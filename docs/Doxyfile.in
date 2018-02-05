@@ -1,0 +1,2 @@
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_SOURCE_DIR@/docs/output/
+INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/modules/ @CMAKE_CURRENT_SOURCE_DIR@/docs

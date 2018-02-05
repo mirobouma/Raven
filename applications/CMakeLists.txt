@@ -1,4 +1,2 @@
-add_subdirectory(CenturionGame)
-if(BUILD_EDITOR)
-	add_subdirectory(CenturionEditor)
-endif(BUILD_EDITOR)
+add_subdirectory(RavenGame)
+add_subdirectory(RavenEditor)

@@ -15,5 +15,5 @@ set (SOURCE
 	${SourceGroup_Main}
 )
 
-add_executable(CenturionGame ${SOURCE})
-target_include_directories(CenturionGame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+add_executable(RavenGame ${SOURCE})
+target_include_directories(RavenGame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)

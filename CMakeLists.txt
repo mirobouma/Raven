@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.8.0)
 
-set(PROJECT_NAME "Centurion")
+set(PROJECT_NAME "Raven")
 set(PROJECT_VERSION 0.0.1)
-set(CENTURION_OUTPUT_DIR "bin")
+set(RAVEN_OUTPUT_DIR "bin")
 
 project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} LANGUAGES CXX)
 
@@ -11,15 +11,15 @@ option(BUILD_DOCUMENTATION "Build documentation" OFF)
 
 #check if we are building for a 64 or 32 bit architecture.
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-   set(CENTURION_ARCHITECTURE "x64")
+   set(RAVEN_ARCHITECTURE "x64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-   set(CENTURION_ARCHITECTURE "x86")
+   set(RAVEN_ARCHITECTURE "x86")
 endif()
 
 #set output directories
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${CENTURION_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${CENTURION_ARCHITECTURE}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${CENTURION_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${CENTURION_ARCHITECTURE}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${CENTURION_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${CENTURION_ARCHITECTURE}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RAVEN_ARCHITECTURE}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RAVEN_ARCHITECTURE}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RAVEN_ARCHITECTURE}")
 
 # check if Doxygen is installed
 if(BUILD_DOCUMENTATION)
@@ -45,9 +45,17 @@ if(BUILD_DOCUMENTATION)
 	endif (DOXYGEN_FOUND)
 endif (BUILD_DOCUMENTATION)
 
-#add submodules
+#build third-party libs
+add_subdirectory(third-party)
+
+#build tools
 add_subdirectory(tools)
-add_subdirectory(cmake)
-add_subdirectory(docs)
+
+#build modules
 add_subdirectory(modules)
+
+#build applications
 add_subdirectory(applications)
+
+#build documentation
+add_subdirectory(docs)

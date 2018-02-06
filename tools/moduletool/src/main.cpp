@@ -1,6 +1,6 @@
-#include "projecttool\module.h"
-#include "projecttool\parser.h"
-#include "projecttool\project.h"
+#include "moduletool\module.h"
+#include "moduletool\parser.h"
+#include "moduletool\project.h"
 
 int main(int argc, char **argv)
 {

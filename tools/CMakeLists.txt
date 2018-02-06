@@ -1,2 +1,2 @@
 #list of tools required for centurion.
-add_subdirectory(projecttool)
+add_subdirectory(moduletool)

@@ -5,9 +5,9 @@ set (SourceGroup_Main
 source_group("Main" FILES ${SourceGroup_Main})
 
 set (SourceGroup_Components
-	"include/projecttool/parser.h"
-	"include/projecttool/project.h"
-	"include/projecttool/module.h"
+	"include/moduletool/parser.h"
+	"include/moduletool/project.h"
+	"include/moduletool/module.h"
 )
 source_group("Components" FILES ${SourceGroup_Components})
 
@@ -16,5 +16,5 @@ set (SOURCE
 	${SourceGroup_Components}
 )
 
-add_executable(CtrProjectTool ${SOURCE})
-target_include_directories(CtrProjectTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+add_executable(RavenProjectTool ${SOURCE} ${RAVEN_ICON_RESOURCE_PATH})
+target_include_directories(RavenProjectTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/ PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/)

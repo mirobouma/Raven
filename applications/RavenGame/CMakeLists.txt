@@ -4,16 +4,10 @@ set (SourceGroup_Main
 )
 source_group("Main" FILES ${SourceGroup_Main})
 
-set (SourceGroup_Components
-	"include/projecttool/parser.h"
-	"include/projecttool/project.h"
-	"include/projecttool/module.h"
-)
-source_group("Components" FILES ${SourceGroup_Components})
-
 set (SOURCE
 	${SourceGroup_Main}
 )
 
 add_executable(RavenGame WIN32 ${SOURCE} ${RAVEN_ICON_RESOURCE_PATH})
 target_include_directories(RavenGame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_link_libraries(RavenGame RavenPlatformWindows)

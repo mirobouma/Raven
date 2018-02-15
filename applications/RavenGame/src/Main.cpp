@@ -1,8 +1,10 @@
-#ifndef WIN32_LEAN_AND_MEAN
-	#define WIN32_LEAN_AND_MEAN
-#endif
+#if defined(WIN32)
+	#ifndef WIN32_LEAN_AND_MEAN
+		#define WIN32_LEAN_AND_MEAN
+	#endif
 
-#include <Windows.h>
+	#include <Windows.h>
+#endif
 
 int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
 {

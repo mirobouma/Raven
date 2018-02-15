@@ -1,11 +1,38 @@
 cmake_minimum_required(VERSION 3.8.0)
 
-set(PROJECT_NAME "Raven")
-set(PROJECT_VERSION 0.0.1)
-set(RAVEN_OUTPUT_DIR "bin")
-set(RAVEN_ICON_RESOURCE_PATH "${CMAKE_SOURCE_DIR}/resources/icon.rc")
+set(RVN_PROJECT_NAME "Raven")
+set(RVN_PROJECT_VERSION 0.0.1)
+set(RVN_OUTPUT_DIR "bin")
+set(RVN_ICON_RESOURCE_PATH "${CMAKE_SOURCE_DIR}/resources/icon.rc")
 
-project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} LANGUAGES CXX)
+# Cmake modules
+include(CheckCXXSourceCompiles)
+include(CheckCXXCompilerFlag)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+include(ProjectGlobalMacros)
+include(ProjectTestFunctions)
+
+project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES CXX)
+enable_testing()
+set(CMAKE_VERBOSE_MAKEFILE OFF)
+
+# Check for C++11/14 support
+project_check_cpp_version()
+
+## Snippets to enforce a C++ version
+#if (not CPP14_SUPPORT)
+#  message(FATAL_ERROR "C++14 support is required.")
+#endif()
+
+if (NOT CPP11_SUPPORT)
+  message(FATAL_ERROR "C++11 support is required.")
+endif()
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
+# Tooling - some must be declared before adding other subdirectories
+project_enable_sanitizer_build()
+project_enable_documentation()
 
 #options
 option(BUILD_DOCUMENTATION "Build documentation" OFF)
@@ -13,58 +40,34 @@ option(FIX_OUTPUT_PATH "Fix output directories for non-vs-project builds." OFF)
 
 #check if we are building for a 64 or 32 bit architecture.
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-   set(RAVEN_ARCHITECTURE "x64")
+   set(RVN_ARCHITECTURE "x64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-   set(RAVEN_ARCHITECTURE "x86")
+   set(RVN_ARCHITECTURE "x86")
 endif()
+
+include_directories(${MANUAL_INCLUDE_DIRS})
 
 #set output directories
 if(FIX_OUTPUT_PATH)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RAVEN_ARCHITECTURE}")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RAVEN_ARCHITECTURE}")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RAVEN_ARCHITECTURE}")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
 else()
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RAVEN_OUTPUT_DIR}")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
 endif()
 
+#project_add_3rdparty(catch)
 
-# check if Doxygen is installed
-if(BUILD_DOCUMENTATION)
-	find_package(Doxygen)
-	if (DOXYGEN_FOUND)
-		# set input and output files
-		set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile.in)
-		set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+project_add_module(RavenCore)
+project_add_module(RavenIO)
+project_add_module(RavenPlatform)
+project_add_module(RavenPlatformWindows)
+project_add_module(RavenRendering)
+project_add_module(RavenRenderingVulkan)
+project_add_module(RavenUI)
+project_add_module(RavenRenderingDX12)
 
-		# request to configure the file
-		configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-		message("Doxygen build started")
-
-		# note the option ALL which allows to build the docs together with the application
-		add_custom_target( doc_doxygen ALL
-			COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-			WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-			COMMENT "Generating API documentation with Doxygen"
-			VERBATIM )
-
-	else (DOXYGEN_FOUND)
-	  message("Doxygen need to be installed to generate the doxygen documentation")
-	endif (DOXYGEN_FOUND)
-endif (BUILD_DOCUMENTATION)
-
-#build third-party libs
-add_subdirectory(third_party)
-
-#build tools
-add_subdirectory(tools)
-
-#build modules
-add_subdirectory(modules)
-
-#build applications
-add_subdirectory(applications)
-
-#build documentation
-add_subdirectory(docs)
+project_add_application(RavenEditor)
+project_add_application(RavenGame)

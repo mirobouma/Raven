@@ -1,4 +1,8 @@
-bin/
 docs/output
 /.vs
 solution/
+BuildConfig.json
+/bin/
+/docs/doxygen/build/
+/docs/sphinx/build/
+/docs/sphinx/source/api

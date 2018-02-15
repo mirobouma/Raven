@@ -1,7 +1,8 @@
 #pragma once
 
 namespace Raven {
-	/** \class ISystem
+	/** 
+	\class ISystem
 	\brief Interface wrapper around any system which requires initialization and destruction.
 	*/
 	class ISystem {

@@ -39,6 +39,7 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+	'sphinx.ext.intersphinx',
     'breathe',
 ]
 
@@ -167,7 +168,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -247,7 +248,7 @@ html_theme = 'sphinx_rtd_theme'
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Cprojecttemplatedoc'
+htmlhelp_basename = 'ravendoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -444,6 +445,6 @@ if process.returncode != 0:
     sys.exit(1)
 
 # Configure breathe
-breathe_projects = { "cpp_project_template": "../../doxygen/build/xml" }
-breathe_default_project = "cpp_project_template"
+breathe_projects = { "Raven": "../../doxygen/build/xml" }
+breathe_default_project = "Raven"
 

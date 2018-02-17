@@ -1,18 +1,17 @@
 .. include:: ../../../README.rst
 
 .. toctree::
-   :caption: Information
+   :caption: Documentation
    :maxdepth: 2
-
-   installing
+   
+   codeconv
 
 .. toctree::
     :maxdepth: 3
     :hidden:
-    :caption: Documentation
-	
+    :caption: API
+
+    Doxygen documentation <../../../doxygen/build/html/index.html#http://>
     api/classlist
     api/namespacelist
     api/filelist
-
-You can also read the :ref:`genindex`

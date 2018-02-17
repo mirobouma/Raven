@@ -60,16 +60,21 @@ endif()
 
 #third party modules
 project_add_3rdparty(json)
+project_add_3rdparty(glm)
 
 #first-party modules
+project_add_module(RavenMath)
+project_add_module(RavenSerialization)
 project_add_module(RavenCore)
 project_add_module(RavenIO)
+project_add_module(RavenPlugin)
 project_add_module(RavenPlatform)
-project_add_module(RavenPlatformWindows)
+project_add_module(RavenPlatformWin32)
 project_add_module(RavenRendering)
 project_add_module(RavenRenderingVulkan)
 project_add_module(RavenUI)
 project_add_module(RavenRenderingDX12)
+project_add_module(RavenEngine)
 
 #applications
 project_add_application(RavenEditor)

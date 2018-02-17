@@ -8,6 +8,17 @@
 #include <thread>
 
 namespace Raven {
+
+	/*!
+	\enum EPlatform
+	\brief enumerator used to determine which platform we're running on.
+	*/
+	enum class EPlatform {
+		EPlatform_Undefined = 0, /*!< Undefined platform. */
+		EPlatform_Win32, /*!< Win32 based platform. */
+		EPlatform_UWP, /*!< Unsupported */
+	};
+
 	/*! 
 	\class IPlatform
 	\brief The IPlatform class is an interface for platform-specific functionality.
@@ -21,7 +32,7 @@ namespace Raven {
 		/*! Initialize the platform interface.
 		\return true if initialization succeeded.
 		*/
-		virtual bool Initialize() = 0; 
+		virtual bool Initialize(); 
 
 		/*! Destroy the platform interface.
 		\return true if deallocation succeeded.
@@ -38,6 +49,9 @@ namespace Raven {
 		*/
 		virtual IPlatformWindow* CreatePlatformWindow(uint32_t width, uint32_t height, const char* title, EPlatformWindowFlags flags = EPlatformWindowFlags::EPlatformWindowFlags_None) = 0;
 
+		/*! Get a pointer to the window system interface. */
+		inline const RWindowSystemInterface* GetWindowSystemInterface() const { return _WindowSystemInterface.get(); }
+
 		/*! Returns page size of this platform.
 		\details Used in custom memory allocators to define the optimal allocation size for pages.
 		*/
@@ -48,7 +62,13 @@ namespace Raven {
 		*/
 		inline uint32_t GetHardwareConcurrency() const { return std::thread::hardware_concurrency(); }
 
+		/*! Retrieve the platform type.
+		\returns enum of the currently selected platform.
+		\sa EPlatform
+		*/
+		virtual EPlatform GetPlatformType() const { return EPlatform::EPlatform_Undefined; }
+
 	protected:
-		std::unique_ptr<WindowSystemInterface> _WindowSystemInterface; /*!< Window system interface. */
+		std::unique_ptr<RWindowSystemInterface> _WindowSystemInterface; /*!< Window system interface. */
 	};
 }

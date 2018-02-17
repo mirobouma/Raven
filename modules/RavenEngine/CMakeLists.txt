@@ -16,9 +16,9 @@ set (SOURCE
 	${SourceGroup_PublicIncludes}
 )
 
-add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC RavenCore RavenPlatform)
-target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+#add_library(${MODULE_NAME} STATIC ${SOURCE})
+#target_link_libraries(${MODULE_NAME} PUBLIC RavenCore RavenPlatform)
+#target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 
 

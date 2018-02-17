@@ -1,9 +1,9 @@
 #pragma once
 #include "Core\Utility\Enum.h"
+#include "Math\Math.h"
+#include "Math\Rect.h"
 
 namespace Raven {
-	class IWindowManager;
-
 	/*! 
 	Enumerator to define flags for window creation. 
 	*/
@@ -23,9 +23,10 @@ namespace Raven {
 	protected:
 		IPlatformWindow() = default;
 	public:
-		friend class Platform;
-		friend class WindowSystemInterface;
+		friend class IPlatform;
+		friend class RWindowSystemInterface;
 	protected:
+		Math::FRect _geometry;
 		EPlatformWindowFlags _flags; /*!< Internal cache of flags enabled on this window. */
 	};
 }

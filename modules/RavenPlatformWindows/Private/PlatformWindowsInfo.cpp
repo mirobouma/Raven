@@ -1,4 +1,4 @@
-#include "PlatformWin32\PlatformWin32.h"
+#include "PlatformWin32\PlatformWindowsInfo.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 	#define WIN32_LEAN_AND_MEAN
@@ -9,17 +9,12 @@
 namespace Raven {
 	bool RPlatformWin32::Initialize()
 	{
-		return IPlatform::Initialize();
+		return IGenericPlatform::Initialize();
 	}
 
 	bool RPlatformWin32::Destroy()
 	{
 		return true;
-	}
-
-	IPlatformWindow* RPlatformWin32::CreatePlatformWindow(uint32_t width, uint32_t height, const char* title, EPlatformWindowFlags flags)
-	{
-		return nullptr;
 	}
 
 	uint32_t RPlatformWin32::GetPageSize()

@@ -1,5 +1,6 @@
 #pragma once
-#include "Core\System\System.h"
+#include "Core\Service\Service.h"
+#include "Platform\GenericPlatformWindow.h"
 
 namespace Raven {
 	/*!
@@ -7,7 +8,7 @@ namespace Raven {
 	\brief Helper object to communicate platform-specific events such as resizing 
 	and window creation to their respective abstracted windows.
 	*/
-	class RWindowSystemInterface : public ISystem {
+	class RWindowSystemInterface : public IService<RWindowSystemInterface> {
 	protected:
 		RWindowSystemInterface() = default;
 		RWindowSystemInterface(const RWindowSystemInterface&) = delete; /*!< Delete copy constuctor */
@@ -19,7 +20,13 @@ namespace Raven {
 		/*! Destroy the window system interface. */
 		bool Destroy() final override;
 
+		/*! Register Platform Window to window system interface. */
+		RGenericPlatformWindow* RegisterPlatformWindow(RGenericPlatformWindow* Window);
+
+		/*! Register Platform Window to window system interface. */
+		bool UnregisterPlatformWindow(RGenericPlatformWindow* Window);
+
 	public:
-		friend class IPlatform;
+		friend class REngine;
 	};
 }

@@ -1,13 +1,18 @@
-#START-FILE-LIST
-set (SourceGroup_Main
-	"src/Main.cpp"
+#Project Definition
+set(PROJECT_NAME "RavenGame")
+
+
+set (SourceGroup_Source
+	"Private/Main.cpp"
 )
-source_group("Main" FILES ${SourceGroup_Main})
+source_group("Source" FILES ${SourceGroup_Source})
 
 set (SOURCE
-	${SourceGroup_Main}
+	${SourceGroup_Source}
 )
 
-add_executable(RavenGame WIN32 ${SOURCE} ${RAVEN_ICON_RESOURCE_PATH})
-target_include_directories(RavenGame PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
-target_link_libraries(RavenGame RavenPlatformWin32)
+add_executable(${PROJECT_NAME} WIN32 ${SOURCE} ${RAVEN_ICON_RESOURCE_PATH})
+target_link_libraries(${PROJECT_NAME} PRIVATE RavenEngine)
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
+
+

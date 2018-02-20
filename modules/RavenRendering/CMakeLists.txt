@@ -2,13 +2,12 @@
 set(MODULE_NAME "RavenRendering")
 
 set (SourceGroup_PublicIncludes
-	"include/Rendering/Window.h"
-	"include/Rendering/WindowManager.h"
+
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
-	"src/WindowManager.cpp"
+	
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

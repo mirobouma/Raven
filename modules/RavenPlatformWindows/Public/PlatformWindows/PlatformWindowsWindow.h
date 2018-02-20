@@ -1,12 +1,12 @@
 #pragma once
-#include "Platform\PlatformWindow.h"
+#include "Platform\GenericPlatformWindow.h"
 
 namespace Raven {
 	/*!
 	\class RPlatformWindowWin32
 	\brief Win32 Native window handle.
 	*/
-	class RPlatformWindowWin32 : public IPlatformWindow {
+	class RPlatformWindowWin32 : public IGenericPlatformWindow {
 	protected:
 		RPlatformWindowWin32() = default;
 	public:

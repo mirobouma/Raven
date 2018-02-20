@@ -1,4 +1,4 @@
-#include "PlatformWin32\PlatformWindowsInfo.h"
+#include "PlatformWindows\PlatformWindowsInfo.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 	#define WIN32_LEAN_AND_MEAN
@@ -7,17 +7,8 @@
 #include <Windows.h>
 
 namespace Raven {
-	bool RPlatformWin32::Initialize()
-	{
-		return IGenericPlatform::Initialize();
-	}
 
-	bool RPlatformWin32::Destroy()
-	{
-		return true;
-	}
-
-	uint32_t RPlatformWin32::GetPageSize()
+	uint32_t RPlatformWindowsInfo::GetPageSize()
 	{
 		// Get system information and fetch the page size.
 		SYSTEM_INFO info;

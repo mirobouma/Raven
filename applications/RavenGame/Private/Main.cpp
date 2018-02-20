@@ -1,4 +1,4 @@
-#if defined(WIN32)
+#ifdef PLATFORM_WINDOWS
 	#ifndef WIN32_LEAN_AND_MEAN
 		#define WIN32_LEAN_AND_MEAN
 	#endif

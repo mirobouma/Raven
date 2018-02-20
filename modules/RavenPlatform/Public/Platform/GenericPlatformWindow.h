@@ -22,7 +22,9 @@ namespace Raven {
 	\brief Generic implementation of a platform window.
 	*/
 	class RGenericPlatformWindow {
-	protected:
+	public:
+		friend class RWindowSystemInterface;
+
 		RGenericPlatformWindow() = default;
 		RGenericPlatformWindow(const RGenericPlatformWindow&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a window. */
 		RGenericPlatformWindow& operator= (const RGenericPlatformWindow&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a window. */
@@ -32,8 +34,6 @@ namespace Raven {
 		*/
 		virtual void OnResize(int width, int height) = 0;
 
-	public:
-		friend class RWindowSystemInterface;
 	protected:
 		Math::FRect _geometry;
 		EPlatformWindowFlags _flags; /*!< Internal cache of flags enabled on this window. */

@@ -21,10 +21,10 @@ namespace Raven {
 		bool Destroy() final override;
 
 		/*! Register Platform Window to window system interface. */
-		RGenericPlatformWindow* RegisterPlatformWindow(RGenericPlatformWindow* Window);
+		RGenericPlatformWindow* RegisterPlatformWindow(RGenericPlatformWindow* Window) {};
 
 		/*! Register Platform Window to window system interface. */
-		bool UnregisterPlatformWindow(RGenericPlatformWindow* Window);
+		bool UnregisterPlatformWindow(RGenericPlatformWindow* Window) {};
 
 	public:
 		friend class REngine;

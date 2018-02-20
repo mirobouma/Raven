@@ -34,20 +34,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 project_enable_sanitizer_build()
 project_enable_documentation()
 
-#options
+# Options
 option(BUILD_DOCUMENTATION "Build documentation" OFF)
 option(FIX_OUTPUT_PATH "Fix output directories for non-vs-project builds." OFF)
 
-#check if we are building for a 64 or 32 bit architecture.
+# Check if we are building for a 64 or 32 bit architecture.
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
    set(RVN_ARCHITECTURE "x64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
    set(RVN_ARCHITECTURE "x86")
 endif()
 
+if (WIN32)
+	add_definitions(-DPLATFORM_WINDOWS) # We are compiling for windows.
+elseif(UNIX AND NOT APPLE)
+	add_definitions(-DPLATFORM_LINUX) # We are compiling for linux.
+endif()
+
 include_directories(${MANUAL_INCLUDE_DIRS})
 
-#set output directories
+# Set output directories
 if(FIX_OUTPUT_PATH)
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
@@ -61,6 +67,7 @@ endif()
 #third party modules
 project_add_3rdparty(json)
 project_add_3rdparty(glm)
+project_add_3rdparty(sdl2)
 
 #first-party modules
 project_add_module(RavenMath)
@@ -71,6 +78,7 @@ project_add_module(RavenPlugin)
 project_add_module(RavenHAL)
 project_add_module(RavenPlatform)
 project_add_module(RavenPlatformWindows)
+project_add_module(RavenPlatformLinux)
 project_add_module(RavenRendering)
 project_add_module(RavenRenderingVulkan)
 project_add_module(RavenUI)

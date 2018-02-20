@@ -14,8 +14,9 @@ namespace Raven {
 	\brief enumerator used to determine which platform we're running on.
 	*/
 	enum class EPlatformType {
-		EPlatform_Undefined = 0, /*!< Undefined platform. */
-		EPlatform_Win32, /*!< Win32 based platform. */
+		EPlatformType_Undefined = 0, /*!< Undefined platform. */
+		EPlatformType_Windows, /*!< Windows based platform. */
+		EPlatformType_Linux, /*!< Linux based platform. */
 	};
 
 	/*! 
@@ -31,7 +32,7 @@ namespace Raven {
 		/*! Returns page size of this platform in KB.
 		\details Used in custom memory allocators to define the optimal allocation size for pages.
 		*/
-		static inline uint32_t GetPageSize() { return 2048; };
+		static uint32_t GetPageSize() { return 2048; };
 
 		/*! Ask the platform for the number of available logical processors.
 		\return Amount of available logical processor cores.
@@ -42,7 +43,7 @@ namespace Raven {
 		\returns enum of the currently selected platform.
 		\sa EPlatform
 		*/
-		static EPlatform GetPlatformType() const { return EPlatform::EPlatform_Undefined; }
+		static EPlatformType GetPlatformType() { return EPlatformType::EPlatformType_Undefined; }
 
 	};
 }

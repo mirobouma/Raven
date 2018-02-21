@@ -1,4 +1,4 @@
-#include "PlatformWindows\PlatformWindowsInfo.h"
+#include "PlatformWindows/PlatformWindowsInfo.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 	#define WIN32_LEAN_AND_MEAN

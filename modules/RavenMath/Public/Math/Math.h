@@ -1,4 +1,4 @@
-#include "glm\glm.hpp"
+#include "glm/glm.hpp"
 /*!
 \file Math.h
 \details Math wrapper around internal math library (GLM)

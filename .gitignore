@@ -6,3 +6,6 @@ BuildConfig.json
 /docs/doxygen/build/
 /docs/sphinx/build/
 /docs/sphinx/source/api
+/Linux
+/SanitizerBlacklist.txt
+*.pc

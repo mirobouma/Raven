@@ -64,12 +64,10 @@ else()
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
 endif()
 
-#third party modules
+#register modules
 project_add_3rdparty(json)
 project_add_3rdparty(glm)
-project_add_3rdparty(sdl2)
 
-#first-party modules
 project_add_module(RavenMath)
 project_add_module(RavenSerialization)
 project_add_module(RavenCore)
@@ -77,13 +75,21 @@ project_add_module(RavenIO)
 project_add_module(RavenPlugin)
 project_add_module(RavenHAL)
 project_add_module(RavenPlatform)
-project_add_module(RavenPlatformWindows)
-project_add_module(RavenPlatformLinux)
 project_add_module(RavenRendering)
 project_add_module(RavenRenderingVulkan)
 project_add_module(RavenUI)
-project_add_module(RavenRenderingDX12)
 project_add_module(RavenEngine)
+
+if (WIN32)
+	project_add_module(RavenPlatformWindows)
+	project_add_module(RavenRenderingDX12)
+endif()
+if(UNIX AND NOT APPLE)
+	project_add_module(RavenPlatformLinux)
+	project_add_3rdparty(sdl2)
+endif()
+
+
 
 #applications
 project_add_application(RavenEditor)

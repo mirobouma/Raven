@@ -1,7 +1,7 @@
 #pragma once
-#include "Core\Service\Service.h"
-#include "Platform\GenericPlatformWindow.h"
-#include "Platform\WindowSystemInterface.h"
+#include "Core/Service/Service.h"
+#include "Platform/GenericPlatformWindow.h"
+#include "Platform/WindowSystemInterface.h"
 
 #include <cinttypes>
 #include <memory>

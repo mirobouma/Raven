@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform\GenericPlatformWindow.h"
+#include "Platform/GenericPlatformWindow.h"
 
 namespace Raven {
 	/*!

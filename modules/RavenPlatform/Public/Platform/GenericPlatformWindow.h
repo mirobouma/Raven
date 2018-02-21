@@ -1,7 +1,7 @@
 #pragma once
-#include "Core\Utility\Enum.h"
-#include "Math\Math.h"
-#include "Math\Rect.h"
+#include "Core/Utility/Enum.h"
+#include "Math/Math.h"
+#include "Math/Rect.h"
 
 namespace Raven {
 	typedef int32_t RWindowHandle; /*!< Represents handle to a platform window. */

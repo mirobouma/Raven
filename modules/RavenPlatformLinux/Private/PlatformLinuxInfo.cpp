@@ -1,4 +1,4 @@
-#include "PlatformLinux\PlatformLinuxInfo.h"
+#include "PlatformLinux/PlatformLinuxInfo.h"
 #include "SDL.h"
 
 namespace Raven {

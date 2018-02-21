@@ -1,6 +1,6 @@
 #pragma once
-#include "Core\Service\Service.h"
-#include "Platform\GenericPlatformWindow.h"
+#include "Core/Service/Service.h"
+#include "Platform/GenericPlatformWindow.h"
 
 namespace Raven {
 	/*!

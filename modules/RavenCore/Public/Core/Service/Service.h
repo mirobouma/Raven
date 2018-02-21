@@ -25,12 +25,12 @@ namespace Raven {
 		\return true if the service has successfully been registered.
 		\sa RServiceProvider
 		*/
-		inline bool RegisterService() const { return Services::RegisterService<T>(); }
+		inline bool RegisterService() const { return false; }
 
 		/*! Deregister a service from the service provider.
 		\return true if the service has successfully been unregistered.
 		\sa RServiceProvider
 		*/
-		inline bool DeregisterService() const { return Services::RegisterService<T>(); }
+		inline bool DeregisterService() const { return false; }
 	};
 }

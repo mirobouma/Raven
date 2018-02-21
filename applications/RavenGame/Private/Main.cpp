@@ -4,9 +4,15 @@
 	#endif
 
 	#include <Windows.h>
-#endif
 
-int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
-{
-	return 0;
-}
+	int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
+	{
+		return 0;
+	}
+
+#else
+	int main(int argc, char *argv[])
+	{
+		return 0;
+	}
+#endif

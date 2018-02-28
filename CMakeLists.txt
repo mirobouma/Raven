@@ -51,6 +51,11 @@ elseif(UNIX AND NOT APPLE)
 	add_definitions(-DPLATFORM_LINUX) # We are compiling for linux.
 endif()
 
+#On Linux, search for SDL2
+if(UNIX AND NOT APPLE)
+	find_package(SDL2 REQUIRED COMPONENTS main)
+endif()
+
 include_directories(${MANUAL_INCLUDE_DIRS})
 
 # Set output directories
@@ -85,8 +90,8 @@ if (WIN32)
 	project_add_module(RavenRenderingDX12)
 endif()
 if(UNIX AND NOT APPLE)
-	project_add_module(RavenPlatformLinux)
 	project_add_3rdparty(sdl2)
+	project_add_module(RavenPlatformLinux)
 endif()
 
 

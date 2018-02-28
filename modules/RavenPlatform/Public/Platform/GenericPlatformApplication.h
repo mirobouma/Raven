@@ -13,5 +13,15 @@ namespace Raven {
 		RGenericPlatformApplication() = default;
 		RGenericPlatformApplication(const RGenericPlatformApplication&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a window. */
 		RGenericPlatformApplication& operator= (const RGenericPlatformApplication&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a window. */
+
+		/*! Initializes this platform application and required subsystems. */
+		virtual bool Initialize() { return true; };
+
+		/*! Initializes this platform application and required subsystems. */
+		virtual bool Destroy() { return true; };
+
+		/*! Start application loop. */
+		virtual void Start() {};
+
 	};
 }

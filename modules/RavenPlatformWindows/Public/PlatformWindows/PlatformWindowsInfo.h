@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform/GenericPlatform.h"
+#include "Platform/GenericPlatformInfo.h"
 
 namespace Raven {
 	/*! 
@@ -21,7 +21,7 @@ namespace Raven {
 		\returns EPlatform::EPlatform_Win32;
 		\sa EPlatform
 		*/
-		static EPlatformType GetPlatformType() { return EPlatformType::EPlatformType_Windows; }
+		static constexpr EPlatformType GetPlatformType() { return EPlatformType::EPlatformType_Windows; }
 	};
 
 	// HAL abstraction

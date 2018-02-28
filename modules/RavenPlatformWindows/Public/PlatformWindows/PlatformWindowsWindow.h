@@ -3,13 +3,16 @@
 
 namespace Raven {
 	/*!
-	\class RPlatformWindowWindows
+	\class RPlatformWindowsWindow
 	\brief Native windows window.
 	*/
-	class RPlatformWindowWindows : public RGenericPlatformWindow {
-	protected:
-		RPlatformWindowWindows() = default;
+	class RPlatformWindowsWindow : public RGenericPlatformWindow {
 	public:
-		friend class RWindowSystemInterface;
+		RPlatformWindowsWindow() = default;
+
+		/*! Show Windows window. */
+		virtual void Show() override;
 	};
+
+	typedef RPlatformWindowsWindow RPlatformWindow;
 }

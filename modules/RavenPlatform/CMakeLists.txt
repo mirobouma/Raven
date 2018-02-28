@@ -2,7 +2,7 @@
 set(MODULE_NAME "RavenPlatform")
 
 set (SourceGroup_PublicIncludes
-	"Public/Platform/GenericPlatform.h"
+	"Public/Platform/GenericPlatformInfo.h"
 	"Public/Platform/GenericPlatformWindow.h"
 	"Public/Platform/WindowSystemInterface.h"
 )

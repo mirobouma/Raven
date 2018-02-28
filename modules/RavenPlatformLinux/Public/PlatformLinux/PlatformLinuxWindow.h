@@ -3,13 +3,16 @@
 
 namespace Raven {
 	/*!
-	\class RPlatformWindowLinux
+	\class RPlatformLinuxWindow
 	\brief Linux platform window.
 	*/
-	class RPlatformWindowLinux : public RGenericPlatformWindow {
-	protected:
-		RPlatformWindowLinux() = default;
+	class RPlatformLinuxWindow: public RGenericPlatformWindow {
 	public:
-		friend class RWindowSystemInterface;
+		RPlatformLinuxWindow() = default;
+		
+		/*! Show linux window. */
+		virtual void Show() override;
 	};
+
+	typedef RPlatformLinuxWindow RPlatformWindow;
 }

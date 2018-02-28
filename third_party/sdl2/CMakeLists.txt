@@ -968,7 +968,7 @@ elseif(UNIX AND NOT APPLE AND NOT ANDROID)
   if(SDL_VIDEO)
     # Need to check for Raspberry PI first and add platform specific compiler flags, otherwise the test for GLES fails!
     CheckRPI()
-    CheckX11()
+    #CheckX11()
     CheckMir()
     CheckDirectFB()
     CheckOpenGLX11()

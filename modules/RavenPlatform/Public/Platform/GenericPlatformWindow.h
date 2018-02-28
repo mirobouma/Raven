@@ -4,7 +4,7 @@
 #include "Math/Rect.h"
 
 namespace Raven {
-	typedef int32_t RWindowHandle; /*!< Represents handle to a platform window. */
+	typedef void* RWindowHandle; /*!< Represents handle to a platform window. */
 
 	/*! 
 	Enumerator to define flags for window creation. 
@@ -23,16 +23,16 @@ namespace Raven {
 	*/
 	class RGenericPlatformWindow {
 	public:
-		friend class RWindowSystemInterface;
 
 		RGenericPlatformWindow() = default;
 		RGenericPlatformWindow(const RGenericPlatformWindow&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a window. */
 		RGenericPlatformWindow& operator= (const RGenericPlatformWindow&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a window. */
 
-		/*!
-		\brief Callback function when the window is resized.
-		*/
-		virtual void OnResize(int width, int height) = 0;
+		/*! Callback function when the window is resized. */
+		virtual void OnResize(int width, int height) {};
+
+		/*! Create the window (Show) */
+		virtual void Show() {};
 
 	protected:
 		Math::FRect _geometry;

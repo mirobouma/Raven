@@ -1,8 +1,45 @@
 #include "PlatformWindows/PlatformWindowsWindow.h"
 #include "PlatformWindows/PlatformWindows.h"
+#include "PlatformWindows/Util/WString.h"
+
 #include <locale>
 
 namespace Raven {
+
+	// Pimpl idiom.
+	struct WindowsWinHandle {
+		HWND handle;
+	};
+
+	void WindowsWinHandleDeleter::operator()(WindowsWinHandle *p)
+	{
+		delete p;
+	}
+
+	RPlatformWindowsWindow::RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags) 
+		: RGenericPlatformWindow(title, size, position, flags), _winHandle(new WindowsWinHandle())
+	{
+		// Create the window.
+		Create();
+
+		if (_flags & EPlatformWindowFlags::EPlatformWindowFlags_Shown)
+		{
+			// Automatically show the window.
+			Show();
+		}
+	}
+
+	RPlatformWindowsWindow::RPlatformWindowsWindow() : RGenericPlatformWindow(), _winHandle(new WindowsWinHandle())
+	{
+		// Create the window.
+		Create();
+
+		if (_flags & EPlatformWindowFlags::EPlatformWindowFlags_Shown)
+		{
+			// Automatically show the window.
+			Show();
+		}
+	} 
 
 	// this is the main message handler for the program
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -21,8 +58,22 @@ namespace Raven {
 		return DefWindowProcW(hWnd, message, wParam, lParam);
 	}
 
-
 	void RPlatformWindowsWindow::Show()
+	{
+		ShowWindow(_winHandle->handle, SW_SHOW);
+	}
+
+	void RPlatformWindowsWindow::Hide()
+	{
+		ShowWindow(_winHandle->handle, SW_HIDE);
+	}
+
+	RWindowHandle RPlatformWindowsWindow::GetNativeHandle()
+	{
+		return _winHandle->handle;
+	}
+
+	void RPlatformWindowsWindow::Create()
 	{
 		WNDCLASSEXW winClass;
 
@@ -42,13 +93,13 @@ namespace Raven {
 		// register the window class
 		RegisterClassExW(&winClass);
 
-		RECT wr = { 0, 0, 800, 600 };    // set the size, but not the position
-		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);    // adjust the size
+		RECT wr = { 0, 0, _geometry.Size.x, _geometry.Size.y }; // set the size, but not the position
+		AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE); // adjust the size to account for the window title bar.
 
 		// create the window and use the result as the handle
-		HWND winHandle = CreateWindowExW(NULL,
+		_winHandle->handle = CreateWindowExW(NULL,
 			L"RavenWindowClass1",    // name of the window class
-			L"Windows Application <Vulkan>",   // title of the window
+			Util::String::ConvertStringToWString(_title).c_str(), // title of the window
 			WS_OVERLAPPEDWINDOW,    // window style
 			CW_USEDEFAULT,    // x-position of the window
 			CW_USEDEFAULT,    // y-position of the window
@@ -58,8 +109,39 @@ namespace Raven {
 			NULL,    // we aren't using menus, NULL
 			GetModuleHandle(nullptr),    // application handle
 			nullptr);    // used with multiple windows, NULL
+	}
 
-		ShowWindow(winHandle, SW_SHOW);
+	void RPlatformWindowsWindow::Raise()
+	{
+		BringWindowToTop(_winHandle->handle);
+	}
+
+	void RPlatformWindowsWindow::SetTitle(const char* title)
+	{
+		SetWindowTextW(_winHandle->handle, Util::String::ConvertStringToWString(title).c_str());
+		_title = title;
+	}
+
+	void RPlatformWindowsWindow::OnResize(int width, int height)
+	{
+		// Unimplemented.
+	}
+
+
+	void RPlatformWindowsWindow::OnMove(int x, int y)
+	{
+		// Unimplemented.
+	}
+
+
+	void RPlatformWindowsWindow::OnFocus()
+	{
+		// Unimplemented.
+	}
+
+	void RPlatformWindowsWindow::OnFocusLost()
+	{
+		// Unimplemented.
 	}
 }
 

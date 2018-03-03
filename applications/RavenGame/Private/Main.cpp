@@ -5,17 +5,30 @@
 #include "HAL/PlatformApplication.h"
 #include "HAL/PlatformWindow.h"
 
+#include <chrono>
+#include <thread>
+
+using namespace Raven;
+using namespace Raven::Math;
+
 void ApplicationStart(int argc, char*argv[])
 {
 	// Initialize platform specific systems.
-	Raven::RPlatform::Initialize();
+	Raven::REngine::Create();
 
 	// Create raven application.
 	Raven::RApplication App;
+
+	// Initialize application.
 	App.Initialize();
 
 	// Create window.
-	Raven::RPlatformWindow Window;
+	Raven::RPlatformWindow Window(
+		"Raven Game Engine <Vulkan>", 
+		FVector2(1024, 800), 
+		FVector2(0,0), 
+		EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition);
+
 	Window.Show();
 
 	// Start application.
@@ -25,7 +38,7 @@ void ApplicationStart(int argc, char*argv[])
 	App.Destroy();
 
 	// Destroy platform specific systems.
-	Raven::RPlatform::Destroy();
+	Raven::REngine::Destroy();
 }
 
 #ifdef PLATFORM_WINDOWS

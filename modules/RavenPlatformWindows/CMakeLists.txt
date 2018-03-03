@@ -6,6 +6,7 @@ set (SourceGroup_PublicIncludes
 	"Public/PlatformWindows/PlatformWindowsApplication.h"
 	"Public/PlatformWindows/PlatformWindowsInfo.h"
 	"Public/PlatformWindows/PlatformWindowsWindow.h"
+	"Public/PlatformWindows/Util/WString.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 

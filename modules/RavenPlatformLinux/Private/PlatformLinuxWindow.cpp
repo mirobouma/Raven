@@ -7,24 +7,12 @@ namespace Raven
 	{
 		// Create the window.
 		Create();
-
-		if (_flags & EPlatformWindowFlags::EPlatformWindowFlags_Shown)
-		{
-			// Automatically show the window.
-			Show();
-		}
 	}
 
 	RPlatformLinuxWindow::RPlatformLinuxWindow() : RGenericPlatformWindow()
 	{
 		// Create the window.
 		Create();
-
-		if (_flags & EPlatformWindowFlags::EPlatformWindowFlags_Shown)
-		{
-			// Automatically show the window.
-			Show();
-		}
 	}
 
 	void RPlatformLinuxWindow::Show()
@@ -44,14 +32,44 @@ namespace Raven
 
 	void RPlatformLinuxWindow::Create()
 	{
+		Math::FVector2 position = _geometry.Position;
+		uint32_t flags = SDL_WINDOW_RESIZABLE;
+
+		// Set up proper variables based on flags.
+		if (_flags & EPlatformWindowFlags_AutoPosition)
+		{
+			position.x = SDL_WINDOWPOS_UNDEFINED;
+			position.y = SDL_WINDOWPOS_UNDEFINED;
+		}
+
+		if (_flags & EPlatformWindowFlags_Borderless)
+		{
+			flags |= SDL_WINDOW_BORDERLESS;
+		}
+
+		if (_flags & EPlatformWindowFlags_AlwaysOnTop)
+		{
+			flags |= SDL_WINDOW_ALWAYS_ON_TOP;
+		}
+
+		if (_flags & EPlatformWindowFlags_NoResize)
+		{
+			flags &= ~SDL_WINDOW_RESIZABLE;
+		}
+
+		if (_flags & EPlatformWindowFlags_Shown)
+		{
+			flags |= SDL_WINDOW_SHOWN;
+		}
+
 		// Create SDL window.
 		_window = SDL_CreateWindow(
 			_title.c_str(),
-			SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED,
+			position.x,
+			position.y,
 			_geometry.Size.x,
 			_geometry.Size.y,
-			SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+			flags
 		);
 	}
 

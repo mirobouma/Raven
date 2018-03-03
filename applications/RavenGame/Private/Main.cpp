@@ -14,10 +14,10 @@ using namespace Raven::Math;
 void ApplicationStart(int argc, char*argv[])
 {
 	// Initialize platform specific systems.
-	Raven::REngine::Create();
+	REngine::Create();
 
 	// Create raven application.
-	Raven::RApplication App;
+	RApplication App;
 
 	// Initialize application.
 	App.Initialize();
@@ -38,7 +38,7 @@ void ApplicationStart(int argc, char*argv[])
 	App.Destroy();
 
 	// Destroy platform specific systems.
-	Raven::REngine::Destroy();
+	REngine::Destroy();
 }
 
 #ifdef PLATFORM_WINDOWS

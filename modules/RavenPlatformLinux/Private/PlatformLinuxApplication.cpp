@@ -15,9 +15,4 @@ namespace Raven {
 		return true;
 	}
 
-	void RPlatformLinuxApplication::Update()
-	{
-
-	}
-
 }

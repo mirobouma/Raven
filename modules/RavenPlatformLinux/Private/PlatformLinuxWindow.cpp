@@ -85,21 +85,27 @@ namespace Raven
 
 		SDL_Event event;
 
-		while (SDL_PollEvent(&event)) {
-
-			SDL_Window* sdl_win = SDL_GetWindowFromID(event.window.windowID);
-			RGenericPlatformWindow* window = GWindowSystemInterface->GetWindowByNativeHandle(sdl_win);
-
-			// Only handle the event if we could find the associated window.
-			if (window != nullptr)
-			{
+		while (SDL_PollEvent(&event))
+        {
 				switch (event.type)
 				{
-				case SDL_QUIT:
-					GWindowSystemInterface->OnMessageQuit(window);
-					return;
+                    case SDL_WINDOWEVENT:
+                    {
+                        SDL_Window* sdl_win = SDL_GetWindowFromID(event.window.windowID);
+                        RGenericPlatformWindow* window = GWindowSystemInterface->GetWindowByNativeHandle(sdl_win);
+
+                            switch (event.window.event)
+                            {
+                                case SDL_WINDOWEVENT_CLOSE:
+                                {
+                                    GWindowSystemInterface->OnMessageQuit(window);
+
+                                }
+                                return;
+                            }
+                    }
+                    break;
 				}
-			}
 		}
 	}
 

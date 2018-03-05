@@ -1,6 +1,7 @@
 #include "PlatformWindows/PlatformWindowsWindow.h"
 #include "PlatformWindows/PlatformWindows.h"
 #include "PlatformWindows/Util/WString.h"
+#include "Platform/WindowSystemInterface.h"
 
 #include <locale>
 
@@ -91,7 +92,7 @@ namespace Raven {
 			NULL,    // we have no parent window, NULL
 			NULL,    // we aren't using menus, NULL
 			GetModuleHandle(nullptr),    // application handle
-			nullptr);    // used with multiple windows, NULL
+			this); 
 
 		// Show the window if it should be shown by default.
 		if (_flags & EPlatformWindowFlags_Shown)
@@ -102,6 +103,22 @@ namespace Raven {
 		if (_flags & EPlatformWindowFlags_AlwaysOnTop)
 		{
 			SetWindowPos(_winHandle->handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+		}
+	}
+
+	void RPlatformWindowsWindow::HandleWindowMessages()
+	{
+		// this struct holds Windows event messages
+		MSG msg;
+
+		// Check to see if any messages are waiting in the queue
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			// translate keystroke messages into the right format
+			TranslateMessage(&msg);
+
+			// send the message to the WindowProc function
+			DispatchMessage(&msg);
 		}
 	}
 

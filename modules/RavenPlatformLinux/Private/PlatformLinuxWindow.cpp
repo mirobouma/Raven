@@ -1,9 +1,11 @@
 #include "PlatformLinux/PlatformLinuxWindow.h"
+#include "Platform/WindowSystemInterface.h"
+
 #include "SDL.h"
 
 namespace Raven 
 {
-	RPlatformLinuxWindow::RPlatformLinuxWindow(const char * title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags) : RGenericPlatformWindow(title, size, position, flags)
+	RPlatformLinuxWindow::RPlatformLinuxWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags) : RGenericPlatformWindow(title, size, position, flags)
 	{
 		// Create the window.
 		Create();
@@ -71,6 +73,34 @@ namespace Raven
 			_geometry.Size.y,
 			flags
 		);
+	}
+
+	void RPlatformLinuxWindow::HandleWindowMessages()
+	{
+		if (GWindowSystemInterface == nullptr)
+		{
+			// Window system interface doesn't exist so we can't handle messages.
+			return;
+		}
+
+		SDL_Event event;
+
+		while (SDL_PollEvent(&event)) {
+
+			SDL_Window* sdl_win = SDL_GetWindowFromID(event.window.windowID);
+			RGenericPlatformWindow* window = GWindowSystemInterface->GetWindowByNativeHandle(sdl_win);
+
+			// Only handle the event if we could find the associated window.
+			if (window != nullptr)
+			{
+				switch (event.type)
+				{
+				case SDL_QUIT:
+					GWindowSystemInterface->OnMessageQuit(window);
+					return;
+				}
+			}
+		}
 	}
 
 	void RPlatformLinuxWindow::Raise()

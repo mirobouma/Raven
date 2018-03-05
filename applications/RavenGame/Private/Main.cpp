@@ -5,6 +5,8 @@
 #include "HAL/PlatformApplication.h"
 #include "HAL/PlatformWindow.h"
 
+#include "RenderingVulkan/TestVulkanRenderer.h"
+
 #include <chrono>
 #include <thread>
 
@@ -15,6 +17,16 @@ void ApplicationStart(int argc, char*argv[])
 {
 	// Initialize platform specific systems.
 	REngine::Create();
+	
+	if (GEngine == nullptr)
+	{
+		// Initialization of engine fail, end application.
+		return;
+	}
+
+	// Initialize engine systems.
+	GEngine->InitializeMinimal();
+	GEngine->InitializeSystems();
 
 	// Create raven application.
 	RApplication App;
@@ -29,10 +41,20 @@ void ApplicationStart(int argc, char*argv[])
 		FVector2(0,0), 
 		EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition);
 
+	// Show the window.
 	Window.Show();
 
-	// Start application.
-	App.Start();
+	// Main loop
+	while (true)
+	{
+		App.Update();
+		GEngine->Render();
+
+		if (Window.ShouldQuit())
+		{
+			break;
+		}
+	}
 
 	// Destroy Application.
 	App.Destroy();

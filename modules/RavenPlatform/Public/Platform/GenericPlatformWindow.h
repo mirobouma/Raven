@@ -38,6 +38,7 @@ namespace Raven {
 		RGenericPlatformWindow(); /*!< Initialize window with default location and size. */
 		RGenericPlatformWindow(const RGenericPlatformWindow&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a window. */
 		RGenericPlatformWindow& operator= (const RGenericPlatformWindow&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a window. */
+		~RGenericPlatformWindow();
 
 		/*! Show the window. */
 		virtual void Show() {}
@@ -63,7 +64,18 @@ namespace Raven {
 		/*! Get title of the window. */
 		inline const char* GetTitle() const { return _title.c_str(); }
 
+		/*! Returns if this window posted its quit message. */
+		inline bool ShouldQuit() const { return _shouldQuit; }
+
 	protected:
+		/*! Friend window system interface so it can call the HandlewindowMessages method. */
+		friend class RWindowSystemInterface;
+
+		/*! Internal initialize function, should never be called directly. */
+		void InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags);
+
+		/*! Handle window messages from the platform. */
+		static void HandleWindowMessages() {};
 
 		/*! Create window (internal) */
 		virtual void Create() {};
@@ -80,8 +92,13 @@ namespace Raven {
 		/*! Callback function when the window focus is lost. */
 		virtual void OnFocusLost() {};
 
+		/*! Callback function when the window posts a quit message. */
+		virtual void OnQuit() { _shouldQuit = true; };
+
 		std::string _title;
 		Math::FRect _geometry; /*!< Internal representation of the window geometry. */
 		EPlatformWindowFlags _flags; /*!< Internal cache of flags enabled on this window. */
+
+		bool _shouldQuit; /*!< boolean if the window should quit.*/
 	};
 }

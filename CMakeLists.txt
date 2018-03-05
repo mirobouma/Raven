@@ -51,10 +51,13 @@ elseif(UNIX AND NOT APPLE)
 	add_definitions(-DPLATFORM_LINUX) # We are compiling for linux.
 endif()
 
+#find packages
 #On Linux, search for SDL2
 if(UNIX AND NOT APPLE)
 	find_package(SDL2 REQUIRED COMPONENTS main)
 endif()
+
+find_package(Vulkan)
 
 include_directories(${MANUAL_INCLUDE_DIRS})
 
@@ -69,7 +72,7 @@ else()
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
 endif()
 
-#register modules
+#add third-party modules.
 project_add_3rdparty(json)
 project_add_3rdparty(glm)
 

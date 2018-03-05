@@ -1,18 +1,33 @@
 #include "PlatformWindows/PlatformWindows.h"
+#include "PlatformWindows/PlatformWindowsWindow.h"
+#include "Platform/WindowSystemInterface.h"
 
 namespace Raven {
 
 	// this is the main message handler for the program
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
-		// Process window messages.
-		switch (message)
+		if (GWindowSystemInterface != nullptr)
 		{
-			// this message is read when the window is closed
-		case WM_DESTROY:
-			// close the application entirely
-			PostQuitMessage(0);
-			break;
+			RPlatformWindowsWindow* wnd = reinterpret_cast<RPlatformWindowsWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+			// Process window messages.
+			switch (message)
+			{
+			case WM_CREATE:
+			{
+				LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+			}
+			return 0;
+
+			case WM_DESTROY:
+			{
+				GWindowSystemInterface->OnMessageQuit(wnd);
+			}
+			return 0;
+		
+			}
 		}
 
 		// Handle any messages the switch statement didn't

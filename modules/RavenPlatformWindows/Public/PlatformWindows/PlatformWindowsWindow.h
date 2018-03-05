@@ -45,6 +45,12 @@ namespace Raven {
 		virtual RWindowHandle GetNativeHandle() override;
 
 	protected:
+		/*! Friend window system interface so it can call the HandlewindowMessages method. */
+		friend class RWindowSystemInterface;
+
+		/*! Handle window messages from the platform. */
+		static void HandleWindowMessages();
+
 		/*! Create window (internal) */
 		virtual void Create() override;
 

@@ -18,8 +18,6 @@ namespace Raven {
 		/*! Initializes this platform application and required subsystems. */
 		virtual bool Destroy() override;
 
-		/*! Start application loop. */
-		virtual void Start() override;
 	};
 
 	// HAL abstraction

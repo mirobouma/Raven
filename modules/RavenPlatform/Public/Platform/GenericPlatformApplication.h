@@ -2,6 +2,7 @@
 #include "Core/Utility/Enum.h"
 #include "Math/Math.h"
 #include "Math/Rect.h"
+#include "Platform/GenericPlatformWindow.h"
 
 namespace Raven {
 	/*!
@@ -19,9 +20,9 @@ namespace Raven {
 
 		/*! Initializes this platform application and required subsystems. */
 		virtual bool Destroy() { return true; };
-
-		/*! Start application loop. */
-		virtual void Start() {};
+		
+		/*! Update the application's windows. */
+		virtual void Update();
 
 	};
 }

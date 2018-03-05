@@ -1,6 +1,5 @@
 #include "PlatformLinux/PlatformLinuxApplication.h"
-#include "SDL.h"
-#undef main 
+
 
 namespace Raven {
 
@@ -16,21 +15,9 @@ namespace Raven {
 		return true;
 	}
 
-
-	void RPlatformLinuxApplication::Start()
+	void RPlatformLinuxApplication::Update()
 	{
-		SDL_Event event;
 
-		while (true)
-		{
-			while (SDL_PollEvent(&event)) {
-				switch (event.type)
-				{
-				case SDL_QUIT:
-					return;
-				}
-			}
-		}
 	}
 
 }

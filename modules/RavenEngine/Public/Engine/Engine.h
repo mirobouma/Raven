@@ -1,6 +1,10 @@
 #pragma once
 
+#include "RenderingVulkan/TestVulkanRenderer.h"
+#include <memory>
+
 namespace Raven {
+	class RWindowSystemInterface;
 	/*!
 	\class REngine
 	\brief Main engine object, only one is allowed to exist per application. 
@@ -33,6 +37,12 @@ namespace Raven {
 		/returns false if initialization failed, true if initialization succeeded.
 		*/
 		bool InitializeSystems();
-		
+
+		/*! TEMP Render the current scene. */
+		void Render();
+
+	protected:
+		/*! TEMP Renderer */
+		std::unique_ptr<RVulkanTestRenderer> _Renderer;
 	};
 }

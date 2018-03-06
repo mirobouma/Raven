@@ -3,7 +3,8 @@
 #include <iostream>
 
 #ifdef PLATFORM_LINUX
-#include "SDL.h"
+#include "SDL_syswm.h"
+#include <X11/Xlib-xcb.h> // for XGetXCBConnection()
 #endif
 
 namespace Raven 
@@ -412,7 +413,7 @@ namespace Raven
 		VkXcbSurfaceCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
 		createInfo.window = wminfo.info.x11.window;
-		createInfo.connection = XGetXCBConnection(wminfo.info.x11.display);;
+		createInfo.connection = XGetXCBConnection(wminfo.info.x11.display);
 
 		auto CreateXcbSurfaceKHR = GET_VK_FUNC(instance, vkCreateXcbSurfaceKHR);
 

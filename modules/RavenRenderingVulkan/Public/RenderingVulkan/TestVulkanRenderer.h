@@ -3,7 +3,6 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 #elif defined(PLATFORM_LINUX)
 #define VK_USE_PLATFORM_XCB_KHR
-#include <X11/Xlib-xcb.h>
 #endif
 
 #include <vulkan/vulkan.h>

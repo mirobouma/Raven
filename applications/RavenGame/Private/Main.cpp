@@ -10,6 +10,12 @@
 #include <chrono>
 #include <thread>
 
+#ifdef PLATFORM_WINDOWS
+#ifndef NDEBUG
+#pragma comment(linker, "/SUBSYSTEM:CONSOLE")
+#endif
+#endif
+
 using namespace Raven;
 using namespace Raven::Math;
 
@@ -41,6 +47,9 @@ void ApplicationStart(int argc, char*argv[])
 		FVector2(0,0), 
 		EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition);
 
+	// Create vulkan surface for this window.
+	GEngine->GetRenderer()->CreateSurface((void*)Window.GetNativeHandle());
+
 	// Show the window.
 	Window.Show();
 
@@ -69,13 +78,13 @@ void ApplicationStart(int argc, char*argv[])
 		ApplicationStart(0, nullptr);
 		return 0;
 	}
-
-#else
-	int main(int argc, char *argv[])
-	{
-		ApplicationStart(argc, argv);
-		return 0;
-	}
 #endif
+
+int main(int argc, char *argv[])
+{
+	ApplicationStart(argc, argv);
+	return 0;
+}
+
 
 

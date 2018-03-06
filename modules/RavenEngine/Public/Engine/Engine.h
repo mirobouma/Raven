@@ -41,6 +41,9 @@ namespace Raven {
 		/*! TEMP Render the current scene. */
 		void Render();
 
+		/*! TEMP get reference to the renderer. */
+		RVulkanTestRenderer* GetRenderer() { return _Renderer.get(); }
+
 	protected:
 		/*! TEMP Renderer */
 		std::unique_ptr<RVulkanTestRenderer> _Renderer;

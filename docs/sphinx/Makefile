@@ -1,6 +1,8 @@
 # Makefile for Sphinx documentation
 #
+ifeq ($(OS),Windows_NT)
 SHELL=cmd.exe
+endif
 
 # You can set these variables from the command line.
 SPHINXOPTS    =

@@ -1,6 +1,7 @@
 #include "RenderingVulkan/TestVulkanRenderer.h"
 #include <vector>
 #include <iostream>
+#include <set>
 
 #ifdef PLATFORM_LINUX
 #include "SDL_syswm.h"
@@ -142,6 +143,26 @@ namespace Raven
 		return true;
 	}
 
+    bool RVulkanTestRenderer::AreDeviceExtensionsAvailable(const VkPhysicalDevice device, const std::vector<const char*>& deviceExtensions)
+    {
+        // query the amount of extensions this physical device supports.
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+        // Retrieve the extension list.
+        std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+        vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+        // Go over the extensions and remove them if we support it. If the list is empty at the end, it means we support all extensions.
+        std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+        for (const auto& extension : availableExtensions) {
+            requiredExtensions.erase(extension.extensionName);
+        }
+
+        return requiredExtensions.empty();
+    }
+
 	bool RVulkanTestRenderer::EnableValidationLayers(VkInstanceCreateInfo& info, const std::vector<const char*>& instanceLayers)
 	{
 
@@ -221,13 +242,18 @@ namespace Raven
 			throw std::runtime_error("failed to find GPUs with Vulkan support!");
 		}
 
+        // List the device extensions we require.
+        const std::vector<const char*> deviceExtensions = {
+                VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+
 		// Get the list of the physical devices we have.
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
 		// Find the first suitable device.
 		for (const auto& device : devices) {
-			if (IsDeviceSuitable(device)) {
+			if (IsDeviceSuitable(device, deviceExtensions)) {
 				physicalDevice = device;
 				break;
 			}
@@ -240,7 +266,7 @@ namespace Raven
 		return true;
 	}
 
-	bool RVulkanTestRenderer::IsDeviceSuitable(const VkPhysicalDevice& device) {
+	bool RVulkanTestRenderer::IsDeviceSuitable(const VkPhysicalDevice& device, const std::vector<const char*>& deviceExtensions) {
 
 		// Query device properties.
 		VkPhysicalDeviceProperties deviceProperties;
@@ -250,12 +276,15 @@ namespace Raven
 		VkPhysicalDeviceFeatures deviceFeatures;
 		vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
+        // Check device extensions
+        bool extensionsAvailable = AreDeviceExtensionsAvailable(device, deviceExtensions);
+
 		// Make sure we have a graphics queue family.
 		int graphicsIndex = FindGraphicsQueueFamily(device);
 
-		// If we have a discrete GPU and we support geometry shaders, it is enough for us.
+		// If we have a discrete GPU, we support geometry shaders, have a graphics queue and swapchain support, then this device is suitable.
 		return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-			deviceFeatures.geometryShader && graphicsIndex != -1;
+			deviceFeatures.geometryShader && graphicsIndex != -1 && extensionsAvailable;
 
 	}
 
@@ -302,6 +331,11 @@ namespace Raven
 			"VK_LAYER_LUNARG_standard_validation"
 		};
 
+        // Enable swapchain extensions.
+        const std::vector<const char*> deviceExtensions = {
+                VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+
 		if (enableValidationLayers) {
 			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
@@ -309,6 +343,9 @@ namespace Raven
 		else {
 			createInfo.enabledLayerCount = 0;
 		}
+
+        createInfo.enabledExtensionCount = deviceExtensions.size();
+        createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 		// Create the device.
 		if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
@@ -444,6 +481,16 @@ namespace Raven
 		// Destroy our vulkan instance.
 		vkDestroyInstance(instance, nullptr);
 	}
+
+    bool RVulkanTestRenderer::CreateSwapchain()
+    {
+        return true;
+    }
+
+	RVulkanTestRenderer::SwapChainSupportDetails RVulkanTestRenderer::QuerySwapChainSupport(VkPhysicalDevice device)
+    {
+
+    }
 
 	void RVulkanTestRenderer::Render()
 	{

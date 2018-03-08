@@ -47,8 +47,9 @@ void ApplicationStart(int argc, char*argv[])
 		FVector2(0,0), 
 		EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition);
 
-	// Create vulkan surface for this window.
+	// Create Vulkan surface for this window.
 	GEngine->GetRenderer()->CreateSurface((void*)Window.GetNativeHandle());
+    GEngine->GetRenderer()->CreateSwapchain();
 
 	// Show the window.
 	Window.Show();

@@ -17,19 +17,27 @@ namespace Raven {
 		RVulkanTestRenderer() : physicalDevice(VK_NULL_HANDLE), instance(VK_NULL_HANDLE), device(VK_NULL_HANDLE), graphicsQueue(VK_NULL_HANDLE), presentQueue(VK_NULL_HANDLE), surface(VK_NULL_HANDLE) {}
 		~RVulkanTestRenderer() = default;
 
+        struct SwapChainSupportDetails {
+            VkSurfaceCapabilitiesKHR capabilities;
+            std::vector<VkSurfaceFormatKHR> formats;
+            std::vector<VkPresentModeKHR> presentModes;
+        };
+
 		void Initialize();
 
 		void Render();
 		void Destroy();
 
 		bool CreateInstance();
-		bool CheckValidationLayerSupport();
 		bool EnableValidationLayers(VkInstanceCreateInfo& info, const std::vector<const char*>& instanceLayers);
 		bool EnableExtensions(VkInstanceCreateInfo& info, const std::vector<const char*>& instanceExtensions);
 		bool PickPhysicalDevice();
-		bool IsDeviceSuitable(const VkPhysicalDevice& device);
+		bool IsDeviceSuitable(const VkPhysicalDevice& device, const std::vector<const char*>& deviceExtensions);
+        bool AreDeviceExtensionsAvailable(const VkPhysicalDevice device, const std::vector<const char*>& deviceExtensions);
 		bool CreateLogicalDevice();
 		void CreateSurface(void* nativeHandle);
+        bool CreateSwapchain();
+        SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
 
 		int FindGraphicsQueueFamily(const VkPhysicalDevice& device);
 		int FindPresentQueueFamily(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);

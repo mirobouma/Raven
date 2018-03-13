@@ -7,10 +7,55 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <chrono>
+#include <array>
 
 #define GET_VK_FUNC(I, T) (PFN_ ## T)vkGetInstanceProcAddr(I, #T)
 
 namespace Raven {
+
+	// Simple vertex structure.
+	struct Vertex {
+		glm::vec2 pos;
+		glm::vec3 color;
+
+		static VkVertexInputBindingDescription GetBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription = {};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(Vertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			return bindingDescription;
+		}
+
+		static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {}; // we have two attributes in our vertex, pos and color.
+
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[0].offset = offsetof(Vertex, pos); // the first attribute is our position vector.
+
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+			attributeDescriptions[1].offset = offsetof(Vertex, color); // the second attribute is our color vector.
+
+			return attributeDescriptions;
+		}
+	};
+
+	// uniform buffer.
+	struct UniformBufferObject {
+		glm::mat4 model;
+		glm::mat4 view;
+		glm::mat4 proj;
+	};
+
 	// Test class for vulkan rendering until proper interface is set up
 	class RVulkanTestRenderer {
 	public:
@@ -38,11 +83,45 @@ namespace Raven {
 		void CreateSurface(void* nativeHandle);
         bool CreateSwapchain();
         SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device);
+		VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+		VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes);
+		VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+		void CreateSwapchainImageViews();
+		bool CreateGraphicsPipeline();
+		static std::vector<char> ReadFile(const std::string& filename);
+		VkShaderModule CreateShaderModule(const std::vector<char>& code);
+		void CreateRenderPass();
+		void CreateFrameBuffers();
+		void CreateCommandPool();
+		void CreateCommandBuffers();
+		void CreateSemaphores();
+		void RecreateSwapchain();
+		void CleanSwapchain();
+		void CreateVertexAndIndexBuffer();
+		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+		void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+		void CreateDescriptorSetLayout();
+		void CreateDescriptorPool();
+		void CreateDescriptorSet();
 
 		int FindGraphicsQueueFamily(const VkPhysicalDevice& device);
 		int FindPresentQueueFamily(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);
 
 		bool SetupDebugCallback();
+
+		// Constant vertex array for a quad.
+		const std::vector<Vertex> vertices = {
+			{ { -0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f } },
+			{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
+			{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } },
+			{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f } }
+		};
+
+		// Indices for the quad.
+		const std::vector<uint16_t> indices = {
+			0, 1, 2, 2, 3, 0
+		};
 
 	private:
 		VkInstance instance; // instance of the vulkan api.
@@ -52,6 +131,31 @@ namespace Raven {
 		VkQueue graphicsQueue; // graphics queue.
 		VkQueue presentQueue; // present queue.
 		VkSurfaceKHR surface; // surface.
+		VkSwapchainKHR swapChain; // swapchain.
+		std::vector<VkImage> swapChainImages; // swapchain images.
+		std::vector<VkImageView> swapChainImageViews; // swapchain image views.
+		VkFormat swapChainImageFormat; // swapchain image format.
+		VkExtent2D swapChainExtent; // swapchain image size.
+		VkShaderModule vertShaderModule; // vertex shader module.
+		VkShaderModule fragShaderModule; // fragment shader module.
+		VkRenderPass renderPass; // render pass.
+		VkDescriptorSetLayout descriptorSetLayout; // descriptor set layout.
+		VkPipelineLayout pipelineLayout; // pipeline layout.
+		VkPipeline graphicsPipeline; // graphics pipeline.
+		std::vector<VkFramebuffer> swapChainFramebuffers; // framebuffers for each swapchain image.
+		std::vector<VkCommandBuffer> CommandBuffers; // list of command buffers.
+		VkCommandPool commandPool; // command pool.
+		VkBuffer vertexBuffer; //vertex buffer.
+		VkBuffer indexBuffer; // index buffer.
+		VkDeviceMemory vertexBufferMemory; // memory for vertex  buffer.
+		VkDeviceMemory indexBufferMemory; // memory for index buffer.
+		VkBuffer uniformBuffer; // uniform buffer
+		VkDeviceMemory uniformBufferMemory; // memory for uniform buffer.
+		VkDescriptorPool descriptorPool; // descriptor pool.
+		VkDescriptorSet descriptorSet; // descriptor set for uniform buffer.
+
+		VkSemaphore imageAvailableSemaphore;
+		VkSemaphore renderFinishedSemaphore;
 
 		bool enableValidationLayers;
 	};

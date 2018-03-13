@@ -4,12 +4,14 @@ set(RVN_PROJECT_NAME "Raven")
 set(RVN_PROJECT_VERSION 0.0.1)
 set(RVN_OUTPUT_DIR "bin")
 set(RVN_ICON_RESOURCE_PATH "${CMAKE_SOURCE_DIR}/resources/icon.rc")
+set(RVN_ROOT_SOURCE "${CMAKE_SOURCE_DIR}")
 
 # Cmake modules
 include(CheckCXXSourceCompiles)
 include(CheckCXXCompilerFlag)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(ProjectGlobalMacros)
+include(GLSLtoSpirV)
 include(ProjectTestFunctions)
 
 project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES CXX)

@@ -17,7 +17,8 @@ set (SOURCE
 )
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC RavenRendering Vulkan::Vulkan)
+
+target_link_libraries(${MODULE_NAME} PUBLIC RavenMath RavenRendering Vulkan::Vulkan)
 if(UNIX AND NOT APPLE)
 	find_package(X11_XCB REQUIRED)
 	target_link_libraries(${MODULE_NAME} PUBLIC sdl2 X11::XCB)
@@ -25,3 +26,5 @@ if(UNIX AND NOT APPLE)
 endif()
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
 
+#enable glsl to spirv compilation.
+enable_glsl_to_spirv_compiling(${MODULE_NAME})

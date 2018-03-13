@@ -1,7 +1,12 @@
 #include "RenderingVulkan/TestVulkanRenderer.h"
 #include <vector>
 #include <iostream>
+#include <fstream>
 #include <set>
+#undef max
+#undef min
+#include <algorithm>
+
 
 #ifdef PLATFORM_LINUX
 #include "SDL_syswm.h"
@@ -19,8 +24,6 @@ namespace Raven
 		// Set up debugging callback for the validation layers.
 		SetupDebugCallback();
 
-		// Find a suitable physical device.
-		PickPhysicalDevice();
 	}
 
 
@@ -33,7 +36,7 @@ namespace Raven
 		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.pEngineName = "Raven";
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		appInfo.apiVersion = VK_API_VERSION_1_1;
 
 
 		// Vulkan instance creation info, pass the application information as argument.
@@ -282,9 +285,19 @@ namespace Raven
 		// Make sure we have a graphics queue family.
 		int graphicsIndex = FindGraphicsQueueFamily(device);
 
+		// Make sure we have a present queue family.
+		int presentIndex = FindPresentQueueFamily(device, surface);
+
+		// Check if we have adequate swapchain support.
+		bool swapChainAdequate = false;
+		if (extensionsAvailable) {
+			SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
+			swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+		}
+
 		// If we have a discrete GPU, we support geometry shaders, have a graphics queue and swapchain support, then this device is suitable.
 		return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-			deviceFeatures.geometryShader && graphicsIndex != -1 && extensionsAvailable;
+			deviceFeatures.geometryShader && graphicsIndex != -1 && presentIndex != -1 && extensionsAvailable && swapChainAdequate;
 
 	}
 
@@ -461,19 +474,83 @@ namespace Raven
 
 		if (device == VK_NULL_HANDLE)
 		{
+			// Find a suitable physical device.
+			PickPhysicalDevice();
+
 			// Create logical device.
 			CreateLogicalDevice();
+
+			// Create swapchain.
+			CreateSwapchain();
+
+			// Create a render pass.
+			CreateRenderPass();
+
+			// Create descriptor set layouts for graphics pipeline.
+			CreateDescriptorSetLayout();
+
+			// Set up graphics pipeline.
+			CreateGraphicsPipeline();
+
+			// Create swapchain image views.
+			CreateSwapchainImageViews();
+
+			// Create frame buffers for the swapchain.
+			CreateFrameBuffers();
+
+			// Create pool for command buffers.
+			CreateCommandPool();
+
+			// Create vertex, index and uniform buffers.
+			CreateVertexAndIndexBuffer();
+
+			// Create descriptor pool.
+			CreateDescriptorPool();
+
+			// Create descriptor set for our resources.
+			CreateDescriptorSet();
+
+			// Create our command buffers.
+			CreateCommandBuffers();
+
+			// Create semaphores.
+			CreateSemaphores();
 		}
 	}
 	void RVulkanTestRenderer::Destroy()
 	{
+		// Wait for rendering to finish before destroying our resources.
+		vkDeviceWaitIdle(device);
+
+		CleanSwapchain();
+
+		vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(device, descriptorPool, nullptr);
+
+		// destroy vertex, index and uniform buffers.
+		vkDestroyBuffer(device, vertexBuffer, nullptr);
+		vkFreeMemory(device, vertexBufferMemory, nullptr);
+
+		vkDestroyBuffer(device, indexBuffer, nullptr);
+		vkFreeMemory(device, indexBufferMemory, nullptr);
+
+		vkDestroyBuffer(device, uniformBuffer, nullptr);
+		vkFreeMemory(device, uniformBufferMemory, nullptr);
+
+		// Destroy semaphores.
+		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+
+		// Destroy command pool.
+		vkDestroyCommandPool(device, commandPool, nullptr);
+
+		// Destroy our logical device.
+		vkDestroyDevice(device, nullptr);
+
 		#ifndef NDEBUG
 			// Destroy debugging report callback.
 			DestroyDebugReportCallbackEXT(instance, callback, nullptr);
 		#endif
-
-		// Destroy our logical device.
-		vkDestroyDevice(device, nullptr);
 
 		// Destroy our surface.
 		vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -484,18 +561,856 @@ namespace Raven
 
     bool RVulkanTestRenderer::CreateSwapchain()
     {
+		SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(physicalDevice);
+
+		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainSupport.formats);
+		VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainSupport.presentModes);
+		VkExtent2D extent = ChooseSwapExtent(swapChainSupport.capabilities);
+
+		// Select how many backbuffers we need in the swap chain, we preferably want the minimum amount + 1.
+		uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+		if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
+			imageCount = swapChainSupport.capabilities.maxImageCount;
+		}
+
+		// Fill the swapchain creation info structure.
+		VkSwapchainCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = surface;
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = surfaceFormat.format;
+		createInfo.imageColorSpace = surfaceFormat.colorSpace;
+		createInfo.imageExtent = extent;
+		createInfo.imageArrayLayers = 1;
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; // Render directly into the swapchain, otherwise TRANSFER_DST if we want offscreen rendering.
+
+		int graphicsIndex = FindGraphicsQueueFamily(physicalDevice);
+		int presentIndex = FindPresentQueueFamily(physicalDevice, surface);
+
+		uint32_t queueFamilyIndices[] = { (uint32_t)graphicsIndex, (uint32_t)presentIndex };
+
+		// If the present queue and graphics queue are not on the same queue, set the swapchain images to concurrect sharing.
+		if (graphicsIndex != presentIndex) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else 
+		{ // If the present queue and graphics queue ARE on the same queue, only one queue can have ownership at a time, and ownership has to be transferred to the other before presenting or rendering.
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE; 
+			createInfo.queueFamilyIndexCount = 0; // Optional
+			createInfo.pQueueFamilyIndices = nullptr; // Optional
+		}
+
+		createInfo.preTransform = swapChainSupport.capabilities.currentTransform; // We don't want any transformation so we set it to the current transform.
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // We don't want to use the alpha bit for blending with other windows so set it to OPAQUE.
+		createInfo.presentMode = presentMode; // Set the present mode to the one we selected.
+		createInfo.clipped = VK_TRUE; // We don't need to read the swapchain image, so if another window is obscuring it, we don't care about it's colours.
+		createInfo.oldSwapchain = VK_NULL_HANDLE; // For now we only need 1 swapchain ever and dont care.
+
+		if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapChain) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create swap chain!");
+		}
+
+		// Retrieve swap chain images.
+		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+		swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+
+		swapChainImageFormat = surfaceFormat.format;
+		swapChainExtent = extent;
+
         return true;
     }
 
+	void RVulkanTestRenderer::CreateSwapchainImageViews()
+	{
+		swapChainImageViews.resize(swapChainImages.size());
+		
+		// For each back buffer create image views.
+		for (size_t i = 0; i < swapChainImages.size(); i++) {
+
+			VkImageViewCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			createInfo.image = swapChainImages[i];
+			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			createInfo.format = swapChainImageFormat;
+
+			// Use default component mapping.
+			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+			// We only have 1 subresource and mip level, and this is a color resource.
+			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			createInfo.subresourceRange.baseMipLevel = 0;
+			createInfo.subresourceRange.levelCount = 1;
+			createInfo.subresourceRange.baseArrayLayer = 0;
+			createInfo.subresourceRange.layerCount = 1;
+
+			if (vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create image views!");
+			}
+		}
+	}
+
 	RVulkanTestRenderer::SwapChainSupportDetails RVulkanTestRenderer::QuerySwapChainSupport(VkPhysicalDevice device)
     {
+		SwapChainSupportDetails details;
 
+		// Query surface capabilities.
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+		
+		// Query surface formats for the created surface.
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+		if (formatCount != 0) {
+			details.formats.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+		}
+
+		// Query present modes for this surface.
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+
+		if (presentModeCount != 0) {
+			details.presentModes.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+		}
+
+		return details;
     }
+
+	VkSurfaceFormatKHR RVulkanTestRenderer::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats)
+	{
+		// If we can choose the format, set it to standard SRGB.
+		if (availableFormats.size() == 1 && availableFormats[0].format == VK_FORMAT_UNDEFINED) {
+			return { VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+		}
+
+		// Otherwise, go through the available formats and pick the first format that has the format and color space we want.
+		for (const auto& availableFormat : availableFormats) {
+			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+				return availableFormat;
+			}
+		}
+
+		// If all else fails, we'll use the first format.
+		return availableFormats[0];
+	}
+
+	VkPresentModeKHR RVulkanTestRenderer::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes) 
+	{
+		VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
+
+		// Mailbox allows for triple buffering with lower latency issues compared to traditional FIFO (vsync) double buffering.
+		for (const auto& availablePresentMode : availablePresentModes) {
+			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+				return availablePresentMode;
+			}
+			else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+				bestMode = availablePresentMode;
+			}
+		}
+
+		return bestMode;
+	}
+
+	VkExtent2D RVulkanTestRenderer::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) 
+	{
+		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+			return capabilities.currentExtent;
+		}
+		else {
+			VkExtent2D actualExtent = { 1024, 896 };
+
+			actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+			actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+
+			return actualExtent;
+		}
+	}
+
+	std::vector<char> RVulkanTestRenderer::ReadFile(const std::string& filename) {
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open()) {
+			throw std::runtime_error("failed to open file!");
+		}
+
+		// Get file size because we start at the end of the file.
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+
+		// go to beginning of file and read contents.
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+
+		file.close();
+
+		return buffer;
+	}
+
+	VkShaderModule RVulkanTestRenderer::CreateShaderModule(const std::vector<char>& code)
+	{
+		VkShaderModuleCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = code.size();
+		createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+		VkShaderModule shaderModule;
+		if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create shader module!");
+		}
+		
+		return shaderModule;
+	}
+
+	bool RVulkanTestRenderer::CreateGraphicsPipeline()
+	{
+		auto vertShaderCode = ReadFile("shaders/test.vert.spv");
+		auto fragShaderCode = ReadFile("shaders/test.frag.spv");
+
+		// Create shader modules.
+		vertShaderModule = CreateShaderModule(vertShaderCode);
+		fragShaderModule = CreateShaderModule(fragShaderCode);
+
+
+		// Define shader stages.
+		VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertShaderStageInfo.module = vertShaderModule;
+		vertShaderStageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+		fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragShaderStageInfo.module = fragShaderModule;
+		fragShaderStageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+		auto bindingDescription = Vertex::GetBindingDescription();
+		auto attributeDescriptions = Vertex::GetAttributeDescriptions();
+
+		// Create input state info.
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
+		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertexInputInfo.vertexBindingDescriptionCount = 1; // we have one vertex binding description.
+		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()); // we have two attribute descriptions.
+		vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+
+		// Create input assemply info.
+		VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
+		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+		// Create viewport.
+		VkViewport viewport = {};
+		viewport.x = 0.0f;
+		viewport.y = 0.0f;
+		viewport.width = (float)swapChainExtent.width;
+		viewport.height = (float)swapChainExtent.height;
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+
+		// Create scissor rects.
+		VkRect2D scissor = {};
+		scissor.offset = { 0, 0 };
+		scissor.extent = swapChainExtent;
+
+		// Combine scissor rects and viewport into a viewport state.
+		VkPipelineViewportStateCreateInfo viewportState = {};
+		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportState.viewportCount = 1;
+		viewportState.pViewports = &viewport;
+		viewportState.scissorCount = 1;
+		viewportState.pScissors = &scissor;
+
+		// Define rasterizor.
+		VkPipelineRasterizationStateCreateInfo rasterizer = {};
+		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizer.depthClampEnable = VK_FALSE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizer.lineWidth = 1.0f;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizer.depthBiasEnable = VK_FALSE;
+		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
+		rasterizer.depthBiasClamp = 0.0f; // Optional
+		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+
+		// Define multisampling
+		VkPipelineMultisampleStateCreateInfo multisampling = {};
+		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.sampleShadingEnable = VK_FALSE;
+		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampling.minSampleShading = 1.0f; // Optional
+		multisampling.pSampleMask = nullptr; // Optional
+		multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
+		multisampling.alphaToOneEnable = VK_FALSE; // Optional
+
+		// Define color blending for an attachment.
+		VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+		colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		colorBlendAttachment.blendEnable = VK_FALSE;
+		colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+		colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+		colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+		colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+		colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+		colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+
+		// Define pipeline color blending.
+		VkPipelineColorBlendStateCreateInfo colorBlending = {};
+		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+		colorBlending.attachmentCount = 1;
+		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.blendConstants[0] = 0.0f; // Optional
+		colorBlending.blendConstants[1] = 0.0f; // Optional
+		colorBlending.blendConstants[2] = 0.0f; // Optional
+		colorBlending.blendConstants[3] = 0.0f; // Optional
+
+		// Define dynamic states that we can change per draw.
+		VkDynamicState dynamicStates[] = {
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_LINE_WIDTH
+		};
+
+		VkPipelineDynamicStateCreateInfo dynamicState = {};
+		dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicState.dynamicStateCount = 2;
+		dynamicState.pDynamicStates = dynamicStates;
+
+		// Create pipeline layout.
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+		pipelineLayoutInfo.pPushConstantRanges = 0; // Optional
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+
+		if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create pipeline layout!");
+		}
+
+		// Create graphics pipeline.
+		VkGraphicsPipelineCreateInfo pipelineInfo = {};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = shaderStages; // we have a fragment and vertex shader.
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssembly;
+		pipelineInfo.pViewportState = &viewportState;
+		pipelineInfo.pRasterizationState = &rasterizer;
+		pipelineInfo.pMultisampleState = &multisampling;
+		pipelineInfo.pDepthStencilState = nullptr; // Optional
+		pipelineInfo.pColorBlendState = &colorBlending;
+		pipelineInfo.pDynamicState = nullptr; // Optional
+		pipelineInfo.layout = pipelineLayout;
+		pipelineInfo.renderPass = renderPass;
+		pipelineInfo.subpass = 0; // we use the first subpass.
+
+		if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create graphics pipeline!");
+		}
+
+		return true;
+	}
+
+	void RVulkanTestRenderer::CreateRenderPass()
+	{
+		// Set up subpass dependencies.
+		VkSubpassDependency dependency = {};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL; // we wait for the pass before this.
+		dependency.dstSubpass = 0; // we need it to be in our subpass.
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; // we need to transition from the pipeline stage where it might still be reading.
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT; 
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT; // into a stage where we can read and write into it.
+
+		// Create color attachment for the swapchain image.
+		VkAttachmentDescription colorAttachment = {};
+		colorAttachment.format = swapChainImageFormat;
+		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR; // clear the image when loading it.
+		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE; // store the image after the render pass.
+		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // we dont know what the initial layout is and we don't care. 
+		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // we want the final layout to be a present source.
+
+		// define color attachment reference.
+		VkAttachmentReference colorAttachmentRef = {};
+		colorAttachmentRef.attachment = 0; // we want the first color attachment.
+		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		// Describe a subpass.
+		VkSubpassDescription subpass = {};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.colorAttachmentCount = 1; // we only have one color attachment.
+		subpass.pColorAttachments = &colorAttachmentRef;
+
+		// Create a render pass.
+		VkRenderPassCreateInfo renderPassInfo = {};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = 1; // we have one attachment.
+		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.subpassCount = 1; // we have one subpass.
+		renderPassInfo.pSubpasses = &subpass;
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency; // we have one dependency in the render pass.
+
+		if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create render pass!");
+		}
+	}
+
+	void RVulkanTestRenderer::CreateFrameBuffers()
+	{
+		//set the vector size to the amount of swapchain images we have.
+		swapChainFramebuffers.resize(swapChainImageViews.size());
+
+		for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+			VkImageView attachments[] = {
+				swapChainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo = {};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = renderPass;
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = swapChainExtent.width;
+			framebufferInfo.height = swapChainExtent.height;
+			framebufferInfo.layers = 1;
+
+			if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to create framebuffer!");
+			}
+		}
+	}
+
+	void RVulkanTestRenderer::CreateCommandPool()
+	{
+		int graphicsQueueIndex = FindGraphicsQueueFamily(physicalDevice);
+
+		VkCommandPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.queueFamilyIndex = graphicsQueueIndex;
+		poolInfo.flags = 0; // Optional
+
+		if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create command pool!");
+		}
+	}
+
+	void RVulkanTestRenderer::CreateCommandBuffers()
+	{
+		CommandBuffers.resize(swapChainFramebuffers.size());
+
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = commandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = (uint32_t)CommandBuffers.size();
+
+		if (vkAllocateCommandBuffers(device, &allocInfo, CommandBuffers.data()) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate command buffers!");
+		}
+
+		// Record command buffers.
+		for (size_t i = 0; i < CommandBuffers.size(); i++) {
+			VkCommandBufferBeginInfo beginInfo = {};
+			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+			beginInfo.pInheritanceInfo = nullptr; // Optional
+
+			//reset command buffer.
+			vkBeginCommandBuffer(CommandBuffers[i], &beginInfo);
+
+			//begin render pass.
+			VkRenderPassBeginInfo renderPassInfo = {};
+			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = renderPass;
+			renderPassInfo.framebuffer = swapChainFramebuffers[i];
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = swapChainExtent;
+
+			// Set clear color.
+			VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+			renderPassInfo.clearValueCount = 1;
+			renderPassInfo.pClearValues = &clearColor;
+
+			// Draw
+			vkCmdBeginRenderPass(CommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+			vkCmdBindPipeline(CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+			VkBuffer vertexBuffers[] = { vertexBuffer };
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(CommandBuffers[i], 0, 1, vertexBuffers, offsets); // bind our vertex buffer.
+			vkCmdBindIndexBuffer(CommandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16); // bind our index buffer.
+			vkCmdBindDescriptorSets(CommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+			vkCmdDrawIndexed(CommandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
+
+			vkCmdEndRenderPass(CommandBuffers[i]);
+
+			// Record the command list.
+			if (vkEndCommandBuffer(CommandBuffers[i]) != VK_SUCCESS) {
+				throw std::runtime_error("failed to record command buffer!");
+			}
+		}
+	}
+
+	void RVulkanTestRenderer::CreateSemaphores()
+	{
+		VkSemaphoreCreateInfo semaphoreInfo = {};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+			vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS) {
+
+			throw std::runtime_error("failed to create semaphores!");
+		}
+	}
 
 	void RVulkanTestRenderer::Render()
 	{
+		// update uniforms.
+		static auto startTime = std::chrono::high_resolution_clock::now();
 
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() / 10.0f;
+
+		UniformBufferObject ubo = {};
+		ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+		ubo.proj[1][1] *= -1;
+
+		void* data;
+		vkMapMemory(device, uniformBufferMemory, 0, sizeof(ubo), 0, &data);
+		memcpy(data, &ubo, sizeof(ubo));
+		vkUnmapMemory(device, uniformBufferMemory);
+
+		// Retrieve next swapchain image.
+		uint32_t imageIndex;
+		VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			RecreateSwapchain();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+			throw std::runtime_error("failed to acquire swap chain image!");
+		}
+
+		// Submit info for render pass.
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		// Wait for the image available semaphore and that the pipeline is in a color output state.
+		VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+
+		// We only want to send one command buffer.
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &CommandBuffers[imageIndex];
+
+		// Set the renderfinished semaphore to be triggered when we finish the command buffer.
+		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+			throw std::runtime_error("failed to submit draw command buffer!");
+		}
+
+		// present our rendered image.
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores; // we need to wait for the rendering finished semaphore to be trigged so we know we can present the image.
+
+		// We want to render to our swapchain.
+		VkSwapchainKHR swapChains[] = { swapChain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &imageIndex;
+		presentInfo.pResults = nullptr; // Optional
+
+		// Present on our present queue.
+		result = vkQueuePresentKHR(presentQueue, &presentInfo);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			//RecreateSwapchain();
+		}
+		else if (result != VK_SUCCESS) {
+			throw std::runtime_error("failed to present swap chain image!");
+		}
+
+		// If we have validation layers, wait for the previous frame to finish before continuing, this lowers fps but fixes validation layer leak while debugging.
+		if (enableValidationLayers)
+		{
+			vkQueueWaitIdle(presentQueue);
+		}
+	}
+
+	void RVulkanTestRenderer::RecreateSwapchain()
+	{
+		vkDeviceWaitIdle(device);
+
+		CleanSwapchain();
+
+		CreateSwapchain();
+		CreateSwapchainImageViews();
+		CreateRenderPass();
+		CreateGraphicsPipeline();
+		CreateFrameBuffers();
+		CreateCommandBuffers();
 	}
 	
+	void RVulkanTestRenderer::CleanSwapchain()
+	{
+		for (size_t i = 0; i < swapChainFramebuffers.size(); i++) {
+			vkDestroyFramebuffer(device, swapChainFramebuffers[i], nullptr);
+		}
+
+		// Destroy shader modules.
+		vkDestroyShaderModule(device, fragShaderModule, nullptr);
+		vkDestroyShaderModule(device, vertShaderModule, nullptr);
+
+
+		vkFreeCommandBuffers(device, commandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+
+		vkDestroyPipeline(device, graphicsPipeline, nullptr);
+		vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+		vkDestroyRenderPass(device, renderPass, nullptr);
+
+		for (size_t i = 0; i < swapChainImageViews.size(); i++) {
+			vkDestroyImageView(device, swapChainImageViews[i], nullptr);
+		}
+
+		vkDestroySwapchainKHR(device, swapChain, nullptr);
+	}
+
+	void RVulkanTestRenderer::CreateVertexAndIndexBuffer()
+	{
+		// create an staging buffer.
+		VkBuffer stagingBuffer;
+		VkDeviceMemory stagingBufferMemory;
+		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
+		CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+
+		void* data;
+		vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+		memcpy(data, vertices.data(), (size_t)bufferSize);
+		vkUnmapMemory(device, stagingBufferMemory);
+
+		// Create gpu-only buffer
+		CreateBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+
+		// Copy the contents from the staging buffer to the gpu-visible vertex buffer.
+		CopyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+
+		// We wait for gpu idle in copybuffer so it's safe to destroy the staging buffer and it's memory now.
+		vkDestroyBuffer(device, stagingBuffer, nullptr);
+		vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+		// INDEX BUFFERS
+		//================================================
+
+		VkDeviceSize iBufferSize = sizeof(indices[0]) * indices.size();
+
+		VkBuffer indexStagingBuffer;
+		VkDeviceMemory IndexStagingBufferMemory;
+		CreateBuffer(iBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, indexStagingBuffer, IndexStagingBufferMemory);
+
+		vkMapMemory(device, IndexStagingBufferMemory, 0, iBufferSize, 0, &data);
+		memcpy(data, indices.data(), (size_t)iBufferSize);
+		vkUnmapMemory(device, IndexStagingBufferMemory);
+
+		CreateBuffer(iBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+
+		CopyBuffer(indexStagingBuffer, indexBuffer, iBufferSize);
+
+		vkDestroyBuffer(device, indexStagingBuffer, nullptr);
+		vkFreeMemory(device, IndexStagingBufferMemory, nullptr);
+
+		// UNIFORM BUFFERS
+		//===============================================
+		VkDeviceSize uBufferSize = sizeof(UniformBufferObject);
+		CreateBuffer(uBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffer, uniformBufferMemory);
+	}
+
+	void RVulkanTestRenderer::CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+		VkCommandBufferAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandPool = commandPool;
+		allocInfo.commandBufferCount = 1;
+
+		// allocate command buffer to copy data between buffers.
+		VkCommandBuffer commandBuffer;
+		vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
+
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; // this will only be used once.
+
+		// Begin the command buffer.
+		vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+		// Set copy region.
+		VkBufferCopy copyRegion = {};
+		copyRegion.srcOffset = 0; // Optional
+		copyRegion.dstOffset = 0; // Optional
+		copyRegion.size = size;
+
+		// Copy the buffer.
+		vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+		// End the command buffer.
+		vkEndCommandBuffer(commandBuffer);
+
+		// Submit the command buffer to the graphics queue (or transfer queue if specified)
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(graphicsQueue); // Lazy wait for idle, to make sure that the staging buffer is still available.
+
+		vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer); // free the command buffer.
+
+	}
+
+	uint32_t RVulkanTestRenderer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+		// Find a suitable memory type which has the properties we require for our vertex buffer.
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+				return i;
+			}
+		}
+
+		throw std::runtime_error("failed to find suitable memory type!");
+	}
+
+	void RVulkanTestRenderer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = size;
+		bufferInfo.usage = usage;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create buffer!");
+		}
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+		VkMemoryAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
+
+		if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate buffer memory!");
+		}
+
+		vkBindBufferMemory(device, buffer, bufferMemory, 0);
+	}
+
+	void RVulkanTestRenderer::CreateDescriptorSetLayout()
+	{
+		// Create discriptor set layout binding for the MVP uniform buffer at binding 0.
+		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+
+		if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create descriptor set layout!");
+		}
+	}
+
+	void RVulkanTestRenderer::CreateDescriptorPool()
+	{
+		VkDescriptorPoolSize poolSize = {}; // create descriptor pool, similar to descriptor heaps in d3d12.
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = 1; // we only have one descriptor, the uniform MVP buffer.
+
+		VkDescriptorPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = 1; // only one descriptor set.
+		//poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; if we want to be able to free individual descriptor sets.
+
+		if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create descriptor pool!");
+		}
+	}
+
+	void RVulkanTestRenderer::CreateDescriptorSet()
+	{
+		VkDescriptorSetLayout layouts[] = { descriptorSetLayout };
+
+		// Create descriptor set allocation info.
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = layouts;
+
+		if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
+			throw std::runtime_error("failed to allocate descriptor set!");
+		}
+
+		// Bind the newly created descriptor set to our uniform buffer.
+		VkDescriptorBufferInfo bufferInfo = {};
+		bufferInfo.buffer = uniformBuffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferObject);
+
+		// Write data to our descriptor set so it references the correct binding in the descriptor set layout.
+		VkWriteDescriptorSet descriptorWrite = {};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = descriptorSet;
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+		descriptorWrite.pImageInfo = nullptr; // Optional
+		descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+		vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+
+	}
 }
 

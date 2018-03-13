@@ -49,7 +49,6 @@ void ApplicationStart(int argc, char*argv[])
 
 	// Create Vulkan surface for this window.
 	GEngine->GetRenderer()->CreateSurface((void*)Window.GetNativeHandle());
-    GEngine->GetRenderer()->CreateSwapchain();
 
 	// Show the window.
 	Window.Show();

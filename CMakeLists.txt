@@ -11,7 +11,7 @@ include(CheckCXXSourceCompiles)
 include(CheckCXXCompilerFlag)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(ProjectGlobalMacros)
-include(GLSLtoSpirV)
+include(GlslToSpirV)
 include(ProjectTestFunctions)
 
 project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES CXX)

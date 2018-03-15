@@ -18,7 +18,7 @@ set (SOURCE
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
 
-target_link_libraries(${MODULE_NAME} PUBLIC RavenMath RavenRendering Vulkan::Vulkan)
+target_link_libraries(${MODULE_NAME} PUBLIC RavenMath RavenRendering Vulkan::Vulkan stb_image assimp)
 if(UNIX AND NOT APPLE)
 	find_package(X11_XCB REQUIRED)
 	target_link_libraries(${MODULE_NAME} PUBLIC sdl2 X11::XCB)

@@ -20,10 +20,10 @@ macro(enable_glsl_to_spirv_compiling trgt)
 
 	foreach(GLSL ${GLSL_SOURCE_FILES})
 	  get_filename_component(FILE_NAME ${GLSL} NAME)
-	  set(SPIRV "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/${FILE_NAME}.spv")
+	  set(SPIRV "${PROJECT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
 	  add_custom_command(
 		OUTPUT ${SPIRV}
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
 		COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
 		DEPENDS ${GLSL})
 	  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
@@ -35,9 +35,10 @@ macro(enable_glsl_to_spirv_compiling trgt)
 		)
 
 	add_custom_command(TARGET Shaders POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${trgt}>/shaders/"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/"
 		COMMAND ${CMAKE_COMMAND} -E copy_directory
+			"${PROJECT_BINARY_DIR}/shaders"
 			"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders"
-			"$<TARGET_FILE_DIR:${trgt}>/shaders"
 			)
+
 endmacro()

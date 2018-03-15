@@ -77,7 +77,8 @@ endif()
 #add third-party modules.
 project_add_3rdparty(json)
 project_add_3rdparty(glm)
-
+project_add_3rdparty(stb)
+project_add_3rdparty(assimp-3.3.1)
 project_add_module(RavenMath)
 project_add_module(RavenSerialization)
 project_add_module(RavenCore)

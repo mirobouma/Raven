@@ -20,8 +20,9 @@ namespace Raven {
 
 	// Simple vertex structure.
 	struct Vertex {
-		glm::vec2 pos;
-		glm::vec3 color;
+		glm::vec3 pos;
+		glm::vec3 normal;
+		glm::vec2 texCoord;
 
 		static VkVertexInputBindingDescription GetBindingDescription() {
 			VkVertexInputBindingDescription bindingDescription = {};
@@ -32,18 +33,23 @@ namespace Raven {
 			return bindingDescription;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {}; // we have two attributes in our vertex, pos and color.
+		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {}; // we have two attributes in our vertex, pos and color.
 
 			attributeDescriptions[0].binding = 0;
 			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 			attributeDescriptions[0].offset = offsetof(Vertex, pos); // the first attribute is our position vector.
 
 			attributeDescriptions[1].binding = 0;
 			attributeDescriptions[1].location = 1;
 			attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			attributeDescriptions[1].offset = offsetof(Vertex, color); // the second attribute is our color vector.
+			attributeDescriptions[1].offset = offsetof(Vertex, normal); // the second attribute is our texture co-ord.
+
+			attributeDescriptions[2].binding = 0;
+			attributeDescriptions[2].location = 2;
+			attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[2].offset = offsetof(Vertex, texCoord); // the second attribute is our texture co-ord.
 
 			return attributeDescriptions;
 		}
@@ -97,31 +103,33 @@ namespace Raven {
 		void CreateSemaphores();
 		void RecreateSwapchain();
 		void CleanSwapchain();
-		void CreateVertexAndIndexBuffer();
+		void CreateUniformBuffer();
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 		void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 		void CreateDescriptorSetLayout();
 		void CreateDescriptorPool();
 		void CreateDescriptorSet();
-
+		void CreateTextureImage();
+		void CreateTextureImageView();
+		VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+		void CreateImage(uint32_t width, uint32_t height, VkFormat format, uint32_t mips, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+		VkCommandBuffer BeginSingleTimeCommands();
+		void EndSingleTimeCommands(VkCommandBuffer& buffer);
 		int FindGraphicsQueueFamily(const VkPhysicalDevice& device);
 		int FindPresentQueueFamily(const VkPhysicalDevice& device, const VkSurfaceKHR& surface);
-
+		void TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+		void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+		void CreateTextureSampler();
 		bool SetupDebugCallback();
+		void CreateDepthResources();
+		void LoadModel();
+		VkFormat FindSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+		bool HasStencilComponent(VkFormat format);
 
 		// Constant vertex array for a quad.
-		const std::vector<Vertex> vertices = {
-			{ { -0.5f, -0.5f },{ 1.0f, 0.0f, 0.0f } },
-			{ { 0.5f, -0.5f },{ 0.0f, 1.0f, 0.0f } },
-			{ { 0.5f, 0.5f },{ 0.0f, 0.0f, 1.0f } },
-			{ { -0.5f, 0.5f },{ 1.0f, 1.0f, 1.0f } }
-		};
-
-		// Indices for the quad.
-		const std::vector<uint16_t> indices = {
-			0, 1, 2, 2, 3, 0
-		};
+		std::vector<Vertex> vertices;
+		std::vector<uint16_t> indices;
 
 	private:
 		VkInstance instance; // instance of the vulkan api.
@@ -153,6 +161,16 @@ namespace Raven {
 		VkDeviceMemory uniformBufferMemory; // memory for uniform buffer.
 		VkDescriptorPool descriptorPool; // descriptor pool.
 		VkDescriptorSet descriptorSet; // descriptor set for uniform buffer.
+
+		VkImage textureImage; // texture image.
+		VkImageView textureImageView; // texture image view.
+		VkDeviceMemory textureImageMemory; // memory for texture image.
+		VkSampler textureSampler; // sampler to sample texture with ani filtering x16
+
+		VkImage depthImage; // depth stencil image
+		VkDeviceMemory depthImageMemory; // memory for depth stencil.
+		VkImageView depthImageView; // depth image view.
+
 
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;

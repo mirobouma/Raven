@@ -1,4 +1,5 @@
-find_library(ASSIMP_LIBRARIES NAMES assimp libassimp.dll.a PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs)
+#find_library(ASSIMP_LIBRARIES NAMES assimp libassimp.dll.a PATHS ${CMAKE_CURRENT_SOURCE_DIR}/libs)
+set(ASSIMP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(ASSIMP REQUIRED)
 
 add_library(assimp INTERFACE)

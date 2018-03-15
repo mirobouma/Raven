@@ -9,11 +9,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include <assimp\Importer.hpp>
-#include <assimp\scene.h>
-#include <assimp\postprocess.h>
-#include <assimp\Logger.hpp> // logger
-#include <assimp\DefaultLogger.hpp> // logger
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/Logger.hpp> // logger
+#include <assimp/DefaultLogger.hpp> // logger
 
 #ifdef PLATFORM_LINUX
 #include "SDL_syswm.h"

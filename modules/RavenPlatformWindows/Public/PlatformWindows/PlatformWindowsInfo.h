@@ -1,12 +1,13 @@
 #pragma once
-#include "Platform/GenericPlatformInfo.h"
+#include "Platform/Defines.h"
+#include <cinttypes>
 
 namespace Raven {
 	/*! 
 	\class RPlatformWindowsInfo
 	\brief Windows implementation of retrieval of misscelanious platform information. 
 	*/
-	class RPlatformWindowsInfo : public RGenericPlatformInfo {
+	class RPlatformWindowsInfo {
 
 		RPlatformWindowsInfo() = default;
 		RPlatformWindowsInfo(const RPlatformWindowsInfo&) = delete; /*!< Delete copy constuctor */

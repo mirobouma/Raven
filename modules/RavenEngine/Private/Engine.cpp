@@ -2,7 +2,7 @@
 #include "Engine/Globals.h"
 
 #include "HAL/Platform.h"
-#include "Platform/WindowSystemInterface.h"
+#include "WindowSystem/WindowSystem.h"
 
 namespace Raven {
 
@@ -27,7 +27,7 @@ namespace Raven {
 	bool REngine::InitializeMinimal()
 	{
 		// Initialize critical systems.
-		RWindowSystemInterface::Initialize();
+		RWindowSystem::Initialize();
 
 		// Initialization succeeded.
 		return true;
@@ -55,7 +55,7 @@ namespace Raven {
 		GEngine->_Renderer->Destroy();
 
 		// Destroy windowing system interface.
-		RWindowSystemInterface::Destroy();
+		RWindowSystem::Destroy();
 
 		// Initialize platform specific systems.
 		Raven::RPlatform::Destroy();

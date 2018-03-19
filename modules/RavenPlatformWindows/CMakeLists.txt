@@ -3,7 +3,6 @@ set(MODULE_NAME "RavenPlatformWindows")
 
 set (SourceGroup_PublicIncludes
 	"Public/PlatformWindows/PlatformWindows.h"
-	"Public/PlatformWindows/PlatformWindowsApplication.h"
 	"Public/PlatformWindows/PlatformWindowsInfo.h"
 	"Public/PlatformWindows/PlatformWindowsWindow.h"
 	"Public/PlatformWindows/Util/WString.h"
@@ -14,7 +13,6 @@ set (SourceGroup_Source
 	"Private/PlatformWindows.cpp"
 	"Private/PlatformWindowsInfo.cpp"
 	"Private/PlatformWindowsWindow.cpp"
-	"Private/PlatformWindowsApplication.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

@@ -1,38 +1,30 @@
 #pragma once
-#include "Core/Service/Service.h"
-#include "Platform/GenericPlatformWindow.h"
 #include "Platform/WindowSystemInterface.h"
 
 #include <cinttypes>
 #include <memory>
 #include <thread>
 
-namespace Raven {
+#include "Platform/Defines.h"
 
-	/*!
-	\enum EPlatformType
-	\brief enumerator used to determine which platform we're running on.
-	*/
-	enum class EPlatformType {
-		EPlatformType_Undefined = 0, /*!< Undefined platform. */
-		EPlatformType_Windows, /*!< Windows based platform. */
-		EPlatformType_Linux, /*!< Linux based platform. */
-	};
+namespace Raven {
 
 	/*! 
 	\class RGenericPlatformInfo
 	\brief The RGenericPlatformInfo class is a generic implementation of platform-specific information.
 	*/
 	class RGenericPlatformInfo {
-	public:
-		RGenericPlatformInfo() = delete;
-		RGenericPlatformInfo(const RGenericPlatformInfo&) = delete; /*!< Delete copy constuctor */
-		RGenericPlatformInfo& operator= (const RGenericPlatformInfo&) = delete; /*!< Delete assignment constuctor */
+	protected:
+		RGenericPlatformInfo() = delete; /*!< Pure static class, so can't instantiate. */
+		RGenericPlatformInfo(const RGenericPlatformInfo&) = delete; /*!< Delete copy constuctor. */
+		RGenericPlatformInfo& operator= (const RGenericPlatformInfo&) = delete; /*!< Delete assignment constuctor. */
 
-		/*! Returns page size of this platform in bytes (2mb by default).
+	public:
+
+		/*! Returns page size of this platform in kb (2mb by default).
 		\details Used in custom memory allocators to define the optimal allocation size for pages.
 		*/
-		static uint32_t GetPageSize() { return 2147483648; };
+		static uint32_t GetPageSize() { return 2048; };
 
 		/*! Ask the platform for the number of available logical processors.
 		\return Amount of available logical processor cores.
@@ -44,6 +36,8 @@ namespace Raven {
 		\sa EPlatform
 		*/
 		static constexpr EPlatformType GetPlatformType() { return EPlatformType::EPlatformType_Undefined; }
-
 	};
+
+	// HAL abstraction
+	typedef RGenericPlatformInfo RPlatformInfo;
 }

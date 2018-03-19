@@ -1,12 +1,11 @@
 #pragma once
-#include "Platform/GenericPlatform.h"
 
 namespace Raven {
 	/*!
 	\class RPlatformLinux
 	\brief Linux platform interface.
 	*/
-	class RPlatformLinux : public RGenericPlatform {
+	class RPlatformLinux {
 	protected:
 		RPlatformLinux() = default;
 		RPlatformLinux(const RPlatformLinux&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a platform. */

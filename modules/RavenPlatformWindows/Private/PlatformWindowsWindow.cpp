@@ -1,7 +1,6 @@
 #include "PlatformWindows/PlatformWindowsWindow.h"
 #include "PlatformWindows/PlatformWindows.h"
 #include "PlatformWindows/Util/WString.h"
-#include "Platform/WindowSystemInterface.h"
 
 #include <locale>
 
@@ -17,18 +16,33 @@ namespace Raven {
 		delete p;
 	}
 
-	RPlatformWindowsWindow::RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags) 
-		: RGenericPlatformWindow(title, size, position, flags), _winHandle(new WindowsWinHandle())
+	RPlatformWindowsWindow::RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
+		: _winHandle(new WindowsWinHandle()), _handler(handler)
 	{
+		// Set default properties.
+		InternalInitialize(title, Math::FRect(size, position), flags);
+	}
+
+	RPlatformWindowsWindow::RPlatformWindowsWindow(IWindowMessageHandler* handler) : _winHandle(new WindowsWinHandle()), _handler(handler)
+	{
+		// Set default properties.
+		InternalInitialize(
+			"New Window <Linux>",
+			Math::FRect(Math::FVector2(800, 600), Math::FVector2(0, 0)),
+			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
+		);
+
+
+	} 
+
+	void RPlatformWindowsWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) {
+		_geometry = geometry;
+		_flags = flags;
+		_title = title;
+
 		// Create the window.
 		Create();
 	}
-
-	RPlatformWindowsWindow::RPlatformWindowsWindow() : RGenericPlatformWindow(), _winHandle(new WindowsWinHandle())
-	{
-		// Create the window.
-		Create();
-	} 
 
 	void RPlatformWindowsWindow::Show()
 	{
@@ -94,6 +108,11 @@ namespace Raven {
 			GetModuleHandle(nullptr),    // application handle
 			this); 
 
+		if (_winHandle->handle != nullptr)
+		{
+			_handler->HandleWindowCreate(this);
+		}
+
 		// Show the window if it should be shown by default.
 		if (_flags & EPlatformWindowFlags_Shown)
 		{
@@ -131,6 +150,11 @@ namespace Raven {
 	{
 		SetWindowTextW(_winHandle->handle, Util::String::ConvertStringToWString(title).c_str());
 		_title = title;
+	}
+
+	void RPlatformWindowsWindow::OnCreate()
+	{
+		// Unimplemented.
 	}
 
 	void RPlatformWindowsWindow::OnResize(int width, int height)

@@ -1,14 +1,15 @@
 #pragma once
-#include "Platform/GenericPlatformInfo.h"
+#include <cinttypes>
+#include "Platform/Defines.h"
 
 namespace Raven {
 	/*! 
 	\class RPlatformLinuxInfo
-	\brief Linux implementation of the platform interface. 
+	\brief The RPlatformLinuxInfo class is a linux implementation of platform-specific information.
 	*/
-	class RPlatformLinuxInfo : public RGenericPlatformInfo {
+	class RPlatformLinuxInfo {
 
-		RPlatformLinuxInfo() = default;
+		RPlatformLinuxInfo() = delete; /*!< Pure static class, so can't instantiate. */
 		RPlatformLinuxInfo(const RPlatformLinuxInfo&) = delete; /*!< Delete copy constuctor */
 		RPlatformLinuxInfo& operator= (const RPlatformLinuxInfo&) = delete; /*!< Delete assignment constuctor */
 

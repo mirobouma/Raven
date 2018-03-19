@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform/GenericPlatformWindow.h"
+#include "Platform/Interfaces/IPlatformWindow.h"
 #include <memory>
 
 namespace Raven {
@@ -17,7 +17,7 @@ namespace Raven {
 	\class RPlatformWindowsWindow
 	\brief Native windows window.
 	*/
-	class RPlatformWindowsWindow : public RGenericPlatformWindow {
+	class RPlatformWindowsWindow : public IPlatformWindow {
 	public:
 		/*! Initialize the window with the specified position, location and flags.
 		\param size size of the window.
@@ -25,8 +25,8 @@ namespace Raven {
 		\param flags Flags for window creation.
 		\sa EPlatformWindowFlags
 		*/
-		RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags);
-		RPlatformWindowsWindow(); /*!< Initialize window with default location and size. */
+		RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
+		RPlatformWindowsWindow(IWindowMessageHandler* handler); /*!< Initialize window with default location and size. */
 		~RPlatformWindowsWindow() {}
 
 		/*! Show the window. */
@@ -41,18 +41,36 @@ namespace Raven {
 		/*! Set window title. */
 		virtual void SetTitle(const char* title);
 
+		/*! Get size of the window. */
+		virtual const Math::FVector2& GetSize() const { return _geometry.Size; }
+
+		/*! Get position of the window. */
+		virtual const Math::FVector2& GetPosition() const { return _geometry.Position; }
+
+		/*! Get title of the window. */
+		virtual const char* GetTitle() const { return _title.c_str(); }
+
 		/*! Get native window handle. */
 		virtual RWindowHandle GetNativeHandle() override;
 
+		/*! Get message handler (required for windows message handling). */
+		IWindowMessageHandler* GetMessageHandler() const { return _handler; }
+
 	protected:
-		/*! Friend window system interface so it can call the HandlewindowMessages method. */
-		friend class RWindowSystemInterface;
+		/*! Expose hidden functions to our windowing system. */
+		friend class RWindowSystem;
+
+		/*! Internal initialize function, should never be called directly. */
+		void InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags);
 
 		/*! Handle window messages from the platform. */
 		static void HandleWindowMessages();
 
 		/*! Create window (internal) */
 		virtual void Create() override;
+
+		/*! Callback function when the window is created. */
+		virtual void OnCreate() override;
 
 		/*! Callback function when the window is resized. */
 		virtual void OnResize(int width, int height) override;
@@ -68,6 +86,14 @@ namespace Raven {
 
 		/*! Internal handle to the window. Using Pimpl idiom to hide windows-specific implementation. */
 		std::unique_ptr<WindowsWinHandle, WindowsWinHandleDeleter> _winHandle;
+
+		/*! Callback function when the window posts a quit message. */
+		virtual void OnClose() override {};
+
+		std::string _title; /*!< Title of the window. */
+		Math::FRect _geometry; /*!< Internal representation of the window geometry. */
+		EPlatformWindowFlags _flags; /*!< Internal cache of flags enabled on this window. */
+		IWindowMessageHandler* _handler; /*!< Internal reference to the window message handler associated with this window. */
 	};
 
 	typedef RPlatformWindowsWindow RPlatformWindow;

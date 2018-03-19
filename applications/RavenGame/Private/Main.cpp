@@ -1,8 +1,9 @@
 #include "Engine/Engine.h"
 #include "Engine/Globals.h"
 
+#include "WindowSystem/WindowSystem.h"
+
 #include "HAL/Platform.h"
-#include "HAL/PlatformApplication.h"
 #include "HAL/PlatformWindow.h"
 
 #include "RenderingVulkan/TestVulkanRenderer.h"
@@ -34,39 +35,43 @@ void ApplicationStart(int argc, char*argv[])
 	GEngine->InitializeMinimal();
 	GEngine->InitializeSystems();
 
-	// Create raven application.
-	RApplication App;
-
-	// Initialize application.
-	App.Initialize();
+	IPlatformWindow* Window;
 
 	// Create window.
-	Raven::RPlatformWindow Window(
-		"Raven Game Engine <Vulkan>", 
-		FVector2(1024, 800), 
-		FVector2(0,0), 
-		EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition);
+	if (GWindowSystem != nullptr)
+	{
+		Window = GWindowSystem->CreateAWindow<Raven::RPlatformWindow>(
+			"Raven Game Engine <Vulkan>",
+			FVector2(1024, 800),
+			FVector2(0, 0),
+			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition);
+	}
 
-	// Create Vulkan surface for this window.
-	GEngine->GetRenderer()->CreateSurface((void*)Window.GetNativeHandle());
+	if (Window != nullptr)
+	{
+		// Create Vulkan surface for this window.
+		GEngine->GetRenderer()->CreateSurface((void*)Window->GetNativeHandle());
 
-	// Show the window.
-	Window.Show();
+		// Show the window.
+		Window->Show();
+	}
 
 	// Main loop
 	while (true)
 	{
-		App.Update();
-		GEngine->Render();
+		GWindowSystem->ProcessWindowMessages();
 
-		if (Window.ShouldQuit())
+		// All windows are destroyed, therefore we should shut down.
+		if (GWindowSystem->GetNumAliveWindows() == 0)
 		{
 			break;
 		}
+
+		GEngine->Render();
+
 	}
 
-	// Destroy Application.
-	App.Destroy();
+	delete Window;
 
 	// Destroy platform specific systems.
 	REngine::Destroy();

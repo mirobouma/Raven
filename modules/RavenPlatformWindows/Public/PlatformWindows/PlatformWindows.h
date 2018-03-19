@@ -1,5 +1,4 @@
 #pragma once
-#include "Platform/GenericPlatform.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -12,7 +11,7 @@ namespace Raven {
 	\class RPlatformWindows
 	\brief Windows platform interface.
 	*/
-	class RPlatformWindows : public RGenericPlatform {
+	class RPlatformWindows {
 	protected:
 		RPlatformWindows() = default;
 		RPlatformWindows(const RPlatformWindows&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a platform. */

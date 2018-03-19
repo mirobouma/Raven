@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Platform/GenericPlatform.h"
-
 #if defined(_MSC_VER)
 	#if defined(__cplusplus)
 		#ifdef RAVEN_EXPORTS 
@@ -29,7 +27,8 @@
 
 #ifdef PLATFORM_WINDOWS
 	#include "PlatformWindows/PlatformWindows.h"
-#endif
-#ifdef PLATFORM_LINUX
+#elif PLATFORM_LINUX
 	#include "PlatformLinux/PlatformLinux.h"
+#else
+	#include "Platform/Generic/GenericPlatform.h"
 #endif

@@ -1,20 +1,33 @@
 #include "PlatformLinux/PlatformLinuxWindow.h"
-#include "Platform/WindowSystemInterface.h"
-
 #include "SDL.h"
 
 namespace Raven 
 {
-	RPlatformLinuxWindow::RPlatformLinuxWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags) : RGenericPlatformWindow(title, size, position, flags)
+
+	RPlatformLinuxWindow::RPlatformLinuxWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler) : _handler(handler)
 	{
-		// Create the window.
-		Create();
+		// Set default properties.
+		InternalInitialize(title, Math::FRect(size, position), flags);
 	}
 
-	RPlatformLinuxWindow::RPlatformLinuxWindow() : RGenericPlatformWindow()
+	RPlatformLinuxWindow::RPlatformLinuxWindow(IWindowMessageHandler* handler) : _handler(handler)
 	{
+		// Set default properties.
+		InternalInitialize(
+			"New Window <Linux>",
+			Math::FRect(Math::FVector2(800, 600), Math::FVector2(0, 0)),
+			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
+		);
+	}
+
+	void RPlatformLinuxWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) {
+		_geometry = geometry;
+		_flags = flags;
+		_title = title;
+
 		// Create the window.
 		Create();
+
 	}
 
 	void RPlatformLinuxWindow::Show()
@@ -73,16 +86,13 @@ namespace Raven
 			_geometry.Size.y,
 			flags
 		);
+
+		// Set pointer to this window instance.
+		SDL_SetWindowData(_window, "wnd", this);
 	}
 
 	void RPlatformLinuxWindow::HandleWindowMessages()
 	{
-		if (GWindowSystemInterface == nullptr)
-		{
-			// Window system interface doesn't exist so we can't handle messages.
-			return;
-		}
-
 		SDL_Event event;
 
 		while (SDL_PollEvent(&event))
@@ -92,17 +102,20 @@ namespace Raven
                     case SDL_WINDOWEVENT:
                     {
                         SDL_Window* sdl_win = SDL_GetWindowFromID(event.window.windowID);
-                        RGenericPlatformWindow* window = GWindowSystemInterface->GetWindowByNativeHandle(sdl_win);
+						RPlatformLinuxWindow* window = (RPlatformLinuxWindow*)SDL_GetWindowData(sdl_win, "wnd");
 
-                            switch (event.window.event)
-                            {
-                                case SDL_WINDOWEVENT_CLOSE:
-                                {
-                                    GWindowSystemInterface->OnMessageQuit(window);
+						if (window != nullptr)
+						{
+							switch (event.window.event)
+							{
+							case SDL_WINDOWEVENT_CLOSE:
+							{
+								window->_handler->HandleWindowClose(window);
 
-                                }
-                                return;
-                            }
+							}
+							return;
+							}
+						}
                     }
                     break;
 				}
@@ -120,6 +133,11 @@ namespace Raven
 		SDL_SetWindowTitle(_window, title);
 	}
 	
+	void RPlatformLinuxWindow::OnCreate()
+	{
+		// Unimplemented.
+	}
+
 	void RPlatformLinuxWindow::OnResize(int width, int height)
 	{
 		// Unimplemented.

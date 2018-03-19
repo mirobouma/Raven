@@ -5,7 +5,6 @@ set (SourceGroup_PublicIncludes
 	"Public/PlatformLinux/PlatformLinux.h"
 	"Public/PlatformLinux/PlatformLinuxInfo.h"
 	"Public/PlatformLinux/PlatformLinuxWindow.h"
-	"Public/PlatformLinux/PlatformLinuxApplication.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
@@ -13,7 +12,6 @@ set (SourceGroup_Source
 	"Private/PlatformLinux.cpp"
 	"Private/PlatformLinuxInfo.cpp"
 	"Private/PlatformLinuxWindow.cpp"
-	"Private/PlatformLinuxApplication.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

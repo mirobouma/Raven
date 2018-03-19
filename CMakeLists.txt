@@ -18,7 +18,7 @@ project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES CXX)
 enable_testing()
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
-# Check for C++11/14 support
+# Check for C++11/14/17 support
 project_check_cpp_version()
 
 ## Snippets to enforce a C++ version
@@ -90,7 +90,7 @@ project_add_module(RavenRendering)
 project_add_module(RavenRenderingVulkan)
 project_add_module(RavenUI)
 project_add_module(RavenEngine)
-
+project_add_module(RavenWindowSystem)
 if (WIN32)
 	project_add_module(RavenPlatformWindows)
 	project_add_module(RavenRenderingDX12)

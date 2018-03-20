@@ -3,11 +3,19 @@ set(MODULE_NAME "RavenRenderingVulkan")
 
 set (SourceGroup_PublicIncludes
 	"Public/RenderingVulkan/TestVulkanRenderer.h"
+	"Public/RenderingVulkan/VulkanRenderer.h"
+	"Public/RenderingVulkan/Vulkan.h"
+	"Public/RenderingVulkan/VulkanBuffer.h"
+	"Public/RenderingVulkan/VulkanImage.h"
+	"Public/RenderingVulkan/VulkanRenderer.h"
+	"Public/RenderingVulkan/VulkanSwapChain.h"
+	"Public/RenderingVulkan/VulkanDevice.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
 	"Private/TestVulkanRenderer.cpp"
+	"Private/VulkanRenderer.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

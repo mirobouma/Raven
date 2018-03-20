@@ -2,9 +2,9 @@
 #include "Engine/Globals.h"
 
 #include "WindowSystem/WindowSystem.h"
+#include "Engine/Windows/RenderableWindow.h"
 
 #include "HAL/Platform.h"
-#include "HAL/PlatformWindow.h"
 
 #include "RenderingVulkan/TestVulkanRenderer.h"
 
@@ -40,7 +40,7 @@ void ApplicationStart(int argc, char*argv[])
 	// Create window.
 	if (GWindowSystem != nullptr)
 	{
-		Window = GWindowSystem->CreateAWindow<Raven::RPlatformWindow>(
+		Window = GWindowSystem->CreateAWindow<Raven::RRenderableWindow>(
 			"Raven Game Engine <Vulkan>",
 			FVector2(1024, 800),
 			FVector2(0, 0),
@@ -49,9 +49,6 @@ void ApplicationStart(int argc, char*argv[])
 
 	if (Window != nullptr)
 	{
-		// Create Vulkan surface for this window.
-		GEngine->GetRenderer()->CreateSurface((void*)Window->GetNativeHandle());
-
 		// Show the window.
 		Window->Show();
 	}

@@ -4,14 +4,14 @@ set(MODULE_NAME "RavenEngine")
 set (SourceGroup_PublicIncludes
 	"Public/Engine/Engine.h"
 	"Public/Engine/Globals.h"
-	"Public/Engine/Windows/GameWindow.h"
+	"Public/Engine/Windows/RenderableWindow.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
 	"Private/Engine.cpp"
 	"Private/Globals.cpp"
-	"Private/Windows/GameWindow.cpp"
+	"Private/Windows/RenderableWindow.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

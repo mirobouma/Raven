@@ -24,28 +24,28 @@ namespace Raven {
 		~RGenericPlatformWindow();
 
 		/*! Show the window. */
-		virtual void Show() {}
+		virtual void Show() override final {}
 
 		/*! Hide the window. */
-		virtual void Hide() {}
+		virtual void Hide() override final {}
 
 		/*! Raise the window to the top. */
-		virtual void Raise() {}
+		virtual void Raise() override final {}
 
 		/*! Set window title. */
-		virtual void SetTitle(const char* title) {}
+		virtual void SetTitle(const char* title) override final {}
 
 		/*! Get size of the window. */
-		virtual const Math::FVector2& GetSize() const { return _geometry.Size; }
+		virtual const Math::FVector2& GetSize() const override final { return _geometry.Size; }
 
 		/*! Get position of the window. */
-		virtual const Math::FVector2& GetPosition() const { return _geometry.Position; }
+		virtual const Math::FVector2& GetPosition() const override final { return _geometry.Position; }
 
 		/*! Get native window handle. */
-		virtual RWindowHandle GetNativeHandle() { return nullptr; }
+		virtual RWindowHandle GetNativeHandle() override final { return nullptr; }
 
 		/*! Get title of the window. */
-		virtual const char* GetTitle() const { return _title.c_str(); }
+		virtual const char* GetTitle() const override final { return _title.c_str(); }
 
 	protected:
 		/*! Expose hidden functions to our windowing system. */
@@ -58,7 +58,7 @@ namespace Raven {
 		static void HandleWindowMessages() {};
 
 		/*! Create window (internal) */
-		virtual void Create();
+		virtual void Create() override final;
 
 		/*! Callback function when the window is focussed. */
 		virtual void OnCreate() {};

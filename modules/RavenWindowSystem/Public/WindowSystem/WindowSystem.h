@@ -33,6 +33,13 @@ namespace Raven {
 
 			// Instantiate the window.
 			T* window = new T(std::forward<Args>(args)..., this);
+
+			// Handle window creation.
+			if (window != nullptr)
+			{
+				window->Create();
+			}
+
 			return window;
 
 			//}
@@ -47,7 +54,7 @@ namespace Raven {
 		void ProcessWindowMessages();
 
 		/*! Returns the amount of alive windows. */
-		uint32_t GetNumAliveWindows() const { return _Windows.size(); }
+		uint32_t GetNumAliveWindows() const { return static_cast<uint32_t>(_Windows.size()); }
 
 	protected:
 

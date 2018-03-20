@@ -16,7 +16,8 @@
 
 #define GET_VK_FUNC(I, T) (PFN_ ## T)vkGetInstanceProcAddr(I, #T)
 
-namespace Raven {
+namespace Raven 
+{
 
 	// Simple vertex structure.
 	struct Vertex {

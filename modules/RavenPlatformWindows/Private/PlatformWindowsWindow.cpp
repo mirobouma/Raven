@@ -39,9 +39,6 @@ namespace Raven {
 		_geometry = geometry;
 		_flags = flags;
 		_title = title;
-
-		// Create the window.
-		Create();
 	}
 
 	void RPlatformWindowsWindow::Show()

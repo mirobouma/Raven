@@ -83,8 +83,14 @@ namespace Raven
 			flags
 		);
 
-		// Set pointer to this window instance.
-		SDL_SetWindowData(_window, "wnd", this);
+        if(_window != nullptr) {
+
+            // Set pointer to this window instance.
+            SDL_SetWindowData(_window, "wnd", this);
+
+            // Handle window creation.
+            _handler->HandleWindowCreate(this);
+        }
 	}
 
 	void RPlatformLinuxWindow::HandleWindowMessages()

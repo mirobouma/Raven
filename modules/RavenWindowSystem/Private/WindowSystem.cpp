@@ -1,7 +1,6 @@
 #include "WindowSystem/WindowSystem.h"
 #include "HAL/PlatformWindow.h"
 #include <algorithm>
-#include "..\Public\WindowSystem\WindowSystem.h"
 
 namespace Raven 
 {

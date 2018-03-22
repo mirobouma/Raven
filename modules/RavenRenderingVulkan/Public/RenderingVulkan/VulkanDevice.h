@@ -25,14 +25,17 @@ namespace Raven
 	/*! \struct FPhysicalVulkanDevice
 	\brief Wrapper object around a vulkan physical device.
 	*/
-	struct FPhysicalVulkanDevice
+	struct FVulkanPhysicalDevice
 	{
-		VkPhysicalDevice								PhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
-		VkPhysicalDeviceProperties						Properties; /*!< Properties of this physical device. */
-		VkPhysicalDeviceFeatures						Features; /*!< Features that this physical device supports. */
-		VkPhysicalDeviceMemoryProperties				MemoryProperties; /*!< Memory properties of this physical device. */
-		std::vector<VkQueueFamilyProperties>			QueueFamilyProperties; /*!< Queue family properties of this physical device. */
-		std::vector<VkExtensionProperties>				SupportedExtensions; /*!< Extensions that this physical device supports. */
+		VkPhysicalDevice						PhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
+		VkPhysicalDeviceProperties				Properties; /*!< Properties of this physical device. */
+		VkPhysicalDeviceFeatures				Features; /*!< Features that this physical device supports. */
+		VkPhysicalDeviceMemoryProperties		MemoryProperties; /*!< Memory properties of this physical device. */
+		std::vector<VkQueueFamilyProperties>	QueueFamilyProperties; /*!< Queue family properties of this physical device. */
+		std::vector<VkExtensionProperties>		SupportedExtensions; /*!< Extensions that this physical device supports. */
+
+        /*! If a vulkan function requires the VkPhysicalDevice and we pass the FVulkanPhysicalDevice object, return PhysicalDevice. */
+        explicit operator VkPhysicalDevice() { return PhysicalDevice; }
 	};
 
 	/*! \struct FVulkanDevice
@@ -45,8 +48,11 @@ namespace Raven
 		VkQueue						ComputeQueue; /*!< compute queue. */
 		VkQueue						TransferQueue; /*!< transfer queue. */
 		FQueueFamilyIndices			QueueIndices; /*!< Queue indices on the physical device. */
-		FPhysicalVulkanDevice*		PhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
+		FVulkanPhysicalDevice*		PhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
 		VkPhysicalDeviceFeatures	EnabledFeatures;/*!< Features that have been enabled for use on the physical device. */
+
+        /*! If a vulkan function requires the VkDevice and we pass the FVulkanDevice object, return Device. */
+        explicit operator VkDevice() { return Device; }
 	};
 
 }

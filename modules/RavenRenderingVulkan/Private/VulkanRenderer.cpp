@@ -32,7 +32,7 @@ namespace Raven
 			}
 		}
 
-		// Query all available GPU's and store them in the mGpus vector.
+		// Query all available GPU's and store them in the mGPUs vector.
 		result = QueryAvailablePhysicalDevices();
 		if (result != RR_SUCCESS)
 		{
@@ -40,7 +40,7 @@ namespace Raven
 		}
 
 		// Pick most suitable physical device.
-		FPhysicalVulkanDevice* PhysicalDevice;
+		FVulkanPhysicalDevice* PhysicalDevice;
 		result = PickPhysicalDevice(&PhysicalDevice);
 		if (result != RR_SUCCESS)
 		{
@@ -255,7 +255,7 @@ namespace Raven
 		}
 
 		// Resize the gpus vector to hold all physical devices.
-		mGpus.resize(deviceCount);
+		mGPUs.resize(deviceCount);
 
 		// Get the list of the physical devices we have.
 		std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -263,44 +263,44 @@ namespace Raven
 
 		for (uint32_t i = 0; i < deviceCount; i++)
 		{
-			mGpus[i] = FPhysicalVulkanDevice();
+			mGPUs[i] = FVulkanPhysicalDevice();
 
 			// Fill our physical device structures.
-			mGpus[i].PhysicalDevice = devices[i];
+			mGPUs[i].PhysicalDevice = devices[i];
 
 			// Query device properties.
-			vkGetPhysicalDeviceProperties(devices[i], &mGpus[i].Properties);
+			vkGetPhysicalDeviceProperties(devices[i], &mGPUs[i].Properties);
 
 			// Query device memory properties.
-			vkGetPhysicalDeviceMemoryProperties(devices[i], &mGpus[i].MemoryProperties);
+			vkGetPhysicalDeviceMemoryProperties(devices[i], &mGPUs[i].MemoryProperties);
 
 			// Query device features.
-			vkGetPhysicalDeviceFeatures(devices[i], &mGpus[i].Features);
+			vkGetPhysicalDeviceFeatures(devices[i], &mGPUs[i].Features);
 
 			// Get amount of available queue families.
 			uint32_t queueFamilyCount = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
 
 			// Get the list of queue families.
-			mGpus[i].QueueFamilyProperties.resize(queueFamilyCount);
-			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, mGpus[i].QueueFamilyProperties.data());
+			mGPUs[i].QueueFamilyProperties.resize(queueFamilyCount);
+			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, mGPUs[i].QueueFamilyProperties.data());
 
 			// query the amount of extensions this physical device supports.
 			uint32_t extensionCount;
 			vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, nullptr);
 
 			// Retrieve the extension list.
-			mGpus[i].SupportedExtensions.resize(extensionCount);
-			vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, mGpus[i].SupportedExtensions.data());
+			mGPUs[i].SupportedExtensions.resize(extensionCount);
+			vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, mGPUs[i].SupportedExtensions.data());
 		}
 
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::PickPhysicalDevice(FPhysicalVulkanDevice** ppDevice)
+	ERenderResult RVulkanRenderer::PickPhysicalDevice(FVulkanPhysicalDevice** ppDevice)
 	{
 		// Safety check to make sure we have retrieved all information about the physical devices.
-		if (mGpus.size() == 0)
+		if (mGPUs.size() == 0)
 		{
 			ERenderResult result = QueryAvailablePhysicalDevices();
 			if (result != RR_SUCCESS)
@@ -315,10 +315,10 @@ namespace Raven
 		};
 
 		// Find the most suitable physical device.
-		FPhysicalVulkanDevice* mostSuitableDevice = nullptr;
+		FVulkanPhysicalDevice* mostSuitableDevice = nullptr;
 		uint32_t deviceScore = 0;
 
-		for (auto& candidate : mGpus) 
+		for (auto& candidate : mGPUs)
 		{
 			// Calculate score for this device.
 			uint32_t score = CalculatePhysicalDeviceScore(&candidate, deviceExtensions);
@@ -342,7 +342,7 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	FQueueFamilyIndices RVulkanRenderer::RetrieveQueueFamilyIndices(const FPhysicalVulkanDevice* pDevice)
+	FQueueFamilyIndices RVulkanRenderer::RetrieveQueueFamilyIndices(const FVulkanPhysicalDevice* pDevice)
 	{
 		FQueueFamilyIndices indices;
 		indices.GraphicsQueueIndex = RetrieveQueueFamilyIndex(pDevice, VK_QUEUE_GRAPHICS_BIT);
@@ -352,7 +352,7 @@ namespace Raven
 		return indices;
 	}
 
-	uint32_t RVulkanRenderer::RetrieveQueueFamilyIndex(const FPhysicalVulkanDevice* pDevice, VkQueueFlags flags)
+	uint32_t RVulkanRenderer::RetrieveQueueFamilyIndex(const FVulkanPhysicalDevice* pDevice, VkQueueFlags flags)
 	{
 		// Try to find a dedicated compute queue.
 		if (flags & VK_QUEUE_COMPUTE_BIT)
@@ -398,7 +398,7 @@ namespace Raven
 		return UINT32_MAX;
 	}
 
-	uint32_t RVulkanRenderer::CalculatePhysicalDeviceScore(const FPhysicalVulkanDevice* pDevice, const std::vector<const char*>& rRequiredDeviceExtensions)
+	uint32_t RVulkanRenderer::CalculatePhysicalDeviceScore(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rRequiredDeviceExtensions)
 	{
 		uint32_t score = 0;
 
@@ -442,7 +442,7 @@ namespace Raven
 		return score;
 	}
 
-	ERenderResult RVulkanRenderer::CreateLogicalDevice(FPhysicalVulkanDevice* pPhysicalDevice)
+	ERenderResult RVulkanRenderer::CreateLogicalDevice(FVulkanPhysicalDevice* pPhysicalDevice)
 	{
 		// Find queue indices.
 		mDevice.QueueIndices = RetrieveQueueFamilyIndices(pPhysicalDevice);
@@ -528,7 +528,7 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	bool RVulkanRenderer::HasDeviceExtensionSupport(const FPhysicalVulkanDevice* pDevice, const std::vector<const char*>& rDeviceExtensions)
+	bool RVulkanRenderer::HasDeviceExtensionSupport(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rDeviceExtensions)
 	{
 		// Go over the extensions and remove them if we support it. If the list is empty at the end, it means we support all extensions.
 		std::set<std::string> requiredExtensions(rDeviceExtensions.begin(), rDeviceExtensions.end());
@@ -547,6 +547,18 @@ namespace Raven
 		{
 			return RR_SUCCESS;
 		}
+
+		if(mShouldEnableValidationLayers)
+		{
+			// Destroy debugging report callback.
+			DestroyDebugReportCallbackExtention(mInstance, mDebuggingCallback, nullptr);
+		}
+
+		// Destroy our logical device.
+		vkDestroyDevice(mDevice, nullptr);
+
+		// Destroy our Vulkan instance.
+		vkDestroyInstance(mInstance, nullptr);
 
 		return RR_SUCCESS;
 	}

@@ -43,7 +43,7 @@ namespace Raven
 
 		#if defined(__APPLE__) || defined(__linux__)
 
-		void aligned_free(void* pointer) {
+		void AlignedFree(void* pointer) {
 			free(pointer);
 		}
 

@@ -8,7 +8,7 @@ namespace Raven
 	struct IPlatformThreadHandle {};
 
 	/*! Entry point typdef. */
-	typedef unsigned int (__stdcall RThreadStart)(void *arg);
+	typedef unsigned int (RThreadStart)(void *arg);
 
 	/*! Entry point for fibers typdef. */
 	typedef void (*RFiberStart)(void *arg);

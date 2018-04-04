@@ -7,12 +7,12 @@ namespace Raven {
 	\class RPlatformLinuxInfo
 	\brief The RPlatformLinuxInfo class is a linux implementation of platform-specific information.
 	*/
-	class RPlatformLinuxInfo {
-
+	class RPlatformLinuxInfo
+	{
 		RPlatformLinuxInfo() = delete; /*!< Pure static class, so can't instantiate. */
 		RPlatformLinuxInfo(const RPlatformLinuxInfo&) = delete; /*!< Delete copy constuctor */
 		RPlatformLinuxInfo& operator= (const RPlatformLinuxInfo&) = delete; /*!< Delete assignment constuctor */
-
+	public:
 		/*! Returns page size of this platform.
 		\details Used in custom memory allocators to define the optimal allocation size for pages.
 		*/

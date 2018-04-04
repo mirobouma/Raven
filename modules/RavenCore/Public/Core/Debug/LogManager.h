@@ -64,7 +64,7 @@ namespace Raven {
 	RLogManager::Log(LS_Warning, message, ##__VA_ARGS__)
 
 #define RLOG_ERROR(message, ...) \
-	RLogManager::Log(LS_Error, std::string(message).append(" at line ").append(STRINGIZE(__LINE__)).append(" of file ").append(STRINGIZE(__FILE__)).append(" in function ").append(##__FUNCTION__), ##__VA_ARGS__)
+	RLogManager::Log(LS_Error, std::string(message).append(" at line ").append(STRINGIZE(__LINE__)).append(" of file ").append(STRINGIZE(__FILE__)).append(" in function ").append(__FUNCTION__ ), ##__VA_ARGS__)
 
 #else
 #define RLOG(severity, message, ...) ((void)0)

@@ -2,7 +2,6 @@
 
 #include "Platform/Interfaces/IPlatformThreading.h"
 #include <functional>
-#include <process.h>
 #include <atomic>
 #include "coro.h"
 
@@ -14,11 +13,69 @@
 
 namespace Raven
 {
+	class RPlatformLinuxFiber;
+	struct FLinuxFiberInitArgs {
+		void* mArgs;
+		RPlatformLinuxFiber* mFiber;
+		RFiberStart mStart;
+	};
+
+	/*! Entry point typdef. */
+	typedef void*(*RLinuxThreadStart)(void *arg);
+
+	/*! \class RPlatformLinuxFiber
+	\brief linux implementation for platform implementation of a fiber.
+	*/
+	class RPlatformLinuxFiber : public IPlatformFiber
+	{
+	public:
+		RPlatformLinuxFiber(std::size_t stackSize, RFiberStart startRoutine, void *arg)
+		{
+
+			if (!startRoutine)
+				return;
+
+			coro_stack_alloc(mStack, stackSize);
+			coro_create(mFiber, startRoutine, arg, mStack, stackSize);
+		}
+
+		~RPlatformLinuxFiber()
+		{
+			coro_stack_free(mStack);
+		}
+
+		/*! Delete copy constructor because it doesn't make sense to copy a fiber. */
+		RPlatformLinuxFiber(const RPlatformLinuxFiber &other) = delete;
+
+		/*! Switch to fiber. */
+		virtual void SwitchToFiber(IPlatformFiber* fiber)
+		{
+			coro_transfer(mFiber, ((RPlatformLinuxFiber*)fiber)->mFiber);
+		}
+
+		virtual void Reset(RFiberStart startRoutine, void *arg)
+		{
+			size_t stackSize = mStack->ssze;
+
+			coro_stack_free(mStack);
+			coro_destroy(mFiber);
+
+			coro_stack_alloc(mStack, stackSize);
+			coro_create(mFiber, startRoutine, arg, mStack, stackSize);
+		}
+
+	protected:
+		coro_context*		mFiber;
+		coro_stack*			mStack;
+	};
+
+	typedef RPlatformLinuxFiber RPlatformFiber;
+
 	/*! \struct FPlatformLinuxThreadHandle
 	\brief structure describing a platform thread handle.
 	*/
 	struct FPlatformLinuxThreadHandle : public IPlatformThreadHandle {
-
+		pthread_t mThread;
 	};
 
 	/*! \class RPlatformLinuxThread
@@ -31,7 +88,7 @@ namespace Raven
 		RPlatformLinuxThread(const RPlatformLinuxThread&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a thread. */
 		RPlatformLinuxThread& operator= (const RPlatformLinuxThread&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a thread. */
 
-																					/*! Create the thread. */
+		/*! Create the thread. */
 		virtual bool Create(uint32_t stackSize, RThreadStart* start, void *arg, size_t coreAffinity = -1)
 		{
 			pthread_attr_t threadAttr;
@@ -50,7 +107,7 @@ namespace Raven
 			}
 			#endif
 
-			int success = pthread_create(returnThread, &threadAttr, startRoutine, arg);
+			int success = pthread_create(&mHandle.mThread, &threadAttr, LinuxThreadStart, arg);
 
 			// Cleanup
 			pthread_attr_destroy(&threadAttr);
@@ -61,7 +118,7 @@ namespace Raven
 		/*! Join the thread. */
 		virtual void Join()
 		{
-			pthread_join(thread, nullptr);
+			pthread_join(mHandle.mThread, nullptr);
 		}
 
 		/*! Set thread affinity. */
@@ -70,73 +127,27 @@ namespace Raven
 			// Set core affinity
 			cpu_set_t cpuSet;
 			CPU_ZERO(&cpuSet);
-			CPU_SET(coreAffinity, &cpuSet);
-			pthread_attr_setaffinity_np(&threadAttr, sizeof(cpu_set_t), &cpuSet);
+			CPU_SET(affinity, &cpuSet);
+
+			pthread_attr_t attr;
+			pthread_getattr_np(mHandle.mThread, &attr);
+			pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuSet);
 		}
 
 		/*! Get platform-specific handle for this thread. */
 		virtual IPlatformThreadHandle* GetHandle() { return &mHandle; };
+
+	private:
+		static void* LinuxThreadStart(void* args)
+		{
+
+		}
 
 	protected:
 		FPlatformLinuxThreadHandle mHandle;
 	};
 
 	typedef RPlatformLinuxThread RPlatformThread;
-
-
-	struct FLinuxFiberInitArgs {
-		void* mArgs;
-		RPlatformLinuxFiber* mFiber;
-		RFiberStart mStart;
-	};
-
-	/*! \class RPlatformLinuxFiber
-	\brief linux implementation for platform implementation of a fiber.
-	*/
-	class RPlatformLinuxFiber : public IPlatformFiber
-	{
-	public:
-		RPlatformLinuxFiber(std::size_t stackSize, RFiberStart startRoutine, void *arg)
-		{
-
-			if (!startRoutine)
-				return;
-
-			coro_stack_alloc(&mStack, stackSize);
-			mFiber = coro_create(stackSize, startRoutine, arg, mStack, stackSize);
-		}
-
-		~RPlatformLinuxFiber()
-		{
-			coro_stack_free(mStack);
-		}
-
-		/*! Delete copy constructor because it doesn't make sense to copy a fiber. */
-		RPlatformLinuxFiber(const RPlatformLinuxFiber &other) = delete;
-
-		/*! Switch to fiber. */
-		virtual void SwitchToFiber(IPlatformFiber* fiber)
-		{
-			coro_transfer(mFiber, ((RPlatformWindowsFiber*)fiber)->mFiber);
-		}
-
-		virtual void Reset(RFiberStart startRoutine, void *arg)
-		{
-			size_t stackSize = mStack.ssze;
-
-			coro_stack_free(mStack);
-			coro_destroy(mFiber);
-
-			coro_stack_alloc(&mStack, stackSize);
-			mFiber = coro_create(stackSize, startRoutine, arg, mStack, stackSize);
-		}
-
-	protected:
-		coro_context*		mFiber;
-		coro_stack*			mStack;
-	};
-
-	typedef RPlatformLinuxFiber RPlatformFiber;
 }
 
 #endif

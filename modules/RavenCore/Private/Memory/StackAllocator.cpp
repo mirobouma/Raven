@@ -2,6 +2,7 @@
 #include "Core/Memory/MemoryUtils.h"
 #include "HAL/PlatformInfo.h"
 #include "Core/Debug/LogManager.h"
+#include <cstring>
 
 namespace Raven 
 {
@@ -62,7 +63,6 @@ namespace Raven
 		{
 			RLOG_ERROR("Exceeded stack allocation size, increase the maximum stack size.");
 			memset(&alloc, 0, sizeof(FStackAllocation));
-
 			return alloc;
 		}
 

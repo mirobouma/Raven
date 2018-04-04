@@ -22,7 +22,7 @@ namespace Raven
 		VkExtent2D						SwapChainExtent; /*!< The size of the swapchain surface. */
 		IPlatformWindow*				PlatformWindow;  /*!< Reference of the platform window associated with this swapchain. */
 
-		/*! If a vulkan function requires the VkSwapchainKHR and we pass the FVulkanSwapChain object, return SwapChain. */
-		explicit operator VkSwapchainKHR() { return SwapChain; }
+		/*! Implicit conversion to a VkSwapchainKHR */
+		operator VkSwapchainKHR() const { return SwapChain; }
 	};
 }

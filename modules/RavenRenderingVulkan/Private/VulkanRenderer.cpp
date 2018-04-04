@@ -1,4 +1,5 @@
 #include "RenderingVulkan/VulkanRenderer.h"
+#include "Core/Debug/LogManager.h"
 #include <iostream>
 #include <set>
 
@@ -213,8 +214,7 @@ namespace Raven
 	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
 	{
 
-		std::cerr << "validation layer: " << msg << std::endl;
-
+		RLOG_WARNING("Vulkan Validation: %s", msg);
 		return VK_FALSE;
 	}
 

@@ -7,7 +7,9 @@
 #include "HAL/Platform.h"
 
 #include "RenderingVulkan/TestVulkanRenderer.h"
-
+#include "Core/Debug/LogManager.h"
+#include "Core/Memory/LinearAllocator.h"
+#include "Core/Memory/StackAllocator.h"
 #include <chrono>
 #include <thread>
 
@@ -32,7 +34,6 @@ void ApplicationStart(int argc, char*argv[])
 	}
 
 	// Initialize engine systems.
-	GEngine->InitializeMinimal();
 	GEngine->InitializeSystems();
 
 	IPlatformWindow* Window;
@@ -52,6 +53,13 @@ void ApplicationStart(int argc, char*argv[])
 		// Show the window.
 		Window->Show();
 	}
+
+	RLinearAllocator lalloc;
+	lalloc.Allocate(2952, 16);
+	lalloc.Allocate(29520, 16);
+	lalloc.Allocate(295200, 16);
+	lalloc.Allocate(2952000, 16);
+	lalloc.Reset();
 
 	// Main loop
 	while (true)

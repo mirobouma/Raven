@@ -34,8 +34,8 @@ namespace Raven
 		std::vector<VkQueueFamilyProperties>	QueueFamilyProperties; /*!< Queue family properties of this physical device. */
 		std::vector<VkExtensionProperties>		SupportedExtensions; /*!< Extensions that this physical device supports. */
 
-        /*! If a vulkan function requires the VkPhysicalDevice and we pass the FVulkanPhysicalDevice object, return PhysicalDevice. */
-        explicit operator VkPhysicalDevice() { return PhysicalDevice; }
+		/*! Implicit conversion to a VkPhysicalDevice */
+        operator VkPhysicalDevice() const { return PhysicalDevice; }
 	};
 
 	/*! \struct FVulkanDevice
@@ -51,8 +51,8 @@ namespace Raven
 		FVulkanPhysicalDevice*		PhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
 		VkPhysicalDeviceFeatures	EnabledFeatures;/*!< Features that have been enabled for use on the physical device. */
 
-        /*! If a vulkan function requires the VkDevice and we pass the FVulkanDevice object, return Device. */
-        explicit operator VkDevice() { return Device; }
+		/*! Implicit conversion to a VkDevice */
+        operator VkDevice() const { return Device; }
 	};
 
 }

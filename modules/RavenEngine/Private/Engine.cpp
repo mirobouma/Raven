@@ -3,6 +3,7 @@
 
 #include "HAL/Platform.h"
 #include "WindowSystem/WindowSystem.h"
+#include "Core/Debug/LogManager.h"
 
 namespace Raven {
 
@@ -17,8 +18,11 @@ namespace Raven {
 		// Create engine instance.
 		GEngine = new REngine();
 
+		// Initialize minimal functionality.
+		GEngine->InitializeMinimal();
+
 		// Initialize platform specific systems.
-		Raven::RPlatform::Initialize();
+		RPlatform::Initialize();
 
 		// Creation succeeded.
 		return GEngine;
@@ -26,6 +30,9 @@ namespace Raven {
 
 	bool REngine::InitializeMinimal()
 	{
+		// Initialize logger.
+		RLogManager::Initialize(LS_Debug);
+
 		// Initialize critical systems.
 		RWindowSystem::Initialize();
 
@@ -58,7 +65,10 @@ namespace Raven {
 		RWindowSystem::Destroy();
 
 		// Initialize platform specific systems.
-		Raven::RPlatform::Destroy();
+		RPlatform::Destroy();
+
+		// Destroy logging manager.
+		RLogManager::Destroy();
 
 		delete GEngine;
 		GEngine = nullptr;

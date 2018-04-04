@@ -1,6 +1,4 @@
 #pragma once
-#include "Platform/WindowSystemInterface.h"
-
 #include <cinttypes>
 #include <memory>
 #include <thread>
@@ -21,10 +19,10 @@ namespace Raven {
 
 	public:
 
-		/*! Returns page size of this platform in kb (2mb by default).
+		/*! Returns page size of this platform in bytes (2mb by default).
 		\details Used in custom memory allocators to define the optimal allocation size for pages.
 		*/
-		static uint32_t GetPageSize() { return 2048; };
+		static uint32_t GetPageSize() { return 0x200000; };
 
 		/*! Ask the platform for the number of available logical processors.
 		\return Amount of available logical processor cores.

@@ -14,6 +14,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/Logger.hpp> // logger
 #include <assimp/DefaultLogger.hpp> // logger
+#include "Core/Debug/LogManager.h"
 
 #ifdef PLATFORM_LINUX
 #include "SDL_syswm.h"
@@ -110,9 +111,7 @@ namespace Raven
 		const char* msg,
 		void* userData)
 	{
-
-		std::cerr << "validation layer: " << msg << std::endl;
-
+		RLOG_WARNING("Vulkan Validation: %s", msg);
 		return VK_FALSE;
 	}
 

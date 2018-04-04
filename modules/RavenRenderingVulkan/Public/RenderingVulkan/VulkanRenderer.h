@@ -10,7 +10,8 @@ namespace Raven
 	/*! \class RVulkanRenderer
 	\brief The RVulkanRenderer class is an vulkan implementation of the rendering interface. 
 	*/
-	class RVulkanRenderer : public IRenderer {
+	class RVulkanRenderer : public IRenderer 
+	{
 	public:
 		// Inherited via IRenderer
 		virtual ERenderResult Initialize() override;

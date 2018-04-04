@@ -22,7 +22,6 @@ if(WIN32)
 	#
     #if(MSVC12 OR MSVC14)
 		
-	
         find_path(ASSIMP_LIBRARY_DIR
                 NAMES
                 assimp-${ASSIMP_MSVC_VERSION}-mt.lib
@@ -30,7 +29,7 @@ if(WIN32)
                 ${ASSIMP_ROOT_DIR}/libs
                 )
 
-        find_library(ASSIMP_LIBRARY_RELEASE				libs/assimp-${ASSIMP_MSVC_VERSION}-mt.lib 			PATHS ${ASSIMP_LIBRARY_DIR})
+        find_library(ASSIMP_LIBRARY_RELEASE				assimp-${ASSIMP_MSVC_VERSION}-mt.lib 			PATHS ${ASSIMP_LIBRARY_DIR})
 
         set(ASSIMP_LIBRARY
                 optimized 	${ASSIMP_LIBRARY_RELEASE}

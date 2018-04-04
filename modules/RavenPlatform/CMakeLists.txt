@@ -5,7 +5,10 @@ set (SourceGroup_PublicIncludes
 	"Public/Platform/Generic/GenericPlatform.h"
 	"Public/Platform/Generic/GenericPlatformInfo.h"
 	"Public/Platform/Generic/GenericPlatformWindow.h"
+	"Public/Platform/Generic/GenericPlatformLogger.h"
 	"Public/Platform/Interfaces/IPlatformWindow.h"
+	"Public/Platform/Interfaces/IPlatformLogger.h"
+	"Public/Platform/Interfaces/IPlatformThreading.h"
 	"Public/Platform/Interfaces/IWindowMessageHandler.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
@@ -13,6 +16,7 @@ source_group("Include" FILES ${SourceGroup_PublicIncludes})
 set (SourceGroup_Source
 	"Private/GenericPlatform.cpp"
 	"Private/GenericPlatformWindow.cpp"
+	"Private/GenericPlatformLogger.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

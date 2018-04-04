@@ -4,6 +4,8 @@ set(MODULE_NAME "RavenHAL")
 set (SourceGroup_PublicIncludes
 	"Public/HAL/Platform.h"
 	"Public/HAL/PlatformInfo.h"
+	"Public/HAL/PlatformLogger.h"
+	"Public/HAL/PlatformThreading.h"
 	"Public/HAL/PlatformWindow.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})

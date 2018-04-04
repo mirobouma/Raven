@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef PLATFORM_WINDOWS
 	#include "PlatformWindows/PlatformWindowsWindow.h"
 #elif PLATFORM_LINUX

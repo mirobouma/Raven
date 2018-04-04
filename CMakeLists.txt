@@ -14,7 +14,7 @@ include(ProjectGlobalMacros)
 include(GlslToSpirV)
 include(ProjectTestFunctions)
 
-project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES CXX)
+project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES C CXX)
 enable_testing()
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -76,6 +76,7 @@ endif()
 
 #add third-party modules.
 project_add_3rdparty(json)
+project_add_3rdparty(libcoro)
 project_add_3rdparty(glm)
 project_add_3rdparty(stb)
 project_add_3rdparty(assimp-3.3.1)

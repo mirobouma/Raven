@@ -28,11 +28,6 @@ namespace Raven {
 		*/
 		static bool Destroy();
 
-		/*! Initializes the minimal engine functionality.
-		/returns false if initialization failed, true if initialization succeeded.
-		*/
-		bool InitializeMinimal();
-
 		/*! Initializes the non-critical systems.
 		/returns false if initialization failed, true if initialization succeeded.
 		*/
@@ -45,6 +40,11 @@ namespace Raven {
 		RVulkanTestRenderer* GetRenderer() { return _Renderer.get(); }
 
 	protected:
+		/*! Initializes the minimal engine functionality.
+		/returns false if initialization failed, true if initialization succeeded.
+		*/
+		bool InitializeMinimal();
+
 		/*! TEMP Renderer */
 		std::unique_ptr<RVulkanTestRenderer> _Renderer;
 	};

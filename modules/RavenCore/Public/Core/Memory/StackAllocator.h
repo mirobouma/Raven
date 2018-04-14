@@ -28,7 +28,6 @@ namespace Raven
 	\sa RBuddyAllocator
 	\sa RFreeListAllocator
 	\sa RPoolAllocator
-	\sa RSlabAllocator
 	\sa RLinearAllocator
 	*/
 	class RStackAllocator

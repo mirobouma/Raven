@@ -8,6 +8,8 @@ namespace Raven
 	Wrapper around RPlatformFiber.
 	*/
 	class RFiber : public RPlatformFiber {
-
+	public:
+		RFiber() : RPlatformFiber() {}
+		RFiber(RFiberStart startRoutine, void *arg, std::size_t stackSize = 0) : RPlatformFiber(stackSize, startRoutine, arg) { }
 	};
 }

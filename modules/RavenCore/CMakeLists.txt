@@ -6,13 +6,17 @@ set (SourceGroup_PublicIncludes
 	"Public/Core/Service/ServiceProvider.h"
 	"Public/Core/Debug/LogManager.h"
 	"Public/Core/Threading/Thread.h"
-	"Public/Core/Threading/ThreadPool.h"
 	"Public/Core/Threading/Fiber.h"
 	"Public/Core/Threading/TaskScheduler.h"
-	"Public/Core/Threading/AtomicCounter.h"
+	"Public/Core/Threading/Task.h"
+	"Public/Core/Threading/TaskAllocator.h"
+	"Public/Core/Threading/TaskQueue.h"
+	"Public/Core/Threading/TaskCounter.h"
 	"Public/Core/Memory/MemoryUtils.h"
 	"Public/Core/Memory/LinearAllocator.h"
 	"Public/Core/Memory/StackAllocator.h"
+	"Public/Core/Memory/PoolAllocator.h"
+	"Public/Core/Memory/BuddyAllocator.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
@@ -21,9 +25,12 @@ set (SourceGroup_Source
 	"Private/Debug/LogManager.cpp"
 	"Private/Service/ServiceProvider.cpp"
 	"Private/Threading/TaskScheduler.cpp"
+	"Private/Threading/TaskCounter.cpp"
 	"Private/Memory/MemoryUtils.cpp"
 	"Private/Memory/LinearAllocator.cpp"
 	"Private/Memory/StackAllocator.cpp"
+	"Private/Memory/PoolAllocator.cpp"
+	"Private/Memory/BuddyAllocator.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

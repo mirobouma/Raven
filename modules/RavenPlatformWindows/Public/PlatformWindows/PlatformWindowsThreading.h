@@ -30,9 +30,10 @@ namespace Raven
 	class RPlatformWindowsFiber : public IPlatformFiber
 	{
 	public:
+		RPlatformWindowsFiber() : mFiber(nullptr) {}
 		RPlatformWindowsFiber(std::size_t stackSize, RFiberStart startRoutine, void *arg)
 		{
-			mFiber = 0;
+			mFiber = nullptr;
 			mArgs.mArgs = arg;
 			mArgs.mFiber = this;
 			mArgs.mStart = startRoutine;
@@ -88,10 +89,15 @@ namespace Raven
 	public:
 		RPlatformWindowsThread() = default;
 		RPlatformWindowsThread(const RPlatformWindowsThread&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a thread. */
-		RPlatformWindowsThread& operator= (const RPlatformWindowsThread&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a thread. */
+
+		virtual void FromCurrentThread() override
+		{
+			mHandle.Handle = GetCurrentThread();
+			mHandle.Id = GetThreadId(mHandle.Handle);
+		}
 
 		/*! Create the thread. */
-		virtual bool Create(uint32_t stackSize, RThreadStart* start, void *arg, size_t coreAffinity = -1)
+		virtual bool Create(uint32_t stackSize, RPlatformThreadStart* start, void *arg, size_t coreAffinity = -1) override
 		{
 			HANDLE handle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize, start, arg, CREATE_SUSPENDED, nullptr));
 
@@ -99,34 +105,42 @@ namespace Raven
 				return false;
 			}
 
+			mHandle.Handle = handle;
+			mHandle.Id = GetThreadId(handle);
+
+
 			if (coreAffinity != -1)
 			{
 				// Set affinity on the thread.
 				SetAffinity(coreAffinity);
 			}
 
-			mHandle.Handle = handle;
-			mHandle.Id = GetThreadId(handle);
 			ResumeThread(mHandle.Handle);
 
 			return true;
 		}
 
 		/*! Join the thread. */
-		virtual void Join()
+		virtual void Join() override
 		{
 			WaitForSingleObject(mHandle.Handle, INFINITE);
 		}
 
 		/*! Set thread affinity. */
-		virtual void SetAffinity(size_t affinity)
+		virtual void SetAffinity(size_t affinity) override
 		{
 			DWORD_PTR mask = 1ull << affinity;
 			SetThreadAffinityMask(mHandle.Handle, mask);
 		}
 
+		virtual bool IsCurrentThread() const override
+		{
+			DWORD threadId = GetCurrentThreadId();
+			return threadId == mHandle.Id;
+		}
+
 		/*! Get platform-specific handle for this thread. */
-		virtual IPlatformThreadHandle* GetHandle() { return &mHandle; };
+		virtual IPlatformThreadHandle* GetHandle() override { return &mHandle; };
 
 	protected:
 		FPlatformWindowsThreadHandle mHandle;

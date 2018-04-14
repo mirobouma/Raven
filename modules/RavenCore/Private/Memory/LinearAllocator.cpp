@@ -6,7 +6,7 @@
 namespace Raven {
 	RLinearAllocator::RLinearAllocator(uint32_t pageSize)
 	{
-		if (pageSize == UINT32_MAX)
+		if (pageSize == UINT32_MAX || pageSize == 0)
 		{
 			// Use system defined page size.
 			pageSize = RPlatformInfo::GetPageSize();

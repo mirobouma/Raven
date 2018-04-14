@@ -1,6 +1,7 @@
 #pragma once
 #include <cinttypes>
 #include "Platform/Defines.h"
+#include <thread>
 
 namespace Raven {
 	/*! 
@@ -17,6 +18,11 @@ namespace Raven {
 		\details Used in custom memory allocators to define the optimal allocation size for pages.
 		*/
 		static uint32_t GetPageSize();
+
+		/*! Ask the platform for the number of available logical processors.
+		\return Amount of available logical processor cores.
+		*/
+		static inline uint32_t GetHardwareConcurrency() { return std::thread::hardware_concurrency(); }
 
 		/*! Retrieve the platform type (Linux).
 		\returns EPlatformType::EPlatformType_Linux;

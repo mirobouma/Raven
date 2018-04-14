@@ -8,14 +8,19 @@
 
 namespace Raven 
 {
+	class RTaskCounter;
 	/*! Base class for a coroutine task so we can store non-specialized types in a vector. */
 	class FTaskBase
 	{
 	public:
 		virtual ~FTaskBase() {};
 		virtual void Execute() {};
-		virtual void WaitForTask() {};
-		virtual bool IsTaskCompleted() { return false; };
+
+		RTaskCounter* GetCounter() const { return _mCounter; };
+
+	protected:
+		friend class RTaskScheduler;
+		RTaskCounter* _mCounter;
 	};
 
 	/*! Helper namespace for storing variadic arguments in a class, from https://stackoverflow.com/questions/16868129/how-to-store-variadic-template-arguments */
@@ -40,40 +45,13 @@ namespace Raven
 		template <typename F, typename... Args>
 		explicit FTask(F&& func, Args&&... args) :
 			_task(std::forward<F>(func)),
-			_args(std::forward<Args>(args)...),
-			_isCompleted(false)
+			_args(std::forward<Args>(args)...)
 		{
-			_future = _task.get_future();
 		}
 
 		virtual void Execute() override
 		{
 			func(_args);
-		}
-
-		virtual void WaitForTask() override
-		{
-			if (_isCompleted)
-				return;
-
-			_future.wait();
-			_isCompleted = true;
-		}
-
-		virtual bool IsTaskCompleted() override
-		{
-			if (_isCompleted)
-			{
-				return true;
-			}
-
-			if (_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-			{
-				_isCompleted = true;
-				return true;
-			}
-
-			return false;
 		}
 
 	protected:
@@ -91,11 +69,8 @@ namespace Raven
 		}
 
 		// Stored packaged task
-
-		bool _isCompleted;
 		std::packaged_task<void(Ts...)> _task;
 		std::tuple<Ts...> _args;
-		std::future<void> _future;
-
 	};
+
 }

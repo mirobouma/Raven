@@ -11,6 +11,9 @@ namespace Raven
 
 	// Implemented using the following article: http://bitsquid.blogspot.nl/2015/08/allocation-adventures-3-buddy-allocator.html
 
+	static const uint32_t LEAF_SIZE = 64; // minimum allocation size.
+	static const uint32_t MAX_LEVELS = 32; /*!< maximum amount of levels in the buddy allocator (~4gb * leaf size) */
+
 	/*! Buddy allocation block. */
 	struct FBuddyBlock {
 		void* prev;
@@ -152,9 +155,6 @@ namespace Raven
 		{
 			return (1 << level);
 		}
-
-		static const uint32_t LEAF_SIZE = 64; // minimum allocation size.
-		static const uint32_t MAX_LEVELS = 32; /*!< maximum amount of levels in the buddy allocator (~4gb * leaf size) */
 
 		void* mMemory; /*!< Memory allocation for this buddy allocator. */
 		void *mFreeLists[MAX_LEVELS]; /*!< Array of linked lists of free blocks. */

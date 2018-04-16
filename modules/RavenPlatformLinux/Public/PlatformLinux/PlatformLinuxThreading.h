@@ -3,7 +3,9 @@
 #include "Platform/Interfaces/IPlatformThreading.h"
 #include <functional>
 #include <atomic>
-#include "coro.h"
+#include "boost_context/fcontext.h"
+#include "Core/Memory/MemoryUtils.h"
+#include "PlatformLinuxInfo.h"
 
 #ifdef PLATFORM_LINUX
 
@@ -13,168 +15,167 @@
 
 namespace Raven
 {
-	class RPlatformLinuxFiber;
-	struct FLinuxFiberInitArgs {
-		void* mArgs;
-		RPlatformLinuxFiber* mFiber;
-		RPlatformThreadStart mStart;
-	};
+    class RPlatformLinuxFiber;
+    struct FLinuxFiberInitArgs {
+        void* mArgs;
+        RPlatformLinuxFiber* mFiber;
+        RPlatformThreadStart mStart;
+    };
 
-	/*! Entry point typdef. */
-	typedef void* (*RLinuxThreadStart)(void *arg);
+    /*! Entry point typdef. */
+    typedef void* (*RLinuxThreadStart)(void *arg);
 
-	/*! \class RPlatformLinuxFiber
-	\brief linux implementation for platform implementation of a fiber.
-	*/
-	class RPlatformLinuxFiber : public IPlatformFiber
-	{
-	public:
-		RPlatformLinuxFiber() : mStack(nullptr), mFiber(nullptr) {}
-		RPlatformLinuxFiber(std::size_t stackSize, RFiberStart startRoutine, void *arg)
-		{
+    /*! \class RPlatformLinuxFiber
+    \brief linux implementation for platform implementation of a fiber.
+    */
+    class RPlatformLinuxFiber : public IPlatformFiber
+    {
+    public:
+        RPlatformLinuxFiber() : mFiber(nullptr) {}
+        RPlatformLinuxFiber(std::size_t stackSize, RFiberStart startRoutine, void *arg)
+        {
+            if (!startRoutine)
+                return;
 
-			if (!startRoutine)
-				return;
+            mArg = arg;
+            mStackSize = Memory::AlignUp(stackSize, RPlatformLinuxInfo::GetPageSize());
+            mStack = boost_context::create_fcontext_stack(0);
+            mFiber = boost_context::make_fcontext(static_cast<char*>(mStack.sptr), mStack.ssize, startRoutine);
+        }
 
-			coro_stack_alloc(mStack, stackSize);
-			coro_create(mFiber, startRoutine, arg, mStack, stackSize);
-		}
+        ~RPlatformLinuxFiber()
+        {
+            if(mStack.ssize != 0 && mStack.sptr != nullptr) {
+                boost_context::destroy_fcontext_stack(&mStack);
+            }
+        }
 
-		~RPlatformLinuxFiber()
-		{
-			coro_stack_free(mStack);
-		}
-
-		/*! Delete copy constructor because it doesn't make sense to copy a fiber. */
-		RPlatformLinuxFiber(const RPlatformLinuxFiber &other) = delete;
+        /*! Delete copy constructor because it doesn't make sense to copy a fiber. */
+        RPlatformLinuxFiber(const RPlatformLinuxFiber &other) = delete;
 
 
-		/*! Switch to fiber. */
-		virtual void SwitchToFiber(IPlatformFiber* fiber)
-		{
-			//todo if mFiber is nullptr, convert thread into fiber.
+        /*! Switch to fiber. */
+        virtual void SwitchToFiber(IPlatformFiber* fiber) override
+        {
 
-			coro_transfer(mFiber, ((RPlatformLinuxFiber*)fiber)->mFiber);
-		}
+            boost_context::jump_fcontext(&mFiber, ((RPlatformLinuxFiber*)fiber)->mFiber, ((RPlatformLinuxFiber*)fiber)->mArg);
+        }
 
-		virtual void Reset(RFiberStart startRoutine, void *arg)
-		{
-			size_t stackSize = mStack->ssze;
+        virtual void Reset(RFiberStart startRoutine, void *arg) override
+        {
+            mArg = arg;
+            mFiber = boost_context::make_fcontext(static_cast<char*>(mStack.sptr), mStack.ssize, startRoutine);
+        }
 
-			coro_stack_free(mStack);
-			coro_destroy(mFiber);
+    protected:
+        boost_context::fcontext_t		    mFiber;
+        boost_context::fcontext_stack_t	    mStack;
+        void*                               mArg;
+        size_t                              mStackSize;
 
-			coro_stack_alloc(mStack, stackSize);
-			coro_create(mFiber, startRoutine, arg, mStack, stackSize);
-		}
+    };
 
-	protected:
-		coro_context*		mFiber;
-		coro_stack*			mStack;
-	};
+    typedef RPlatformLinuxFiber RPlatformFiber;
 
-	typedef RPlatformLinuxFiber RPlatformFiber;
+    /*! \struct FPlatformLinuxThreadHandle
+    \brief structure describing a platform thread handle.
+    */
+    struct FPlatformLinuxThreadHandle : public IPlatformThreadHandle {
+        pthread_t mThread;
+    };
 
-	/*! \struct FPlatformLinuxThreadHandle
-	\brief structure describing a platform thread handle.
-	*/
-	struct FPlatformLinuxThreadHandle : public IPlatformThreadHandle {
-		pthread_t mThread;
-	};
+    struct FLinuxThreadStartArgs {
+        void* mArgs;
+        RPlatformThreadStart* mStart;
+    };
 
-	struct FLinuxThreadStartArgs {
-		void* mArgs;
-		RPlatformThreadStart mStart;
-	};
+    /*! \class RPlatformLinuxThread
+    \brief Linux implementation of a thread.
+    */
+    class RPlatformLinuxThread : public IPlatformThread
+    {
+    public:
+        RPlatformLinuxThread() = default;
+        RPlatformLinuxThread(const RPlatformLinuxThread&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a thread. */
+        RPlatformLinuxThread& operator= (const RPlatformLinuxThread&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a thread. */
 
-	/*! \class RPlatformLinuxThread
-	\brief Linux implementation of a thread.
-	*/
-	class RPlatformLinuxThread : public IPlatformThread
-	{
-	public:
-		RPlatformLinuxThread() = default;
-		RPlatformLinuxThread(const RPlatformLinuxThread&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a thread. */
-		RPlatformLinuxThread& operator= (const RPlatformLinuxThread&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a thread. */
+        virtual void FromCurrentThread()
+        {
+            mHandle.mThread = pthread_self();
+        }
 
-		virtual void FromCurrentThread()
-		{
-			mHandle.mThread = pthread_self();
-		}
+        /*! Create the thread. */
+        virtual bool Create(uint32_t stackSize, RPlatformThreadStart* start, void *arg, size_t coreAffinity = -1)
+        {
+            pthread_attr_t threadAttr;
+            pthread_attr_init(&threadAttr);
 
-		/*! Create the thread. */
-		virtual bool Create(uint32_t stackSize, RPlatformThreadStart* start, void *arg, size_t coreAffinity = -1)
-		{
-			pthread_attr_t threadAttr;
-			pthread_attr_init(&threadAttr);
+            // Set stack size
+            if (stackSize != 0)
+            {
+                pthread_attr_setstacksize(&threadAttr, stackSize);
+            }
 
-			// Set stack size
-			if (stackSize != 0)
-			{
-				pthread_attr_setstacksize(&threadAttr, stackSize);
-			}
+            mArgs.mArgs = arg;
+            mArgs.mStart = start;
 
-			mArgs.mArgs = arg;
-			mArgs.mStart = start;
+            int success = pthread_create(&mHandle.mThread, &threadAttr, LinuxThreadStart, &mArgs);
 
-			int success = pthread_create(&mHandle.mThread, &threadAttr, LinuxThreadStart, mArgs);
+            if (coreAffinity != -1)
+            {
+                SetAffinity(coreAffinity);
+            }
 
-			if (coreAffinity != -1)
-			{
-				SetAffinity(coreAffinity);
-			}
+            // Cleanup
+            pthread_attr_destroy(&threadAttr);
 
-			// Cleanup
-			pthread_attr_destroy(&threadAttr);
+            return success == 0;
+        }
 
-			return success == 0;
-		}
+        /*! Join the thread. */
+        virtual void Join()
+        {
+            pthread_join(mHandle.mThread, nullptr);
+        }
 
-		/*! Join the thread. */
-		virtual void Join()
-		{
-			pthread_join(mHandle.mThread, nullptr);
-		}
+        /*! Set thread affinity. */
+        virtual void SetAffinity(size_t affinity)
+        {
+            // Set core affinity
+            cpu_set_t cpuSet;
+            CPU_ZERO(&cpuSet);
+            CPU_SET(1 << affinity, &cpuSet);
 
-		/*! Set thread affinity. */
-		virtual void SetAffinity(size_t affinity)
-		{
-			// Set core affinity
-			cpu_set_t cpuSet;
-			CPU_ZERO(&cpuSet);
-			CPU_SET(1 << affinity, &cpuSet);
+            pthread_attr_t attr;
+            pthread_setaffinity_np(mHandle.mThread, sizeof(cpu_set_t), &cpuSet);
+        }
 
-			pthread_attr_t attr;
-			pthread_getattr_np(mHandle.mThread, &attr);
-			pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuSet);
-		}
+        /*! Get platform-specific handle for this thread. */
+        virtual IPlatformThreadHandle* GetHandle() { return &mHandle; };
 
-		/*! Get platform-specific handle for this thread. */
-		virtual IPlatformThreadHandle* GetHandle() { return &mHandle; };
+        /*! Check if this thread equals the currently executing thread. */
+        virtual bool IsCurrentThread() const
+        {
+            pthread_t currentThread = pthread_self();
+            return pthread_equal(currentThread, mHandle.mThread);
+        }
 
-		/*! Check if this thread equals the currently executing thread. */
-		virtual bool IsCurrentThread() const
-		{
-			pthread_t currentThread = pthread_self();
-			return pthread_equal(threadId == mHandle.mThread);
-		}
+    private:
+        static void* LinuxThreadStart(void* arg)
+        {
+            FLinuxThreadStartArgs* args = (FLinuxThreadStartArgs*)arg;
 
-	private:
-		static void* LinuxThreadStart(void* arg)
-		{
-			FLinuxThreadStartArgs* args = (FLinuxThreadStartArgs*)arg;
-			
-			args->mStart(args->mArgs);
+            args->mStart(args->mArgs);
 
-			return 0;
-		}
+            return (void*)0;
+        }
 
-	protected:
-		FLinuxThreadStartArgs	   mArgs;
-		FPlatformLinuxThreadHandle mHandle;
-	};
+    protected:
+        FLinuxThreadStartArgs	   mArgs;
+        FPlatformLinuxThreadHandle mHandle;
+    };
 
-	typedef RPlatformLinuxThread RPlatformThread;
+    typedef RPlatformLinuxThread RPlatformThread;
 }
 
 #endif

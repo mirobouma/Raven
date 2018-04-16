@@ -76,7 +76,7 @@ endif()
 
 #add third-party modules.
 project_add_3rdparty(json)
-project_add_3rdparty(libcoro)
+project_add_3rdparty(boost_context)
 project_add_3rdparty(glm)
 project_add_3rdparty(stb)
 project_add_3rdparty(assimp-3.3.1)

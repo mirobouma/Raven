@@ -58,14 +58,14 @@ void ApplicationStart(int argc, char*argv[])
 				{
 					task3[z] = gTaskScheduler->MakeTask([](uint32_t i3)
 					{
-						RLOG_INFO("wazzaaaZaaaaaZazazaza %i", i3);
+						RLOG_INFO("wazzaaaZaaaaaZazazaza");
 					}, z);
 				}
 
 				gTaskScheduler->ExecuteTasks(&counter3, &task3[0], 5);
 				gTaskScheduler->WaitForCounter(&counter3, 0);
 
-				RLOG_INFO("wazzaaaZaaaaa %i", i2);
+				RLOG_INFO("wazzaaaZaaaaa");
 
 			}, x);
 		}
@@ -73,7 +73,7 @@ void ApplicationStart(int argc, char*argv[])
 		gTaskScheduler->ExecuteTasks(&counter2, &task2[0], 10);
 		gTaskScheduler->WaitForCounter(&counter2, 0);
 
-		RLOG_INFO("wazzaaa %i", i);
+		RLOG_INFO("wazzaaa");
 	}, 0);
 
 	gTaskScheduler->ExecuteTasks(&counter, &task, 1);

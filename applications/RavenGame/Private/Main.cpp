@@ -41,6 +41,7 @@ void ApplicationStart(int argc, char*argv[])
 
 	IPlatformWindow* Window;
 
+
 	RTaskCounter counter;
 	FTaskBase* task = gTaskScheduler->MakeTask([](uint32_t i)
 	{
@@ -58,14 +59,14 @@ void ApplicationStart(int argc, char*argv[])
 				{
 					task3[z] = gTaskScheduler->MakeTask([](uint32_t i3)
 					{
-						RLOG_INFO("wazzaaaZaaaaaZazazaza");
+						RLOG_INFO("wazzaaaZaaaaaZazazaza %i", i3);
 					}, z);
 				}
 
 				gTaskScheduler->ExecuteTasks(&counter3, &task3[0], 5);
 				gTaskScheduler->WaitForCounter(&counter3, 0);
 
-				RLOG_INFO("wazzaaaZaaaaa");
+				RLOG_INFO("wazzaaaZaaaaa %i", i2);
 
 			}, x);
 		}
@@ -73,7 +74,7 @@ void ApplicationStart(int argc, char*argv[])
 		gTaskScheduler->ExecuteTasks(&counter2, &task2[0], 10);
 		gTaskScheduler->WaitForCounter(&counter2, 0);
 
-		RLOG_INFO("wazzaaa");
+		RLOG_INFO("wazzaaa %i", i);
 	}, 0);
 
 	gTaskScheduler->ExecuteTasks(&counter, &task, 1);

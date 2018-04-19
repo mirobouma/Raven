@@ -5,10 +5,10 @@
 
 namespace Raven 
 {
-	ERenderResult RVulkanRenderer::Initialize()
+	ERenderResult RVulkanRenderer::initialize()
 	{
 		// Don't try to initialize if we already successfully initialized before.
-		if (IsInitialized())
+		if (isInitialized())
 		{
 			return RR_ALREADY_INITIALIZED;
 		}
@@ -17,7 +17,7 @@ namespace Raven
 		ERenderResult result;
 
 		// Create a vulkan instance.
-		result = CreateVulkanInstance();
+		result = createVulkanInstance();
 		if (result != RR_SUCCESS)
 		{
 			return result;
@@ -26,7 +26,7 @@ namespace Raven
 		// Set up debugging callbacks
 		if (mShouldEnableValidationLayers)
 		{
-			result = SetupDebugCallback();
+			result = setupDebugCallback();
 			if (result != RR_SUCCESS)
 			{
 				return result;
@@ -34,7 +34,7 @@ namespace Raven
 		}
 
 		// Query all available GPU's and store them in the mGPUs vector.
-		result = QueryAvailablePhysicalDevices();
+		result = queryAvailablePhysicalDevices();
 		if (result != RR_SUCCESS)
 		{
 			return result;
@@ -42,14 +42,14 @@ namespace Raven
 
 		// Pick most suitable physical device.
 		FVulkanPhysicalDevice* PhysicalDevice;
-		result = PickPhysicalDevice(&PhysicalDevice);
+		result = pickPhysicalDevice(&PhysicalDevice);
 		if (result != RR_SUCCESS)
 		{
 			return result;
 		}
 
 		// Create logical device.
-		result = CreateLogicalDevice(PhysicalDevice);
+		result = createLogicalDevice(PhysicalDevice);
 		if (result != RR_SUCCESS)
 		{
 			return result;
@@ -61,12 +61,12 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	bool RVulkanRenderer::IsInitialized() const
+	bool RVulkanRenderer::isInitialized() const
 	{
 		return mInitialized;
 	}
 
-	ERenderResult RVulkanRenderer::CreateVulkanInstance()
+	ERenderResult RVulkanRenderer::createVulkanInstance()
 	{
 		// Define vulkan application. Useful for driver optimizations (aka useless for small applications)
 		VkApplicationInfo appInfo = {};
@@ -113,13 +113,13 @@ namespace Raven
 		}
 		
 		// Enable validation layers
-		if (mShouldEnableValidationLayers && !EnableValidationLayers(createInfo, validationLayers))
+		if (mShouldEnableValidationLayers && !enableValidationLayers(createInfo, validationLayers))
 		{
 			return RR_LAYER_NOT_PRESENT;
 		}
 
 		// Enable extensions
-		if (!EnableInstanceExtensions(createInfo, instanceExtensions))
+		if (!enableInstanceExtensions(createInfo, instanceExtensions))
 		{
 			return RR_EXTENSION_NOT_PRESENT;
 		}
@@ -132,7 +132,7 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::EnableValidationLayers(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceLayers)
+	ERenderResult RVulkanRenderer::enableValidationLayers(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceLayers)
 	{
 		uint32_t layerCount;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -164,7 +164,7 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::EnableInstanceExtensions(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceExtensions)
+	ERenderResult RVulkanRenderer::enableInstanceExtensions(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceExtensions)
 	{
 		// Query how many extensions are available to us.
 		uint32_t extensionCount = 0;
@@ -200,7 +200,7 @@ namespace Raven
 
 	}
 
-	VkResult RVulkanRenderer::CreateDebugReportCallbackExtension(VkInstance pInstance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) 
+	VkResult RVulkanRenderer::createDebugReportCallbackExtension(VkInstance pInstance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback)
 	{
 		auto func = GET_VK_FUNC(mInstance, vkCreateDebugReportCallbackEXT);
 		if (func != nullptr) {
@@ -211,14 +211,14 @@ namespace Raven
 		}
 	}
 
-	static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData)
 	{
 
 		RLOG_WARNING("Vulkan Validation: %s", msg);
 		return VK_FALSE;
 	}
 
-	ERenderResult RVulkanRenderer::DestroyDebugReportCallbackExtention(VkInstance pInstance, VkDebugReportCallbackEXT pCallback, const VkAllocationCallbacks* pAllocator) {
+	ERenderResult RVulkanRenderer::destroyDebugReportCallbackExtention(VkInstance pInstance, VkDebugReportCallbackEXT pCallback, const VkAllocationCallbacks* pAllocator) {
 		auto func = GET_VK_FUNC(mInstance, vkDestroyDebugReportCallbackEXT);
 		if (func != nullptr) {
 			func(mInstance, pCallback, pAllocator);
@@ -228,22 +228,22 @@ namespace Raven
 		return RR_EXTENSION_NOT_PRESENT;
 	}
 
-	ERenderResult RVulkanRenderer::SetupDebugCallback()
+	ERenderResult RVulkanRenderer::setupDebugCallback()
 	{
 		VkDebugReportCallbackCreateInfoEXT createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
 		createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT; // only errors and warnings.
-		createInfo.pfnCallback = DebugCallback;
+		createInfo.pfnCallback = debugCallback;
 
 		// Create debug extension.
-		if (CreateDebugReportCallbackExtension(mInstance, &createInfo, nullptr, &mDebuggingCallback) != VK_SUCCESS) {
+		if (createDebugReportCallbackExtension(mInstance, &createInfo, nullptr, &mDebuggingCallback) != VK_SUCCESS) {
 			return RR_INITIALIZATION_FAILED;
 		}
 
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::QueryAvailablePhysicalDevices()
+	ERenderResult RVulkanRenderer::queryAvailablePhysicalDevices()
 	{
 		// Query how many physical devices we have.
 		uint32_t deviceCount = 0;
@@ -266,43 +266,43 @@ namespace Raven
 			mGPUs[i] = FVulkanPhysicalDevice();
 
 			// Fill our physical device structures.
-			mGPUs[i].PhysicalDevice = devices[i];
+			mGPUs[i].mPhysicalDevice = devices[i];
 
 			// Query device properties.
-			vkGetPhysicalDeviceProperties(devices[i], &mGPUs[i].Properties);
+			vkGetPhysicalDeviceProperties(devices[i], &mGPUs[i].mProperties);
 
 			// Query device memory properties.
-			vkGetPhysicalDeviceMemoryProperties(devices[i], &mGPUs[i].MemoryProperties);
+			vkGetPhysicalDeviceMemoryProperties(devices[i], &mGPUs[i].mMemoryProperties);
 
 			// Query device features.
-			vkGetPhysicalDeviceFeatures(devices[i], &mGPUs[i].Features);
+			vkGetPhysicalDeviceFeatures(devices[i], &mGPUs[i].mFeatures);
 
 			// Get amount of available queue families.
 			uint32_t queueFamilyCount = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
 
 			// Get the list of queue families.
-			mGPUs[i].QueueFamilyProperties.resize(queueFamilyCount);
-			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, mGPUs[i].QueueFamilyProperties.data());
+			mGPUs[i].mQueueFamilyProperties.resize(queueFamilyCount);
+			vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, mGPUs[i].mQueueFamilyProperties.data());
 
 			// query the amount of extensions this physical device supports.
 			uint32_t extensionCount;
 			vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, nullptr);
 
 			// Retrieve the extension list.
-			mGPUs[i].SupportedExtensions.resize(extensionCount);
-			vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, mGPUs[i].SupportedExtensions.data());
+			mGPUs[i].mSupportedExtensions.resize(extensionCount);
+			vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, mGPUs[i].mSupportedExtensions.data());
 		}
 
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::PickPhysicalDevice(FVulkanPhysicalDevice** ppDevice)
+	ERenderResult RVulkanRenderer::pickPhysicalDevice(FVulkanPhysicalDevice** ppDevice)
 	{
 		// Safety check to make sure we have retrieved all information about the physical devices.
 		if (mGPUs.size() == 0)
 		{
-			ERenderResult result = QueryAvailablePhysicalDevices();
+			ERenderResult result = queryAvailablePhysicalDevices();
 			if (result != RR_SUCCESS)
 			{
 				return result;
@@ -321,7 +321,7 @@ namespace Raven
 		for (auto& candidate : mGPUs)
 		{
 			// Calculate score for this device.
-			uint32_t score = CalculatePhysicalDeviceScore(&candidate, deviceExtensions);
+			uint32_t score = calculatePhysicalDeviceScore(&candidate, deviceExtensions);
 
 			// If this device is suitable, and better than the current candidate, make this device our best candidate.
 			if (score != 0 && score > deviceScore)
@@ -342,27 +342,27 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	FQueueFamilyIndices RVulkanRenderer::RetrieveQueueFamilyIndices(const FVulkanPhysicalDevice* pDevice)
+	FQueueFamilyIndices RVulkanRenderer::retrieveQueueFamilyIndices(const FVulkanPhysicalDevice* pDevice)
 	{
 		FQueueFamilyIndices indices;
-		indices.GraphicsQueueIndex = RetrieveQueueFamilyIndex(pDevice, VK_QUEUE_GRAPHICS_BIT);
-		indices.ComputeQueueIndex = RetrieveQueueFamilyIndex(pDevice, VK_QUEUE_COMPUTE_BIT);
-		indices.TransferQueueIndex = RetrieveQueueFamilyIndex(pDevice, VK_QUEUE_TRANSFER_BIT);
+		indices.mGraphicsQueueIndex = retrieveQueueFamilyIndex(pDevice, VK_QUEUE_GRAPHICS_BIT);
+		indices.mComputeQueueIndex = retrieveQueueFamilyIndex(pDevice, VK_QUEUE_COMPUTE_BIT);
+		indices.mTransferQueueIndex = retrieveQueueFamilyIndex(pDevice, VK_QUEUE_TRANSFER_BIT);
 
 		return indices;
 	}
 
-	uint32_t RVulkanRenderer::RetrieveQueueFamilyIndex(const FVulkanPhysicalDevice* pDevice, VkQueueFlags flags)
+	uint32_t RVulkanRenderer::retrieveQueueFamilyIndex(const FVulkanPhysicalDevice* pDevice, VkQueueFlags flags)
 	{
 		// Try to find a dedicated compute queue.
 		if (flags & VK_QUEUE_COMPUTE_BIT)
 		{
-			for (uint32_t i = 0; i < pDevice->QueueFamilyProperties.size(); i++)
+			for (uint32_t i = 0; i < pDevice->mQueueFamilyProperties.size(); i++)
 			{
 				// If the queue supports compute and does NOT support graphics, we can return this as a dedicated compute queue.
-				if (pDevice->QueueFamilyProperties[i].queueCount > 0 && 
-					(pDevice->QueueFamilyProperties[i].queueFlags & flags) 
-					&& ((pDevice->QueueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)) {
+				if (pDevice->mQueueFamilyProperties[i].queueCount > 0 &&
+					(pDevice->mQueueFamilyProperties[i].queueFlags & flags)
+					&& ((pDevice->mQueueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0)) {
 					return i;
 				}
 			}
@@ -371,13 +371,13 @@ namespace Raven
 		// Try to find a dedicated transfer queue.
 		if (flags & VK_QUEUE_TRANSFER_BIT)
 		{
-			for (uint32_t i = 0; i < pDevice->QueueFamilyProperties.size(); i++)
+			for (uint32_t i = 0; i < pDevice->mQueueFamilyProperties.size(); i++)
 			{
 				// If the queue supports compute and does NOT support graphics or compute, we can return this as a dedicated compute queue.
-				if (pDevice->QueueFamilyProperties[i].queueCount > 0 && 
-					(pDevice->QueueFamilyProperties[i].queueFlags & flags) && 
-					((pDevice->QueueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) && 
-					((pDevice->QueueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0)) 
+				if (pDevice->mQueueFamilyProperties[i].queueCount > 0 &&
+					(pDevice->mQueueFamilyProperties[i].queueFlags & flags) &&
+					((pDevice->mQueueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0) &&
+					((pDevice->mQueueFamilyProperties[i].queueFlags & VK_QUEUE_COMPUTE_BIT) == 0))
 				{
 					return i;
 				}
@@ -385,11 +385,11 @@ namespace Raven
 		}
 
 		// Otherwise return the first queue which matches the flags.
-		for (uint32_t i = 0; i < pDevice->QueueFamilyProperties.size(); i++)
+		for (uint32_t i = 0; i < pDevice->mQueueFamilyProperties.size(); i++)
 		{
 			// If the queue supports compute and does NOT support graphics or compute, we can return this as a dedicated compute queue.
-			if (pDevice->QueueFamilyProperties[i].queueCount > 0 && 
-				(pDevice->QueueFamilyProperties[i].queueFlags & flags)) {
+			if (pDevice->mQueueFamilyProperties[i].queueCount > 0 &&
+				(pDevice->mQueueFamilyProperties[i].queueFlags & flags)) {
 				return i;
 			}
 		}
@@ -398,43 +398,43 @@ namespace Raven
 		return UINT32_MAX;
 	}
 
-	uint32_t RVulkanRenderer::CalculatePhysicalDeviceScore(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rRequiredDeviceExtensions)
+	uint32_t RVulkanRenderer::calculatePhysicalDeviceScore(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rRequiredDeviceExtensions)
 	{
 		uint32_t score = 0;
 
 		// We require device extensions to be available.
-		if (!HasDeviceExtensionSupport(pDevice, rRequiredDeviceExtensions))
+		if (!hasDeviceExtensionSupport(pDevice, rRequiredDeviceExtensions))
 		{
 			// We don't have required device extensions therefore this device is unsuitable.
 			return 0;
 		}
 
 		// Retrieve queue family indices.
-		FQueueFamilyIndices queueFamilyIndices = RetrieveQueueFamilyIndices(pDevice);
+		FQueueFamilyIndices queueFamilyIndices = retrieveQueueFamilyIndices(pDevice);
 
 		// A dedicated GPU is preferred.
-		if (pDevice->Properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+		if (pDevice->mProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 		{
 			score += 1000;
 		}
 
 		// If we have dedicated queues for transferral and compute, our score goes up.
-		if (queueFamilyIndices.HasDedicatedComputeQueue())
+		if (queueFamilyIndices.hasDedicatedComputeQueue())
 		{
 			score += 100;
 		}
 
-		if (queueFamilyIndices.HasDedicatedTransferQueue())
+		if (queueFamilyIndices.hasDedicatedTransferQueue())
 		{
 			score += 100;
 		}
 
-		if (pDevice->Features.tessellationShader)
+		if (pDevice->mFeatures.tessellationShader)
 		{
 			score += 100;
 		}
 
-		if (pDevice->Features.geometryShader)
+		if (pDevice->mFeatures.geometryShader)
 		{
 			score += 100;
 		}
@@ -442,10 +442,10 @@ namespace Raven
 		return score;
 	}
 
-	ERenderResult RVulkanRenderer::CreateLogicalDevice(FVulkanPhysicalDevice* pPhysicalDevice)
+	ERenderResult RVulkanRenderer::createLogicalDevice(FVulkanPhysicalDevice* pPhysicalDevice)
 	{
 		// Find queue indices.
-		mDevice.QueueIndices = RetrieveQueueFamilyIndices(pPhysicalDevice);
+		mDevice.mQueueIndices = retrieveQueueFamilyIndices(pPhysicalDevice);
 
 		// Vector of queue creation information structures.
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
@@ -454,41 +454,41 @@ namespace Raven
 		float queuePriority = 1.0f;
 		VkDeviceQueueCreateInfo graphicsQueueCreateInfo = {};
 		graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		graphicsQueueCreateInfo.queueFamilyIndex = mDevice.QueueIndices.GraphicsQueueIndex;
+		graphicsQueueCreateInfo.queueFamilyIndex = mDevice.mQueueIndices.mGraphicsQueueIndex;
 		graphicsQueueCreateInfo.queueCount = 1;
 		graphicsQueueCreateInfo.pQueuePriorities = &queuePriority;
 		queueInfos.push_back(graphicsQueueCreateInfo);
 
 		// Create queue creation info for the compute queue if it is dedicated.
-		if (mDevice.QueueIndices.HasDedicatedComputeQueue())
+		if (mDevice.mQueueIndices.hasDedicatedComputeQueue())
 		{
 			VkDeviceQueueCreateInfo computeQueueCreateInfo = {};
 			computeQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			computeQueueCreateInfo.queueFamilyIndex = mDevice.QueueIndices.ComputeQueueIndex;
+			computeQueueCreateInfo.queueFamilyIndex = mDevice.mQueueIndices.mComputeQueueIndex;
 			computeQueueCreateInfo.queueCount = 1;
 			computeQueueCreateInfo.pQueuePriorities = &queuePriority;
 			queueInfos.push_back(computeQueueCreateInfo);
 		}
 
 		// Create queue creation info for the transfer queue if it is dedicated.
-		if (mDevice.QueueIndices.HasDedicatedTransferQueue())
+		if (mDevice.mQueueIndices.hasDedicatedTransferQueue())
 		{
 			VkDeviceQueueCreateInfo transferQueueCreateInfo = {};
 			transferQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			transferQueueCreateInfo.queueFamilyIndex = mDevice.QueueIndices.TransferQueueIndex;
+			transferQueueCreateInfo.queueFamilyIndex = mDevice.mQueueIndices.mTransferQueueIndex;
 			transferQueueCreateInfo.queueCount = 1;
 			transferQueueCreateInfo.pQueuePriorities = &queuePriority;
 			queueInfos.push_back(transferQueueCreateInfo);
 		}
 
 		// We want certain device features to be enabled.
-		mDevice.EnabledFeatures.samplerAnisotropy = VK_TRUE;
+		mDevice.mEnabledFeatures.samplerAnisotropy = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		createInfo.pQueueCreateInfos = queueInfos.data();
 		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
-		createInfo.pEnabledFeatures = &mDevice.EnabledFeatures;
+		createInfo.pEnabledFeatures = &mDevice.mEnabledFeatures;
 
 		createInfo.enabledExtensionCount = 0;
 
@@ -514,36 +514,36 @@ namespace Raven
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 		// Create the device.
-		if (vkCreateDevice(pPhysicalDevice->PhysicalDevice, &createInfo, nullptr, &mDevice.Device) != VK_SUCCESS) {
+		if (vkCreateDevice(pPhysicalDevice->mPhysicalDevice, &createInfo, nullptr, &mDevice.mDevice) != VK_SUCCESS) {
 			return RR_INITIALIZATION_FAILED;
 		}
 
-		mDevice.PhysicalDevice = pPhysicalDevice;
+		mDevice.mPhysicalDevice = pPhysicalDevice;
 
 		// Retrieve our graphics queue.
-		vkGetDeviceQueue(mDevice.Device, mDevice.QueueIndices.GraphicsQueueIndex, 0, &mDevice.GraphicsQueue);
-		vkGetDeviceQueue(mDevice.Device, mDevice.QueueIndices.TransferQueueIndex, 0, &mDevice.TransferQueue);
-		vkGetDeviceQueue(mDevice.Device, mDevice.QueueIndices.ComputeQueueIndex, 0, &mDevice.ComputeQueue);
+		vkGetDeviceQueue(mDevice.mDevice, mDevice.mQueueIndices.mGraphicsQueueIndex, 0, &mDevice.mGraphicsQueue);
+		vkGetDeviceQueue(mDevice.mDevice, mDevice.mQueueIndices.mTransferQueueIndex, 0, &mDevice.mTransferQueue);
+		vkGetDeviceQueue(mDevice.mDevice, mDevice.mQueueIndices.mComputeQueueIndex, 0, &mDevice.mComputeQueue);
 
 		return RR_SUCCESS;
 	}
 
-	bool RVulkanRenderer::HasDeviceExtensionSupport(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rDeviceExtensions)
+	bool RVulkanRenderer::hasDeviceExtensionSupport(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rDeviceExtensions)
 	{
 		// Go over the extensions and remove them if we support it. If the list is empty at the end, it means we support all extensions.
 		std::set<std::string> requiredExtensions(rDeviceExtensions.begin(), rDeviceExtensions.end());
 
-		for (const auto& extension : pDevice->SupportedExtensions) {
+		for (const auto& extension : pDevice->mSupportedExtensions) {
 			requiredExtensions.erase(extension.extensionName);
 		}
 
 		return requiredExtensions.empty();
 	}
 
-	ERenderResult RVulkanRenderer::Destroy()
+	ERenderResult RVulkanRenderer::destroy()
 	{
 		// If the renderer is not initialized, we have nothing to destroy; thefore we immediately return success.
-		if (!IsInitialized())
+		if (!isInitialized())
 		{
 			return RR_SUCCESS;
 		}
@@ -551,7 +551,7 @@ namespace Raven
 		if(mShouldEnableValidationLayers)
 		{
 			// Destroy debugging report callback.
-			DestroyDebugReportCallbackExtention(mInstance, mDebuggingCallback, nullptr);
+			destroyDebugReportCallbackExtention(mInstance, mDebuggingCallback, nullptr);
 		}
 
 		// Destroy our logical device.
@@ -563,12 +563,12 @@ namespace Raven
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::CreateSwapChain(IPlatformWindow* nativeWindow, ISwapChain** ppSwapChain)
+	ERenderResult RVulkanRenderer::createSwapChain(IPlatformWindow* nativeWindow, ISwapChain** ppSwapChain)
 	{
 		return RR_SUCCESS;
 	}
 
-	ERenderResult RVulkanRenderer::DestroySwapChain(ISwapChain* pSwapchain)
+	ERenderResult RVulkanRenderer::destroySwapChain(ISwapChain* pSwapchain)
 	{
 		return RR_SUCCESS;
 	}

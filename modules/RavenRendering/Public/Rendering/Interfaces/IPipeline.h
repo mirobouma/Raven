@@ -6,6 +6,28 @@ namespace Raven
 	// Forward declarations.
 	struct IRootSignature;
 	struct IShader;
+	struct IRenderTarget;
+
+	/*! \struct FRasterizerState
+	\brief Structure describing rasterizer state. */
+	typedef struct FRasterizerState
+	{
+
+	} FRasterizerState;
+
+	/*! \struct FDepthStencilState
+	\brief Structure describing depth-stencil state. */
+	typedef struct FDepthStencilState
+	{
+
+	} FDepthStencilState;
+
+    /*! \struct FBlendState
+    \brief Structure describing blend state. */
+    typedef struct FBlendState
+    {
+
+    } FBlendState;
 
 	/*! \enum EPrimitiveTopology
 	\brief Enumeration of primitive topology types for drawing. */
@@ -76,21 +98,22 @@ namespace Raven
 		// Render target formats
 		// Depth stencil formats
 
-		IShader*				pShader;
 		IRootSignature*			pRootSignature;
-		EPrimitiveTopology		primitiveTopology;
-		IRasterizerState*		pRasterizerState;
+		IShader*				pShader;
+		uint32_t 				numRenderTargets;
+		IRenderTarget*			pRenderTargets;
+		IRenderTarget*			pDepthStencilTarget;
+		FRasterizerState*		pRasterizerState;
+		FDepthStencilState*		pDepthStencilState;
+		FBlendState*			pBlendState;
 		uint32_t				sampleCount;
 		uint32_t				sampleQuality;
+		EPrimitiveTopology		primitiveTopology;
 	};
 
 	/*! \struct IPipeline
 	\brief Interface for a pipeline state object. */
 	struct IPipeline {};
-
-	/*! \struct IRasterizerState
-	\brief Interface for a rasterizer state object. */
-	struct IRasterizerState {};
 
 	/*! \struct IGraphicsPipeline
 	\brief Interface for a graphics pipeline state object. */

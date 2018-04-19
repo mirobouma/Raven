@@ -5,8 +5,18 @@ set (SourceGroup_PublicIncludes
 	"Public/Rendering/Interfaces/IRenderer.h"
 	"Public/Rendering/Interfaces/IBuffer.h"
 	"Public/Rendering/Interfaces/ISwapChain.h"
-	"Public/Rendering/Interfaces/IShaderModule.h"
+	"Public/Rendering/Interfaces/IShader.h"
+	"Public/Rendering/Interfaces/ICommandList.h"
+	"Public/Rendering/Interfaces/ICommandPool.h"
+	"Public/Rendering/Interfaces/IPipeline.h"
+	"Public/Rendering/Interfaces/IQueue.h"
+	"Public/Rendering/Interfaces/IRenderTarget.h"
+	"Public/Rendering/Interfaces/IRootSignature.h"
+	"Public/Rendering/Interfaces/ISampler.h"
+	"Public/Rendering/Interfaces/ITexture.h"
+	"Public/Rendering/Interfaces/SharedDefines.h"
 )
+
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source

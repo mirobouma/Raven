@@ -5,12 +5,12 @@
 namespace Raven
 {
 	/*! Flags for queue creation. */
-	typedef enum QueueFlags {
-		QUEUE_FLAG_CREATE_PROTECTED_BIT, // Vulkan-specific flag.
-		QUEUE_FLAG_DISABLE_GPU_TIMEOUT, // DirectX-specific flag.
-		MAX_QUEUE_FLAG
-	} QueueFlags;
-	DECL_ENUM_AS_FLAGS(QueueFlags)
+	typedef enum FQueueFlags {
+		QUEUE_FLAG_CREATE_PROTECTED_BIT = 1 << 0, // Vulkan-specific flag.
+		QUEUE_FLAG_DISABLE_GPU_TIMEOUT = 1 << 1, // DirectX-specific flag.
+		MAX_QUEUE_FLAG = 1 << 2
+	} FQueueFlags;
+	DECL_ENUM_AS_FLAGS(FQueueFlags)
 	
 	/*! Priority for queue work. */
 	typedef enum EQueuePriority {
@@ -39,7 +39,7 @@ namespace Raven
 
 		ECommandType type; /*!< Type of commands this queue can accept. */
 		EQueuePriority priority; /*! Priority for the work submitted to this queue. */
-		QueueFlags flags; /*! Optional queue creation flags. */
+		FQueueFlags flags; /*! Optional queue creation flags. */
 		
 	} FQueueCreateDesc;
 

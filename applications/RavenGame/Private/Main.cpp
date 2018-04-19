@@ -43,39 +43,39 @@ void ApplicationStart(int argc, char*argv[])
 
 
 	RTaskCounter counter;
-	FTaskBase* task = gTaskScheduler->MakeTask([](uint32_t i)
+	FTaskBase* task = gTaskScheduler->MakeTask([]()
 	{
 		RTaskCounter counter2;
 		FTaskBase* task2[10];
 
 		for (uint32_t x = 0; x < 10; ++x)
 		{
-			task2[x] = gTaskScheduler->MakeTask([](uint32_t i2)
+			task2[x] = gTaskScheduler->MakeTask([]()
 			{
 				RTaskCounter counter3;
 				FTaskBase* task3[5];
 
 				for (uint32_t z = 0; z < 5; ++z)
 				{
-					task3[z] = gTaskScheduler->MakeTask([](uint32_t i3)
+					task3[z] = gTaskScheduler->MakeTask([](uint32_t i)
 					{
-						RLOG_INFO("wazzaaaZaaaaaZazazaza %i", i3);
+						RLOG_INFO("wazzaaaZaaaaaZazazaza %i", i);
 					}, z);
 				}
 
 				gTaskScheduler->ExecuteTasks(&counter3, &task3[0], 5);
 				gTaskScheduler->WaitForCounter(&counter3, 0);
 
-				RLOG_INFO("wazzaaaZaaaaa %i", i2);
+				RLOG_INFO("wazzaaaZaaaaa");
 
-			}, x);
+			});
 		}
 
 		gTaskScheduler->ExecuteTasks(&counter2, &task2[0], 10);
 		gTaskScheduler->WaitForCounter(&counter2, 0);
 
-		RLOG_INFO("wazzaaa %i", i);
-	}, 0);
+		RLOG_INFO("wazzaaa");
+	});
 
 	gTaskScheduler->ExecuteTasks(&counter, &task, 1);
 	gTaskScheduler->WaitForCounter(&counter, 0);

@@ -14,80 +14,80 @@ namespace Raven
 	{
 	public:
 		// Inherited via IRenderer
-		virtual ERenderResult Initialize() override;
-		virtual ERenderResult Destroy() override;
-		virtual ERenderResult CreateSwapChain(IPlatformWindow* nativeWindow, ISwapChain** ppSwapChain) override;
-		virtual ERenderResult DestroySwapChain(ISwapChain* pSwapChain) override;
-		virtual bool IsInitialized() const override;
+		virtual ERenderResult initialize() override;
+		virtual ERenderResult destroy() override;
+		virtual ERenderResult createSwapChain(IPlatformWindow* nativeWindow, ISwapChain** ppSwapChain) override;
+		virtual ERenderResult destroySwapChain(ISwapChain* pSwapChain) override;
+		virtual bool isInitialized() const override;
 
 	protected:
 		/*! Create a vulkan instance.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult CreateVulkanInstance();
+		ERenderResult createVulkanInstance();
 
 		/*! Queries which physical devices are available and adds them to the mGpus member variable.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult QueryAvailablePhysicalDevices();
+		ERenderResult queryAvailablePhysicalDevices();
 
 		/*! Pick the most suitable physical device. 
 		\param[out] ppDevice ppDevice points to an VkPhysicalDevice handle in which the resulting VkPhysicalDevice is returned.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult PickPhysicalDevice(FVulkanPhysicalDevice** ppDevice);
+		ERenderResult pickPhysicalDevice(FVulkanPhysicalDevice** ppDevice);
 
 		/*! Calculate a score for the physical device so we can find the most suitable GPU.
 		\param[in] rDevice rDevice points to an FVulkanPhysicalDevice handle which we will use.
 		\param[in] rRequiredDeviceExtensions rRequiredDeviceExtensions points to an vector of extensions we need to have support for.
 		\returns If the device meets the minimum requirements, it's score will be > 0.
 		*/
-		uint32_t CalculatePhysicalDeviceScore(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rRequiredDeviceExtensions);
+		uint32_t calculatePhysicalDeviceScore(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rRequiredDeviceExtensions);
 
 		/*! Checks if the device extensions specified in rDeviceExtensions are supported by the physical device.
 		\param[in] pDevice pDevice points to an VkPhysicalDevice handle which we will use to check for extension support.
 		\param[in] rDeviceExtensions rDeviceExtensions points to an vector of extensions we want to check if they are supported.
 		\returns On success, this command returns true.
 		*/
-		bool HasDeviceExtensionSupport(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rDeviceExtensions);
+		bool hasDeviceExtensionSupport(const FVulkanPhysicalDevice* pDevice, const std::vector<const char*>& rDeviceExtensions);
 
 		/*! Retrieve indices for the queue families of the specified physical device
 		\param[in] pDevice pDevice points to an VkPhysicalDevice handle which we will use to retrieve queue family indices from.
 		\returns a structure of FQueueFamilyIndices.
 		*/
-		FQueueFamilyIndices RetrieveQueueFamilyIndices(const FVulkanPhysicalDevice* pDevice);
+		FQueueFamilyIndices retrieveQueueFamilyIndices(const FVulkanPhysicalDevice* pDevice);
 
 		/*! Retrieve index for a queue that supports the specified flags. Will try to prioritize a queue which only supports that/those types.
 		\param[in] pDevice pDevice points to an VkPhysicalDevice handle which we will use to retrieve queue family indices from.
 		\param[in] flags flags define which type of queue we want to find it's index from.
 		\returns On success, this command returns the queue family index, on failure it will return UINT32_MAX.
 		*/
-		uint32_t RetrieveQueueFamilyIndex(const FVulkanPhysicalDevice* pDevice, VkQueueFlags flags);
+		uint32_t retrieveQueueFamilyIndex(const FVulkanPhysicalDevice* pDevice, VkQueueFlags flags);
 
 		/*! Pick the most suitable logical device.
 		\param[in] pPhysicalDevice pPhysicalDevice is a reference to the selected physical device.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult CreateLogicalDevice(FVulkanPhysicalDevice* pPhysicalDevice);
+		ERenderResult createLogicalDevice(FVulkanPhysicalDevice* pPhysicalDevice);
 
 		/*! Checks if validation layers are supported, if so, add them to the VkInstanceCreateInfo structure.
 		\param[in, out] rInfo rInfo is a reference to the VkInstanceCreateInfo structure.
 		\param[in] rInstanceLayers rInstanceLayers is a reference to a vector of strings describing which validation layers we want to have enabled.
 		\returns On success, this command returns RR_SUCCESS, on failure it will return RR_LAYER_NOT_PRESENT.
 		*/
-		ERenderResult EnableValidationLayers(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceLayers);
+		ERenderResult enableValidationLayers(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceLayers);
 
 		/*! Checks if the specified instance extensionss are supported, if so, add them to the VkInstanceCreateInfo structure.
 		\param[in, out] rInfo rInfo is a reference to the VkInstanceCreateInfo structure.
 		\param[in] rInstanceExtensions rInstanceExtensions is a reference to a vector of strings describing which instance extensions we want to have enabled.
 		\returns On success, this command returns RR_SUCCESS, on failure it will return RR_EXTENSION_NOT_PRESENT.
 		*/
-		ERenderResult EnableInstanceExtensions(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceExtensions);
+		ERenderResult enableInstanceExtensions(VkInstanceCreateInfo& rInfo, const std::vector<const char*>& rInstanceExtensions);
 		
 		/*! Set up debugging callback for validation layer output.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult SetupDebugCallback();
+		ERenderResult setupDebugCallback();
 
 		/*! Create the debug report callback extension.
 		\param[in] pInstance pInstance is a reference to the VkInstance of this renderer.
@@ -96,7 +96,7 @@ namespace Raven
 		\param[in] pCallback pCallback is a reference to the callback function to call when a debugging string is outputted.
 		\returns On success, this command returns VK_SUCCESS.
 		*/
-		VkResult CreateDebugReportCallbackExtension(VkInstance pInstance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
+		VkResult createDebugReportCallbackExtension(VkInstance pInstance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback);
 
 		/*! Destroy the debug report callback extension.
 		\param[in] pInstance pInstance is a reference to the VkInstance of this renderer.
@@ -104,7 +104,7 @@ namespace Raven
 		\param[in] pAllocator pAllocator is a reference to an allocator to use for this extension.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult DestroyDebugReportCallbackExtention(VkInstance pInstance, VkDebugReportCallbackEXT pCallback, const VkAllocationCallbacks* pAllocator);
+		ERenderResult destroyDebugReportCallbackExtention(VkInstance pInstance, VkDebugReportCallbackEXT pCallback, const VkAllocationCallbacks* pAllocator);
 
         // Renderer variables.
 		VkInstance								mInstance; /*!< Vulkan instance for this renderer. */

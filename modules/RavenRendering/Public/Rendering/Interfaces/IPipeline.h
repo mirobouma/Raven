@@ -42,7 +42,7 @@ namespace Raven
 
 	/*! \struct FGraphicsPipelineCreateDesc
 	\brief Structure describing the parameters for graphics pipeline creation. */
-	struct FGraphicsPipelineCreateDesc
+	typedef struct FGraphicsPipelineCreateDesc
 	{
 		// === DirectX ===
 		//ID3D12RootSignature *pRootSignature;
@@ -109,7 +109,15 @@ namespace Raven
 		uint32_t				sampleCount;
 		uint32_t				sampleQuality;
 		EPrimitiveTopology		primitiveTopology;
-	};
+	} FGraphicsPipelineCreateDesc;
+
+	/*! \struct FComputePipelineCreateDesc
+	\brief Structure describing the parameters for graphics pipeline creation. */
+	typedef struct FComputePipelineCreateDesc
+	{
+		IRootSignature*			pRootSignature;
+		IShader*				pShader;
+	} FComputePipelineCreateDesc;
 
 	/*! \struct IPipeline
 	\brief Interface for a pipeline state object. */

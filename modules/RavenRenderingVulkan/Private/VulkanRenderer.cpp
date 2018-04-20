@@ -5,7 +5,7 @@
 
 namespace Raven 
 {
-	ERenderResult RVulkanRenderer::initialize()
+	ERenderResult RVulkanRenderer::initialize(FRendererInitializationDesc* pDesc)
 	{
 		// Don't try to initialize if we already successfully initialized before.
 		if (isInitialized())
@@ -17,7 +17,7 @@ namespace Raven
 		ERenderResult result;
 
 		// Create a vulkan instance.
-		result = createVulkanInstance();
+		result = createVulkanInstance(pDesc);
 		if (result != RR_SUCCESS)
 		{
 			return result;
@@ -66,7 +66,7 @@ namespace Raven
 		return mInitialized;
 	}
 
-	ERenderResult RVulkanRenderer::createVulkanInstance()
+	ERenderResult RVulkanRenderer::createVulkanInstance(FRendererInitializationDesc* pDesc)
 	{
 		// Define vulkan application. Useful for driver optimizations (aka useless for small applications)
 		VkApplicationInfo appInfo = {};
@@ -226,6 +226,111 @@ namespace Raven
 		}
 
 		return RR_EXTENSION_NOT_PRESENT;
+	}
+
+	ERenderResult RVulkanRenderer::createSwapChain(IPlatformWindow* pNativeWindow, ISwapChain** ppSwapChain)
+	{
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::destroySwapChain(ISwapChain* pSwapchain)
+	{
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::createQueue(IQueue** ppQueue, FQueueCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyQueue(IQueue* pQueue)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createCommandPool(ICommandPool** ppCmdPool, IQueue* pQueue, FCommandPoolCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyCommandPool(ICommandPool* pCmdPool)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createCommandList(ICommandList** ppCommandList, ICommandPool* pCmdPool)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createCommandLists(ICommandList** ppCommandLists, uint32_t numCommandLists, ICommandPool* pCmdPool)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyCommandList(ICommandList* pTexture)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createPipeline(IGraphicsPipeline** ppPipeline, FGraphicsPipelineCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyPipeline(IGraphicsPipeline* pPipeline)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createPipeline(IComputePipeline** ppPipeline, FComputePipelineCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyPipeline(IComputePipeline* pPipeline)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createRootSignature(IRootSignature** ppRootSignature, FRootSignatureCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyRootSignature(IRootSignature* pRootSignature)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createShader(IShader** ppShader, FShaderCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyShader(IShader* pShader)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createTexture(ITexture** ppTexture, FTextureCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyTexture(ITexture* pTexture)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::createRenderTarget(IRenderTarget** ppRenderTarget, FRenderTargetCreateDesc* pDesc)
+	{
+		return ERenderResult();
+	}
+
+	ERenderResult RVulkanRenderer::destroyRenderTarget(IRenderTarget* pRenderTarget)
+	{
+		return ERenderResult();
 	}
 
 	ERenderResult RVulkanRenderer::setupDebugCallback()
@@ -560,16 +665,6 @@ namespace Raven
 		// Destroy our Vulkan instance.
 		vkDestroyInstance(mInstance, nullptr);
 
-		return RR_SUCCESS;
-	}
-
-	ERenderResult RVulkanRenderer::createSwapChain(IPlatformWindow* nativeWindow, ISwapChain** ppSwapChain)
-	{
-		return RR_SUCCESS;
-	}
-
-	ERenderResult RVulkanRenderer::destroySwapChain(ISwapChain* pSwapchain)
-	{
 		return RR_SUCCESS;
 	}
 }

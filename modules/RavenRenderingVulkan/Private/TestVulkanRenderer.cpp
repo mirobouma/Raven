@@ -316,7 +316,6 @@ namespace Raven
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
 
 		float queuePriority = 1.0f;
-
 		VkDeviceQueueCreateInfo graphicsQueueCreateInfo = {};
 		graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		graphicsQueueCreateInfo.queueFamilyIndex = graphicsIndex;

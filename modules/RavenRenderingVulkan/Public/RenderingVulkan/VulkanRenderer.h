@@ -14,17 +14,37 @@ namespace Raven
 	{
 	public:
 		// Inherited via IRenderer
-		virtual ERenderResult initialize() override;
+		virtual ERenderResult initialize(FRendererInitializationDesc* pDesc) override;
 		virtual ERenderResult destroy() override;
-		virtual ERenderResult createSwapChain(IPlatformWindow* nativeWindow, ISwapChain** ppSwapChain) override;
+		virtual ERenderResult createSwapChain(IPlatformWindow* pNativeWindow, ISwapChain** ppSwapChain) override;
 		virtual ERenderResult destroySwapChain(ISwapChain* pSwapChain) override;
+		virtual ERenderResult createQueue(IQueue** ppQueue, FQueueCreateDesc* pDesc) override;
+		virtual ERenderResult destroyQueue(IQueue* pQueue) override;
+		virtual ERenderResult createCommandPool(ICommandPool** ppCmdPool, IQueue* pQueue, FCommandPoolCreateDesc* pDesc) override;
+		virtual ERenderResult destroyCommandPool(ICommandPool* pCmdPool) override;
+		virtual ERenderResult createCommandList(ICommandList** ppCommandList, ICommandPool* pCmdPool) override;
+		virtual ERenderResult createCommandLists(ICommandList** ppCommandLists, uint32_t numCommandLists, ICommandPool* pCmdPool) override;
+		virtual ERenderResult destroyCommandList(ICommandList* pTexture) override;
+		virtual ERenderResult createPipeline(IGraphicsPipeline** ppPipeline, FGraphicsPipelineCreateDesc* pDesc) override;
+		virtual ERenderResult destroyPipeline(IGraphicsPipeline* pPipeline) override;
+		virtual ERenderResult createPipeline(IComputePipeline** ppPipeline, FComputePipelineCreateDesc* pDesc) override;
+		virtual ERenderResult destroyPipeline(IComputePipeline* pPipeline) override;
+		virtual ERenderResult createRootSignature(IRootSignature** ppRootSignature, FRootSignatureCreateDesc* pDesc) override;
+		virtual ERenderResult destroyRootSignature(IRootSignature* pRootSignature) override;
+		virtual ERenderResult createShader(IShader** ppShader, FShaderCreateDesc* pDesc) override;
+		virtual ERenderResult destroyShader(IShader* pShader) override;
+		virtual ERenderResult createTexture(ITexture** ppTexture, FTextureCreateDesc* pDesc) override;
+		virtual ERenderResult destroyTexture(ITexture* pTexture) override;
+		virtual ERenderResult createRenderTarget(IRenderTarget** ppRenderTarget, FRenderTargetCreateDesc* pDesc) override;
+		virtual ERenderResult destroyRenderTarget(IRenderTarget* pRenderTarget) override;
+
 		virtual bool isInitialized() const override;
 
 	protected:
 		/*! Create a vulkan instance.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		ERenderResult createVulkanInstance();
+		ERenderResult createVulkanInstance(FRendererInitializationDesc* pDesc);
 
 		/*! Queries which physical devices are available and adds them to the mGpus member variable.
 		\returns On success, this command returns RR_SUCCESS.
@@ -114,5 +134,5 @@ namespace Raven
 		bool									mShouldEnableValidationLayers; /*!< Enables validation layers for debugging. */
 		bool									mInitialized; /*!< Boolean to store if the renderer is initialized. */
 
-	};
+};
 }

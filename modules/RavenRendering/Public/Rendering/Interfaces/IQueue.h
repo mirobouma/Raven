@@ -5,7 +5,8 @@
 namespace Raven
 {
 	/*! Flags for queue creation. */
-	typedef enum FQueueFlags {
+	typedef enum FQueueFlags 
+	{
 		QUEUE_FLAG_CREATE_PROTECTED_BIT = 1 << 0, // Vulkan-specific flag.
 		QUEUE_FLAG_DISABLE_GPU_TIMEOUT = 1 << 1, // DirectX-specific flag.
 		MAX_QUEUE_FLAG = 1 << 2
@@ -19,7 +20,7 @@ namespace Raven
 		QUEUE_PRIORITY_HIGH,
 		QUEUE_PRIORITY_REALTIME,
 		MAX_QUEUE_PRIORITY
-	};
+	} EQueuePriority;
 
 	/*! \struct FQueueCreateDesc
 	\brief Structure describing the parameters for command queue creation. */

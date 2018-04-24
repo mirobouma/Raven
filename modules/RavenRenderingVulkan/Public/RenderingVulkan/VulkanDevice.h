@@ -35,7 +35,8 @@ namespace Raven
 		std::vector<VkExtensionProperties>		mSupportedExtensions; /*!< Extensions that this physical device supports. */
 
 		/*! Implicit conversion to a VkPhysicalDevice */
-        operator VkPhysicalDevice() const { return mPhysicalDevice; }
+        operator VkPhysicalDevice*() const { return &mPhysicalDevice; }
+		operator VkPhysicalDevice() const { return mPhysicalDevice; }
 	};
 
 	/*! \struct FVulkanDevice
@@ -52,7 +53,8 @@ namespace Raven
 		VkPhysicalDeviceFeatures	mEnabledFeatures;/*!< Features that have been enabled for use on the physical device. */
 
 		/*! Implicit conversion to a VkDevice */
-        operator VkDevice() const { return mDevice; }
+        operator VkDevice*() const { return &mDevice; }
+		operator VkDevice() const { return mDevice; }
 	};
 
 }

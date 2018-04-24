@@ -217,6 +217,9 @@ namespace Raven
 
 		freeFiberIndex = scheduler->GetFreeFiberIndex();
 
+		// We should always get a free fiber.
+		RASSERT(freeFiberIndex != UINT32_MAX);
+
 		// When all threads are initialized, we can safely covert this thread into a fiber and switch to the first task.
 		scheduler->_mTLS[threadId].CurrentFiberIndex = freeFiberIndex;
 

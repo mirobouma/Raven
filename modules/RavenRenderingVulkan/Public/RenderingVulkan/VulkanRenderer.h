@@ -13,6 +13,8 @@ namespace Raven
 	class RVulkanRenderer : public IRenderer 
 	{
 	public:
+		RVulkanRenderer() : mDevice(nullptr) {}
+
 		// Inherited via IRenderer
 		virtual ERenderResult initialize(FRendererInitializationDesc* pDesc) override;
 		virtual ERenderResult destroy() override;
@@ -50,6 +52,31 @@ namespace Raven
 		\returns On success, this command returns RR_SUCCESS.
 		*/
 		ERenderResult queryAvailablePhysicalDevices();
+
+		/*! Queries if the surface supports swapchains.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		ERenderResult querySwapchainSupport(FVulkanDevice* pDevice, FVulkanSwapChain* pSwapChain);
+
+		/*! Choose the most suitable swapchain support format and fill the swapchain structure with this surface format.
+		\returns On success, this command returns RR_SUCCESS.
+		 */
+		ERenderResult chooseSwapChainSurfaceFormat(FVulkanSwapChain* pSwapChain);
+
+		/*! Choose the most suitable swapchain present mode and fill the swapchain structure with this present mode.
+		\returns On success, this command returns RR_SUCCESS.
+		 */
+		ERenderResult chooseSwapChainPresentMode(FVulkanSwapChain* pSwapChain);
+
+		/*! Choose the most suitable swapchain extent and fill the swapchain structure with this extent.
+		\returns On success, this command returns RR_SUCCESS.
+		 */
+		ERenderResult chooseSwapChainExtent(FVulkanSwapChain* pSwapChain);
+
+		/*! Create a surface for a window.
+		\returns On success, this command returns RR_SUCCESS.
+		 * */
+		ERenderResult createWindowSurface(IPlatformWindow* window, VkSurfaceKHR* pSurface);
 
 		/*! Pick the most suitable physical device. 
 		\param[out] ppDevice ppDevice points to an VkPhysicalDevice handle in which the resulting VkPhysicalDevice is returned.
@@ -130,8 +157,8 @@ namespace Raven
 		VkInstance								mInstance; /*!< Vulkan instance for this renderer. */
 		VkDebugReportCallbackEXT				mDebuggingCallback; // callback extension for validation layers.
 		std::vector<FVulkanPhysicalDevice>		mGPUs; /*!< Logical device associated with this renderer. */
-		FVulkanDevice							mDevice; /*!< Logical device associated with this renderer. */
-		bool									mShouldEnableValidationLayers; /*!< Enables validation layers for debugging. */
+		FVulkanDevice*							mDevice; /*!< Logical device associated with this renderer. */
+		FRendererInitializationDesc				mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
 		bool									mInitialized; /*!< Boolean to store if the renderer is initialized. */
 
 };

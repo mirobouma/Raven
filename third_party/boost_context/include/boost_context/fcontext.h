@@ -18,12 +18,30 @@
 #include <cstddef>
 // size_t
 
+#define VALGRIND
+
+#if defined(VALGRIND)
+#include <valgrind/valgrind.h>
+
+#define RVN_VALGRIND_ID uint32_t m_stackId
+
+#define RVN_VALGRIND_REGISTER(st, e) \
+		s.m_stackId = VALGRIND_STACK_REGISTER(st, e)
+
+#define RVN_VALGRIND_DEREGISTER() VALGRIND_STACK_DEREGISTER(s->m_stackId)
+#else
+#define RVN_VALGRIND_ID
+#define RVN_VALGRIND_REGISTER(st, e)
+#define RVN_VALGRIND_DEREGISTER()
+#endif
+
 namespace boost_context
 {
     struct fcontext_stack_t
     {
         void* sptr;
         size_t ssize;
+        RVN_VALGRIND_ID;
     };
 
     typedef void *fcontext_t;

@@ -20,24 +20,25 @@ namespace Raven
 		FTask<Args...>* MakeTask(F&& f, Args... args)
 		{
 			// Allocate memory for the task.
-			FLinearAllocation memory = _allocator.Allocate(sizeof(FTask<Args...>));
+			//FLinearAllocation memory = _allocator.Allocate(sizeof...(FTask<Args...>));
 
 			// Initialize the task in the memory of the task.
-			FTask<Args...>* task = new (memory.ptr) FTask<Args...>(std::forward<F>(f), std::forward<Args>(args)...);
+			FTask<Args...>* task = new FTask<Args...>(std::forward<F>(f), std::forward<Args>(args)...);
 			_allocatedTasks.push_back(task);
 			return task;
 		}
 
 		/*! Reset the memory allocated for the tasks. */
-		void Reset(bool freeMemory = false) 
+		void Reset(bool freeMemory = false)
 		{ 
 			for (uint32_t i = 0; i < _allocatedTasks.size(); i++)
 			{
 				// call destructor.
-				_allocatedTasks[i]->~FTaskBase();
+				delete _allocatedTasks[i];
 			}
+			_allocatedTasks.clear();
 
-			_allocator.Reset(freeMemory); 
+			//_allocator.Reset(freeMemory);
 		}
 
 	protected:

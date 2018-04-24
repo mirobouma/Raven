@@ -29,11 +29,11 @@ namespace Raven
 	/*! \struct FShaderCreateDesc
 	 \brief Structure describing the parameters for shader creation.
 	 */
-	struct FShaderCreateDesc
+	typedef struct FShaderCreateDesc
 	{
 		uint32_t 		numShaders;
 		FShaderProperty shaders[MAX_SHADER_TYPE];
-	};
+	} FShaderCreateDesc;
 
 	/*! \struct IShader
 	 \brief Interface for a shader.

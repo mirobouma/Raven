@@ -6,6 +6,7 @@
 #include "boost_context/fcontext.h"
 #include "Core/Memory/MemoryUtils.h"
 #include "PlatformLinuxInfo.h"
+#include "Core/Debug/LogManager.h"
 
 #ifdef PLATFORM_LINUX
 
@@ -31,21 +32,27 @@ namespace Raven
     class RPlatformLinuxFiber : public IPlatformFiber
     {
     public:
-        RPlatformLinuxFiber() : mFiber(nullptr) {}
+        RPlatformLinuxFiber() : mFiber(nullptr), mStackSize(0), mStack(), mArg(nullptr) {}
         RPlatformLinuxFiber(std::size_t stackSize, RFiberStart startRoutine, void *arg)
         {
             if (!startRoutine)
                 return;
 
             mArg = arg;
-            mStackSize = Memory::AlignUp(stackSize, RPlatformLinuxInfo::GetPageSize());
-            mStack = boost_context::create_fcontext_stack(0);
+
+            if(stackSize == 0)
+            {
+                stackSize = 15360;  //16k
+            }
+
+            mStack = boost_context::create_fcontext_stack(Memory::AlignUp(stackSize, RPlatformLinuxInfo::GetPageSize()));
+            mStackSize = mStack.ssize;
             mFiber = boost_context::make_fcontext(static_cast<char*>(mStack.sptr), mStack.ssize, startRoutine);
         }
 
         ~RPlatformLinuxFiber()
         {
-            if(mStack.ssize != 0 && mStack.sptr != nullptr) {
+            if(mStack.sptr != nullptr) {
                 boost_context::destroy_fcontext_stack(&mStack);
             }
         }
@@ -63,6 +70,8 @@ namespace Raven
 
         virtual void Reset(RFiberStart startRoutine, void *arg) override
         {
+            RASSERT(mStackSize != 0);
+
             mArg = arg;
             mFiber = boost_context::make_fcontext(static_cast<char*>(mStack.sptr), mStack.ssize, startRoutine);
         }

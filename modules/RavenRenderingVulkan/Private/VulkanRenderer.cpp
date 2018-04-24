@@ -3,6 +3,11 @@
 #include <iostream>
 #include <set>
 
+#ifdef PLATFORM_LINUX
+#include "SDL_syswm.h"
+#include <X11/Xlib-xcb.h> // for XGetXCBConnection()
+#endif
+
 namespace Raven 
 {
 	ERenderResult RVulkanRenderer::initialize(FRendererInitializationDesc* pDesc)
@@ -23,8 +28,10 @@ namespace Raven
 			return result;
 		}
 
+		memcpy(&mRendererInfo, pDesc, sizeof(FRendererInitializationDesc));
+
 		// Set up debugging callbacks
-		if (mShouldEnableValidationLayers)
+		if (pDesc->enableDebugging)
 		{
 			result = setupDebugCallback();
 			if (result != RR_SUCCESS)
@@ -71,8 +78,8 @@ namespace Raven
 		// Define vulkan application. Useful for driver optimizations (aka useless for small applications)
 		VkApplicationInfo appInfo = {};
 		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "Raven Application";
-		appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+		appInfo.pApplicationName = pDesc->applicationName.c_str();
+		appInfo.applicationVersion = VK_MAKE_VERSION(pDesc->versionMajor, pDesc->versionMinor, pDesc->versionPatch);
 		appInfo.pEngineName = "Raven";
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.apiVersion = VK_API_VERSION_1_1;
@@ -99,23 +106,16 @@ namespace Raven
 			instanceExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
 		#endif
 
-		// Enable validation layers if this is a debug build.
-		#ifdef NDEBUG
-			mShouldEnableValidationLayers = false;
-		#else
-			mShouldEnableValidationLayers = true;
-		#endif
-
 		// Enable debug report extensions if we're running in debug mode.
-		if (mShouldEnableValidationLayers)
+		if (pDesc->enableDebugging)
 		{
 			instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-		}
-		
-		// Enable validation layers
-		if (mShouldEnableValidationLayers && !enableValidationLayers(createInfo, validationLayers))
-		{
-			return RR_LAYER_NOT_PRESENT;
+
+			// Enable validation layers
+			if (!enableValidationLayers(createInfo, validationLayers))
+			{
+				return RR_LAYER_NOT_PRESENT;
+			}
 		}
 
 		// Enable extensions
@@ -228,13 +228,274 @@ namespace Raven
 		return RR_EXTENSION_NOT_PRESENT;
 	}
 
+	ERenderResult RVulkanRenderer::querySwapchainSupport(FVulkanDevice* pDevice, FVulkanSwapChain* pSwapChain)
+	{
+		// Retrieve surface capabilities.
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pDevice->mPhysicalDevice->mPhysicalDevice, pSwapChain->mSurface, &pSwapChain->mSurfaceCapabilities);
+
+		// Retrieve surface formats for the created surface.
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(pDevice->mPhysicalDevice->mPhysicalDevice, pSwapChain->mSurface, &formatCount, nullptr);
+
+		if (formatCount != 0)
+		{
+			pSwapChain->mSurfaceFormats.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(pDevice->mPhysicalDevice->mPhysicalDevice, pSwapChain->mSurface, &formatCount, pSwapChain->mSurfaceFormats.data());
+		}
+		else
+		{
+			RLOG_ERROR("The specified surface has no surface formats.");
+			return RR_FEATURE_NOT_PRESENT;
+		}
+
+		// Retrieve present modes for this surface.
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(pDevice->mPhysicalDevice->mPhysicalDevice, pSwapChain->mSurface, &presentModeCount, nullptr);
+
+		if (presentModeCount != 0)
+		{
+			pSwapChain->mSurfacePresentModes.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(pDevice->mPhysicalDevice->mPhysicalDevice, pSwapChain->mSurface, &presentModeCount, pSwapChain->mSurfacePresentModes.data());
+		}
+		else
+		{
+			RLOG_ERROR("The specified surface has no present modes.");
+			return RR_FEATURE_NOT_PRESENT;
+		}
+
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::chooseSwapChainSurfaceFormat(FVulkanSwapChain* pSwapChain)
+	{
+		RASSERT(pSwapChain->mSurfaceFormats.size() != 0);
+
+		// If we can choose the format, set it to standard SRGB.
+		if (pSwapChain->mSurfaceFormats.size() == 1 && pSwapChain->mSurfaceFormats[0].format == VK_FORMAT_UNDEFINED)
+		{
+			pSwapChain->mSurfaceFormat = { VK_FORMAT_B8G8R8A8_UNORM,  VK_COLOR_SPACE_SRGB_NONLINEAR_KHR };
+			return RR_SUCCESS;
+		}
+
+		// Otherwise, go through the available formats and pick the first format that has the format and color space we want.
+		for (const auto& availableFormat : pSwapChain->mSurfaceFormats) {
+			if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+			{
+				pSwapChain->mSurfaceFormat = availableFormat;
+				return RR_SUCCESS;
+			}
+		}
+
+		// If all else fails, we'll use the first format.
+		pSwapChain->mSurfaceFormat = pSwapChain->mSurfaceFormats[0];
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::chooseSwapChainPresentMode(FVulkanSwapChain* pSwapChain)
+	{
+		VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
+
+		// Mailbox allows for triple buffering with lower latency issues compared to traditional FIFO (vsync) double buffering.
+		for (const auto& availablePresentMode : pSwapChain->mSurfacePresentModes) {
+			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+				pSwapChain->mSurfacePresentMode = availablePresentMode;
+				return RR_SUCCESS;
+			}
+			else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+			{
+				bestMode = availablePresentMode;
+			}
+		}
+
+		pSwapChain->mSurfacePresentMode = bestMode;
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::chooseSwapChainExtent(FVulkanSwapChain* pSwapChain)
+	{
+		if (pSwapChain->mSurfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+			pSwapChain->mSwapChainExtent = pSwapChain->mSurfaceCapabilities.currentExtent;
+			return RR_SUCCESS;
+		}
+		else
+		{
+			VkExtent2D actualExtent = { 1024, 896 };
+
+			actualExtent.width = std::max(pSwapChain->mSurfaceCapabilities..minImageExtent.width,
+										  std::min(pSwapChain->mSurfaceCapabilities.maxImageExtent.width, actualExtent.width));
+			actualExtent.height = std::max(pSwapChain->mSurfaceCapabilities..minImageExtent.height,
+										   std::min(pSwapChain->mSurfaceCapabilities.maxImageExtent.height, actualExtent.height));
+
+			pSwapChain->mSwapChainExtent = actualExtent;
+
+			return RR_SUCCESS;
+		}
+	}
+
+	ERenderResult RVulkanRenderer::createWindowSurface(Raven::IPlatformWindow* pWindow, VkSurfaceKHR* pSurface)
+	{
+#if defined(PLATFORM_WINDOWS)
+		VkWin32SurfaceCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+		createInfo.hwnd = (HWND)pWindow->GetNativeHandle();
+		createInfo.hinstance = GetModuleHandle(nullptr);
+
+		auto CreateWin32SurfaceKHR = GET_VK_FUNC(mInstance, vkCreateWin32SurfaceKHR);
+
+		if (!CreateWin32SurfaceKHR || CreateWin32SurfaceKHR(mInstance, &createInfo, nullptr, pSurface) != VK_SUCCESS)
+		{
+			RLOG_ERROR("failed to create window surface!");
+			return RR_INITIALIZATION_FAILED;
+		}
+
+#elif defined(PLATFORM_LINUX)
+		SDL_SysWMinfo wminfo;
+		SDL_VERSION(&wminfo.version);
+		if (!SDL_GetWindowWMInfo((SDL_Window*)pWindow->GetNativeHandle(), &wminfo))
+			return RR_OBJECT_DOES_NOT_EXIST;
+
+		if (wminfo.subsystem != SDL_SYSWM_X11)
+		{
+			RLOG_ERROR("We can only initialize an X11 surface!");
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		VkXcbSurfaceCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+		createInfo.window = wminfo.info.x11.window;
+		createInfo.connection = XGetXCBConnection(wminfo.info.x11.display);
+
+		auto CreateXcbSurfaceKHR = GET_VK_FUNC(mInstance, vkCreateXcbSurfaceKHR);
+		if (!CreateXcbSurfaceKHR || CreateXcbSurfaceKHR(mInstance, &createInfo, nullptr, pSurface) != VK_SUCCESS)
+		{
+			RLOG_ERROR("failed to create window surface!");
+			return RR_INITIALIZATION_FAILED;
+		}
+#endif
+		return RR_SUCCESS;
+	}
+
 	ERenderResult RVulkanRenderer::createSwapChain(IPlatformWindow* pNativeWindow, ISwapChain** ppSwapChain)
 	{
+		RASSERT(mInitialized);
+		RASSERT(mDevice != nullptr);
+
+		FVulkanSwapChain* swapChain = new FVulkanSwapChain();
+
+		// Create surface for window.
+		if(createWindowSurface(pNativeWindow, &swapChain->mSurface) != RR_SUCCESS)
+		{
+			RLOG_ERROR("Failed to create surface for the specified window.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		// Retrieve swapchain support details into the surface object.
+		if(querySwapchainSupport(mDevice, swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We do not support swapchain creation for this device (Missing extensions?).");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		if(chooseSwapChainSurfaceFormat(swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We could not find a suitable SwapChain surface format.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		if(chooseSwapChainPresentMode(swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We could not find a suitable SwapChain present mode.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		if(chooseSwapChainExtent(swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We could not find a suitable SwapChain surface format.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		// Select how many backbuffers we need in the swap chain, we preferably want the minimum amount + 1 for minimal latency without tearing.
+		uint32_t imageCount = swapChain->mSurfaceCapabilities.minImageCount + 1;
+		if (swapChain->mSurfaceCapabilities.maxImageCount > 0 && imageCount > swapChain->mSurfaceCapabilities.maxImageCount)
+		{
+			imageCount = swapChain->mSurfaceCapabilities.maxImageCount;
+		}
+
+		// Fill the swapchain creation info structure.
+		VkSwapchainCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = swapChain->mSurface;
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = swapChain->mSurfaceFormat.format;
+		createInfo.imageColorSpace = swapChain->mSurfaceFormat.colorSpace;
+		createInfo.imageExtent = swapChain->mSwapChainExtent;
+		createInfo.imageArrayLayers = 1; // no VR support.
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+		int graphicsIndex = FindGraphicsQueueFamily(physicalDevice);
+		int presentIndex = FindPresentQueueFamily(physicalDevice, surface);
+
+		uint32_t queueFamilyIndices[] = { (uint32_t)graphicsIndex, (uint32_t)presentIndex };
+
+		// If the present queue and graphics queue are not on the same queue, set the swapchain images to concurrect sharing.
+		if (graphicsIndex != presentIndex) {
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			createInfo.queueFamilyIndexCount = 2;
+			createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		}
+		else
+		{ // If the present queue and graphics queue ARE on the same queue, only one queue can have ownership at a time, and ownership has to be transferred to the other before presenting or rendering.
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			createInfo.queueFamilyIndexCount = 0; // Optional
+			createInfo.pQueueFamilyIndices = nullptr; // Optional
+		}
+
+		createInfo.preTransform = swapChain->mSurfaceCapabilities.currentTransform; // We don't want any transformation so we set it to the current transform.
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // We don't want to use the alpha bit for blending with other windows so set it to OPAQUE.
+		createInfo.presentMode = swapChain->mSurfacePresentMode; // Set the present mode to the one we selected.
+		createInfo.clipped = VK_TRUE; // We don't need to read the swapchain image, so if another window is obscuring it, we don't care about it's colours.
+		createInfo.oldSwapchain = VK_NULL_HANDLE; // For now we only need 1 swapchain ever and dont care.
+
+		if (vkCreateSwapchainKHR(mDevice->mDevice, &createInfo, nullptr, &swapChain->mSwapChain) != VK_SUCCESS)
+		{
+			RLOG_ERROR("Failed to create SwapChain object.");
+		}
+
+		// Retrieve swap chain images.
+		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, nullptr);
+		swapChain->mSwapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, swapChain->mSwapChainImages.data());
+
+		// Assign the native window to this swapchain.
+		swapChain->mPlatformWindow = pNativeWindow;
+
+		// Create image views.
+		swapChain->mSwapChainImageViews.resize(swapChain->mSwapChainImages.size());
+
+		for (uint32_t i = 0; i < swapChain->mSwapChainImages.size(); i++)
+		{
+			swapChain->mSwapChainImageViews[i] = createImageView(swapChain->mSwapChainImages[i], swapChain->mSurfaceFormat, VK_IMAGE_ASPECT_COLOR_BIT);
+		}
+
+		// Update the pointer argument to point to the newly created swapchain.
+		*ppSwapChain = (ISwapChain*)swapChain;
+
 		return RR_SUCCESS;
 	}
 
 	ERenderResult RVulkanRenderer::destroySwapChain(ISwapChain* pSwapchain)
 	{
+		delete pSwapchain;
 		return RR_SUCCESS;
 	}
 
@@ -405,7 +666,7 @@ namespace Raven
 	ERenderResult RVulkanRenderer::pickPhysicalDevice(FVulkanPhysicalDevice** ppDevice)
 	{
 		// Safety check to make sure we have retrieved all information about the physical devices.
-		if (mGPUs.size() == 0)
+		if (mGPUs.empty())
 		{
 			ERenderResult result = queryAvailablePhysicalDevices();
 			if (result != RR_SUCCESS)
@@ -442,7 +703,7 @@ namespace Raven
 		}
 
 		// Output our most suitable device to ppDevice.
-		ppDevice = &mostSuitableDevice;
+		*ppDevice = mostSuitableDevice;
 
 		return RR_SUCCESS;
 	}
@@ -550,7 +811,7 @@ namespace Raven
 	ERenderResult RVulkanRenderer::createLogicalDevice(FVulkanPhysicalDevice* pPhysicalDevice)
 	{
 		// Find queue indices.
-		mDevice.mQueueIndices = retrieveQueueFamilyIndices(pPhysicalDevice);
+		mDevice->mQueueIndices = retrieveQueueFamilyIndices(pPhysicalDevice);
 
 		// Vector of queue creation information structures.
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
@@ -559,41 +820,41 @@ namespace Raven
 		float queuePriority = 1.0f;
 		VkDeviceQueueCreateInfo graphicsQueueCreateInfo = {};
 		graphicsQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		graphicsQueueCreateInfo.queueFamilyIndex = mDevice.mQueueIndices.mGraphicsQueueIndex;
+		graphicsQueueCreateInfo.queueFamilyIndex = mDevice->mQueueIndices.mGraphicsQueueIndex;
 		graphicsQueueCreateInfo.queueCount = 1;
 		graphicsQueueCreateInfo.pQueuePriorities = &queuePriority;
 		queueInfos.push_back(graphicsQueueCreateInfo);
 
 		// Create queue creation info for the compute queue if it is dedicated.
-		if (mDevice.mQueueIndices.hasDedicatedComputeQueue())
+		if (mDevice->mQueueIndices.hasDedicatedComputeQueue())
 		{
 			VkDeviceQueueCreateInfo computeQueueCreateInfo = {};
 			computeQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			computeQueueCreateInfo.queueFamilyIndex = mDevice.mQueueIndices.mComputeQueueIndex;
+			computeQueueCreateInfo.queueFamilyIndex = mDevice->mQueueIndices.mComputeQueueIndex;
 			computeQueueCreateInfo.queueCount = 1;
 			computeQueueCreateInfo.pQueuePriorities = &queuePriority;
 			queueInfos.push_back(computeQueueCreateInfo);
 		}
 
 		// Create queue creation info for the transfer queue if it is dedicated.
-		if (mDevice.mQueueIndices.hasDedicatedTransferQueue())
+		if (mDevice->mQueueIndices.hasDedicatedTransferQueue())
 		{
 			VkDeviceQueueCreateInfo transferQueueCreateInfo = {};
 			transferQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			transferQueueCreateInfo.queueFamilyIndex = mDevice.mQueueIndices.mTransferQueueIndex;
+			transferQueueCreateInfo.queueFamilyIndex = mDevice->mQueueIndices.mTransferQueueIndex;
 			transferQueueCreateInfo.queueCount = 1;
 			transferQueueCreateInfo.pQueuePriorities = &queuePriority;
 			queueInfos.push_back(transferQueueCreateInfo);
 		}
 
 		// We want certain device features to be enabled.
-		mDevice.mEnabledFeatures.samplerAnisotropy = VK_TRUE;
+		mDevice->mEnabledFeatures.samplerAnisotropy = VK_TRUE;
 
 		VkDeviceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		createInfo.pQueueCreateInfos = queueInfos.data();
 		createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueInfos.size());
-		createInfo.pEnabledFeatures = &mDevice.mEnabledFeatures;
+		createInfo.pEnabledFeatures = &mDevice->mEnabledFeatures;
 
 		createInfo.enabledExtensionCount = 0;
 
@@ -607,7 +868,7 @@ namespace Raven
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 
-		if (mShouldEnableValidationLayers) {
+		if (mRendererInfo.enableDebugging) {
 			createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
 			createInfo.ppEnabledLayerNames = validationLayers.data();
 		}
@@ -619,16 +880,16 @@ namespace Raven
 		createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
 		// Create the device.
-		if (vkCreateDevice(pPhysicalDevice->mPhysicalDevice, &createInfo, nullptr, &mDevice.mDevice) != VK_SUCCESS) {
+		if (vkCreateDevice(pPhysicalDevice->mPhysicalDevice, &createInfo, nullptr, &mDevice->mDevice) != VK_SUCCESS) {
 			return RR_INITIALIZATION_FAILED;
 		}
 
-		mDevice.mPhysicalDevice = pPhysicalDevice;
+		mDevice->mPhysicalDevice = pPhysicalDevice;
 
 		// Retrieve our graphics queue.
-		vkGetDeviceQueue(mDevice.mDevice, mDevice.mQueueIndices.mGraphicsQueueIndex, 0, &mDevice.mGraphicsQueue);
-		vkGetDeviceQueue(mDevice.mDevice, mDevice.mQueueIndices.mTransferQueueIndex, 0, &mDevice.mTransferQueue);
-		vkGetDeviceQueue(mDevice.mDevice, mDevice.mQueueIndices.mComputeQueueIndex, 0, &mDevice.mComputeQueue);
+		vkGetDeviceQueue(mDevice->mDevice, mDevice->mQueueIndices.mGraphicsQueueIndex, 0, &mDevice->mGraphicsQueue);
+		vkGetDeviceQueue(mDevice->mDevice, mDevice->mQueueIndices.mTransferQueueIndex, 0, &mDevice->mTransferQueue);
+		vkGetDeviceQueue(mDevice->mDevice, mDevice->mQueueIndices.mComputeQueueIndex, 0, &mDevice->mComputeQueue);
 
 		return RR_SUCCESS;
 	}
@@ -653,14 +914,14 @@ namespace Raven
 			return RR_SUCCESS;
 		}
 
-		if(mShouldEnableValidationLayers)
+		if(mRendererInfo.enableDebugging)
 		{
 			// Destroy debugging report callback.
 			destroyDebugReportCallbackExtention(mInstance, mDebuggingCallback, nullptr);
 		}
 
 		// Destroy our logical device.
-		vkDestroyDevice(mDevice, nullptr);
+		vkDestroyDevice(mDevice->mDevice, nullptr);
 
 		// Destroy our Vulkan instance.
 		vkDestroyInstance(mInstance, nullptr);

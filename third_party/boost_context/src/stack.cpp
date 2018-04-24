@@ -145,6 +145,8 @@ namespace boost_context {
 
         s.sptr = (char *) vp + size_;
         s.ssize = size_;
+
+        RVN_VALGRIND_REGISTER(s.sptr, s.ssize);
         return s;
     }
 
@@ -163,7 +165,7 @@ namespace boost_context {
 #else
         free(vp);
 #endif
-
+        RVN_VALGRIND_DEREGISTER();
         memset(s, 0x00, sizeof(fcontext_stack_t));
     }
 }

@@ -42,7 +42,8 @@ namespace Raven
 		break;
 		}
 
-		vprintf((prefix + message + "\n").c_str(), args);
+		std::string msg = (prefix + message + std::string("\n"));
+		vprintf(msg.c_str(), args);
 
 	}
 

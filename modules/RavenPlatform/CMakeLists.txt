@@ -4,6 +4,7 @@ set(MODULE_NAME "RavenPlatform")
 set (SourceGroup_PublicIncludes
 	"Public/Platform/Generic/GenericPlatform.h"
 	"Public/Platform/Generic/GenericPlatformInfo.h"
+	"Public/Platform/Generic/GenericPlatformFileSystem.h"
 	"Public/Platform/Generic/GenericPlatformWindow.h"
 	"Public/Platform/Generic/GenericPlatformLogger.h"
 	"Public/Platform/Interfaces/IPlatformWindow.h"
@@ -17,6 +18,7 @@ set (SourceGroup_Source
 	"Private/GenericPlatform.cpp"
 	"Private/GenericPlatformWindow.cpp"
 	"Private/GenericPlatformLogger.cpp"
+	"Private/GenericPlatformFileSystem.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

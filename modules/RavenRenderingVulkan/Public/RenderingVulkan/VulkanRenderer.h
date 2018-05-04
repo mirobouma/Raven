@@ -1,8 +1,25 @@
 #pragma once
+
+#include "RenderingVulkan/Vulkan.h"
 #include "Rendering/Interfaces/IRenderer.h"
 #include "RenderingVulkan/VulkanDevice.h"
 #include "RenderingVulkan/VulkanSwapChain.h"
-#include "RenderingVulkan/Vulkan.h"
+#include "RenderingVulkan/VulkanPipeline.h"
+#include "RenderingVulkan/VulkanTexture.h"
+#include "RenderingVulkan/VulkanBuffer.h"
+#include "RenderingVulkan/VulkanQueue.h"
+#include "RenderingVulkan/VulkanShader.h"
+#include "RenderingVulkan/VulkanFence.h"
+#include "RenderingVulkan/VulkanSemaphore.h"
+#include "RenderingVulkan/VulkanDescriptorPool.h"
+#include "RenderingVulkan/VulkanCommandPool.h"
+#include "RenderingVulkan/VulkanCommandList.h"
+#include "RenderingVulkan/VulkanRenderPass.h"
+#include "RenderingVulkan/VulkanFrameBuffer.h"
+#include "RenderingVulkan/VulkanRootSignature.h"
+#include "RenderingVulkan/VulkanSharedDefines.h"
+#include "RenderingVulkan/VulkanRenderTarget.h"
+
 #include <vector>
 
 namespace Raven 
@@ -13,7 +30,7 @@ namespace Raven
 	class RVulkanRenderer : public IRenderer 
 	{
 	public:
-		RVulkanRenderer() : mDevice(nullptr) {}
+		RVulkanRenderer() : mDevice(nullptr), mInitialized(false), mDescriptorPool(nullptr) {}
 
 		// Inherited via IRenderer
 		virtual ERenderResult initialize(FRendererInitializationDesc* pDesc) override;
@@ -24,22 +41,32 @@ namespace Raven
 		virtual ERenderResult destroyQueue(IQueue* pQueue) override;
 		virtual ERenderResult createCommandPool(ICommandPool** ppCmdPool, IQueue* pQueue, FCommandPoolCreateDesc* pDesc) override;
 		virtual ERenderResult destroyCommandPool(ICommandPool* pCmdPool) override;
-		virtual ERenderResult createCommandList(ICommandList** ppCommandList, ICommandPool* pCmdPool) override;
-		virtual ERenderResult createCommandLists(ICommandList** ppCommandLists, uint32_t numCommandLists, ICommandPool* pCmdPool) override;
-		virtual ERenderResult destroyCommandList(ICommandList* pTexture) override;
-		virtual ERenderResult createPipeline(IGraphicsPipeline** ppPipeline, FGraphicsPipelineCreateDesc* pDesc) override;
-		virtual ERenderResult destroyPipeline(IGraphicsPipeline* pPipeline) override;
-		virtual ERenderResult createPipeline(IComputePipeline** ppPipeline, FComputePipelineCreateDesc* pDesc) override;
-		virtual ERenderResult destroyPipeline(IComputePipeline* pPipeline) override;
+		virtual ERenderResult createCommandList(ICommandList** ppCommandList, ICommandPool* pCmdPool, ECommandListType type = COMMAND_LIST_TYPE_PRIMARY) override;
+		virtual ERenderResult createCommandLists(ICommandList** ppCommandLists, uint32_t numCommandLists, ICommandPool* pCmdPool, ECommandListType type = COMMAND_LIST_TYPE_PRIMARY) override;
+		virtual ERenderResult destroyCommandList(ICommandPool* pCmdPool, ICommandList* pCommandList) override;
+		virtual ERenderResult destroyCommandLists(ICommandPool* pCmdPool, ICommandList* pCommandLists, uint32_t numLists) override;
+		virtual ERenderResult createPipeline(IPipeline** ppPipeline, FGraphicsPipelineCreateDesc* pDesc) override;
+		virtual ERenderResult createPipeline(IPipeline** ppPipeline, FComputePipelineCreateDesc* pDesc) override;
+		virtual ERenderResult destroyPipeline(IPipeline* pPipeline) override;
+		virtual ERenderResult createFence(IFence** ppFence, uint64_t value = 1) override;
+		virtual ERenderResult destroyFence(IFence* pFence) override;
+		virtual ERenderResult createSemaphore(ISemaphore** ppSemaphore) override;
+		virtual ERenderResult destroySemaphore(ISemaphore* pSemaphore) override;
 		virtual ERenderResult createRootSignature(IRootSignature** ppRootSignature, FRootSignatureCreateDesc* pDesc) override;
 		virtual ERenderResult destroyRootSignature(IRootSignature* pRootSignature) override;
 		virtual ERenderResult createShader(IShader** ppShader, FShaderCreateDesc* pDesc) override;
 		virtual ERenderResult destroyShader(IShader* pShader) override;
+		virtual ERenderResult createSampler(ISampler** ppSampler, FSamplerCreateDesc* pDesc) override;
+		virtual ERenderResult destroySampler(ISampler* pSampler) override;
 		virtual ERenderResult createTexture(ITexture** ppTexture, FTextureCreateDesc* pDesc) override;
 		virtual ERenderResult destroyTexture(ITexture* pTexture) override;
+		virtual ERenderResult createBuffer(IBuffer** ppBuffer, FBufferCreateDesc* pDesc) override;
+		virtual ERenderResult destroyBuffer(IBuffer* pBuffer) override;
 		virtual ERenderResult createRenderTarget(IRenderTarget** ppRenderTarget, FRenderTargetCreateDesc* pDesc) override;
 		virtual ERenderResult destroyRenderTarget(IRenderTarget* pRenderTarget) override;
-
+		virtual ERenderResult queueSubmit(IQueue* pQueue, uint32_t numCmds, ICommandList** ppCmds, IFence* pSignalFence, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores, uint32_t numSignalSemaphores, ISemaphore** ppSignalSemaphores) override;
+		virtual ERenderResult queuePresent(IQueue* pQueue, uint32_t numSwapChains, ISwapChain** ppSwapChains, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores) override;
+		virtual ERenderResult swapChainAcquireNextImage(ISwapChain* pSwapChain, ISemaphore* pSignalSemaphores, IFence* pSignalFence) override;
 		virtual bool isInitialized() const override;
 
 	protected:
@@ -153,6 +180,73 @@ namespace Raven
 		*/
 		ERenderResult destroyDebugReportCallbackExtention(VkInstance pInstance, VkDebugReportCallbackEXT pCallback, const VkAllocationCallbacks* pAllocator);
 
+		/*! Create image view for VkImage.
+		\param[in] pImage pImage is a reference to the VkImage this image view should be created for.
+		\param[in] format format is the surface format this image view should have.
+		\param[in] aspectFlags aspectFlags is a bitflag which describes which aspects can be used for this image view.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		VkImageView createImageView(FVulkanTexture* pImage, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspectFlags);
+
+		/*! Find suitable memory type with the specified flags
+		\param[in] typeFilter typeFilter is a bitflag specifying the required memory type bits (Retrieve from VkMemoryRequirements).
+		\param[in] properties properties a bit flag of on which device the memory must reside and if their memory is coherent.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		uint32_t findSuitableMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+		/*! Create a descriptor pool.
+		\param[in] ppDescriptorPool ppDescriptorPool is a reference to the FVulkanDescriptorPool pointer in which the created pool has to be returned.
+		\param[in] pDesc pDesc points to a structure describing additional creation info.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		ERenderResult createDescriptorPool(FVulkanDescriptorPool** ppDescriptorPool, FVulkanDescriptorPoolCreateDesc* pDesc);
+
+		/*! Destroy a descriptor pool.
+		\param[in] pDescriptorPool pDescriptorPool is a reference to the FVulkanDescriptorPool pointer which has to be destroyed.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		void destroyDescriptorPool(FVulkanDescriptorPool* pDescriptorPool);
+
+		/*! Create a render pass.
+		\param[in] ppDescriptorPool ppDescriptorPool is a reference to the FVulkanDescriptorPool pointer in which the created pool has to be returned.
+		\param[in] pDesc pDesc points to a structure describing additional creation info.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		ERenderResult createRenderPass(FVulkanRenderPass** ppRenderPass, FVulkanRenderPassCreateDesc* pDesc);
+
+		/*! Create a frame buffer.
+		\param[in] ppFrameBuffer ppFrameBuffer is a reference to the FVulkanFrameBuffer pointer in which the created frame buffer is returned.
+		\param[in] pDesc pDesc points to a structure describing additional creation info.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		ERenderResult createFrameBuffer(FVulkanFrameBuffer** ppFrameBuffer, FVulkanFrameBufferCreateDesc* pDesc);
+
+		/*! Destroy a render pass.
+		\param[in] pRenderPass pRenderPass is a reference to the VkRenderPass pointer which has to be destroyed.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		void destroyRenderPass(FVulkanRenderPass* pRenderPass);
+
+		// Global variables
+		static const uint32_t gDescriptorPoolSize = 4096;
+		static const uint32_t gDescriptorSets = gDescriptorPoolSize * VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+
+		VkDescriptorPoolSize gDescriptorPoolSizes[VK_DESCRIPTOR_TYPE_RANGE_SIZE] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, gDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, gDescriptorPoolSize * 4 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, gDescriptorPoolSize * 4 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1, },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, gDescriptorPoolSize * 4 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, gDescriptorPoolSize * 4 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, gDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, gDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 },
+		};
+
         // Renderer variables.
 		VkInstance								mInstance; /*!< Vulkan instance for this renderer. */
 		VkDebugReportCallbackEXT				mDebuggingCallback; // callback extension for validation layers.
@@ -160,6 +254,7 @@ namespace Raven
 		FVulkanDevice*							mDevice; /*!< Logical device associated with this renderer. */
 		FRendererInitializationDesc				mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
 		bool									mInitialized; /*!< Boolean to store if the renderer is initialized. */
+		FVulkanDescriptorPool*					mDescriptorPool; /*!< Global descriptor pool. */
 
 };
 }

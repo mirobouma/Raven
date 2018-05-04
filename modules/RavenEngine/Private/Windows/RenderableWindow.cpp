@@ -14,7 +14,7 @@ namespace Raven
 	{
 		if (GEngine != nullptr)
 		{
-			GEngine->GetRenderer()->CreateSurface((void*)GetNativeHandle());
+			GEngine->GetRenderer()->createSwapChain(this, &_SwapChain);
 		}	
 
 		// Call super.
@@ -50,6 +50,7 @@ namespace Raven
 		if (GEngine != nullptr)
 		{
 			// Destroy swapchain.
+			GEngine->GetRenderer()->destroySwapChain(_SwapChain);
 		}
 
 		// Call super.

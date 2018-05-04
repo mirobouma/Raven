@@ -41,47 +41,6 @@ void ApplicationStart(int argc, char*argv[])
 
 	IPlatformWindow* Window;
 
-    RLOG_INFO("wazzaaaddone");
-    
-	RTaskCounter counter;
-	FTaskBase* task = gTaskScheduler->MakeTask([](uint32_t a)
-	{
-		RTaskCounter counter2;
-		FTaskBase* task2[10];
-
-		for (uint32_t x = 0; x < 10; ++x)
-		{
-			task2[x] = gTaskScheduler->MakeTask([](uint32_t b)
-			{
-				RTaskCounter counter3;
-				FTaskBase* task3[5];
-
-				for (uint32_t z = 0; z < 5; ++z)
-				{
-					task3[z] = gTaskScheduler->MakeTask([](uint32_t c)
-					{
-						RLOG_INFO("wazzaaaZaaaaaZazazaza %i", c);
-					}, z);
-				}
-
-				gTaskScheduler->ExecuteTasks(&counter3, &task3[0], 5);
-				gTaskScheduler->WaitForCounter(&counter3, 0);
-
-				RLOG_INFO("wazzaaaZaaaaa  %i", b);
-
-			}, x);
-		}
-
-		gTaskScheduler->ExecuteTasks(&counter2, &task2[0], 10);
-		gTaskScheduler->WaitForCounter(&counter2, 0);
-
-		RLOG_INFO("wazzaaa %i", a);
-	}, 69);
-
-	gTaskScheduler->ExecuteTasks(&counter, &task, 1);
-	gTaskScheduler->WaitForCounter(&counter, 0);
-	RLOG_INFO("wazzaaadone");
-
 	// Create window.
 	if (GWindowSystem != nullptr)
 	{
@@ -124,13 +83,15 @@ void ApplicationStart(int argc, char*argv[])
 	int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
 	{
 		RTaskAllocator taskAllocator;
-		auto task = taskAllocator.MakeTask([=](uint32_t i) { ApplicationStart(0, nullptr); }, 0);
+		auto task = FTask<uint32_t>([=](uint32_t i)
+		{
+			ApplicationStart(0, nullptr);
+		}, 0);
 
-		RTaskScheduler scheduler;
-		scheduler.Run(1, 60, task);
+		gTaskScheduler = new RTaskScheduler();
+		gTaskScheduler->Run(0, 60, &task);
 
 		taskAllocator.Reset(true);
-		//ApplicationStart(0, nullptr);
 		return 0;
 	}
 #endif

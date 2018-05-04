@@ -3,6 +3,7 @@
 #include "Platform/Interfaces/IPlatformWindow.h"
 #include "RenderingVulkan/Vulkan.h"
 #include <vector>
+#include <map>
 
 namespace Raven
 {
@@ -35,8 +36,7 @@ namespace Raven
 		std::vector<VkExtensionProperties>		mSupportedExtensions; /*!< Extensions that this physical device supports. */
 
 		/*! Implicit conversion to a VkPhysicalDevice */
-        operator VkPhysicalDevice*() const { return &mPhysicalDevice; }
-		operator VkPhysicalDevice() const { return mPhysicalDevice; }
+        operator VkPhysicalDevice() const { return mPhysicalDevice; }
 	};
 
 	/*! \struct FVulkanDevice
@@ -44,16 +44,13 @@ namespace Raven
 	*/
 	struct FVulkanDevice
 	{
-		VkDevice					mDevice; /*!< Logical device. */
-		VkQueue						mGraphicsQueue; /*!< graphics queue. */
-		VkQueue						mComputeQueue; /*!< compute queue. */
-		VkQueue						mTransferQueue; /*!< transfer queue. */
-		FQueueFamilyIndices			mQueueIndices; /*!< Queue indices on the physical device. */
-		FVulkanPhysicalDevice*		mPhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
-		VkPhysicalDeviceFeatures	mEnabledFeatures;/*!< Features that have been enabled for use on the physical device. */
+		VkDevice						mDevice; /*!< Logical device. */
+		FQueueFamilyIndices				mQueueIndices; /*!< Queue indices on the physical device. */
+		std::map<uint32_t, uint32_t>	mQueueCounters; /*!< Counters for retrieved queues. */
+		FVulkanPhysicalDevice*			mPhysicalDevice; /*!< Reference to the physical device associated with this vulkan logical device.*/
+		VkPhysicalDeviceFeatures		mEnabledFeatures;/*!< Features that have been enabled for use on the physical device. */
 
 		/*! Implicit conversion to a VkDevice */
-        operator VkDevice*() const { return &mDevice; }
 		operator VkDevice() const { return mDevice; }
 	};
 

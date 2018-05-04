@@ -16,6 +16,7 @@ macro(enable_glsl_to_spirv_compiling trgt)
 	file(GLOB_RECURSE GLSL_SOURCE_FILES
 		"${RVN_ROOT_SOURCE}/shaders/*.frag"
 		"${RVN_ROOT_SOURCE}/shaders/*.vert"
+		"${RVN_ROOT_SOURCE}/shaders/*.comp"
 		)
 
 	foreach(GLSL ${GLSL_SOURCE_FILES})

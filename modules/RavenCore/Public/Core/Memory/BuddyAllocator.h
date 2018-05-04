@@ -6,6 +6,9 @@
 #include "Core/Memory/MemoryUtils.h"
 #include <algorithm>
 
+#undef min
+#undef max
+
 namespace Raven
 {
 

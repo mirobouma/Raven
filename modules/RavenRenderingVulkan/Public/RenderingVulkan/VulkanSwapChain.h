@@ -22,7 +22,7 @@ namespace Raven
 		std::vector<VkImageView>		mSwapChainImageViews; /*!< Vector containing a VkImageView for each VkImage in SwapChainImages. */
 		VkExtent2D						mSwapChainExtent; /*!< The size of the SwapChain surface. */
 		IPlatformWindow*				mPlatformWindow;  /*!< Reference of the platform window associated with this SwapChain. */
-
+		uint32_t						mImageIndex; /*!< Current image index to render to on this SwapChain. */
 		/*! Implicit conversion to a VkSwapchainKHR */
 		operator VkSwapchainKHR() const { return mSwapChain; }
 	};

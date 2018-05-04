@@ -43,7 +43,10 @@ namespace Raven {
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 
 #ifndef NDEBUG
-#define RASSERT(condition) if(!(condition)) { RLOG_ERROR("Assertion failed: \"%s\"", #condition); }
+#define RASSERT(condition) if(!(condition)) {  \
+RLOG_ERROR("Assertion failed: \"%s\"", #condition);  \
+}
+
 #else
 #define RASSERT(condition) ((void)0)
 #endif

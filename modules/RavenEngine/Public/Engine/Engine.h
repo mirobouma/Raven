@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderingVulkan/TestVulkanRenderer.h"
+#include "Rendering/Interfaces/IRenderer.h"
 #include <memory>
 
 namespace Raven {
@@ -37,7 +37,7 @@ namespace Raven {
 		void Render();
 
 		/*! TEMP get reference to the renderer. */
-		RVulkanTestRenderer* GetRenderer() { return _Renderer.get(); }
+		IRenderer* GetRenderer() { return _Renderer.get(); }
 
 	protected:
 		/*! Initializes the minimal engine functionality.
@@ -46,6 +46,6 @@ namespace Raven {
 		bool InitializeMinimal();
 
 		/*! TEMP Renderer */
-		std::unique_ptr<RVulkanTestRenderer> _Renderer;
+		std::unique_ptr<IRenderer> _Renderer;
 	};
 }

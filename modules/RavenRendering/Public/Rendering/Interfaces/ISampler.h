@@ -51,6 +51,20 @@ namespace Raven
 		MAX_MIP_MODE
 	} EMipMode;
 
+	/*! \enum EBorderColor
+	\brief Enumeration describing the sampler border color.
+	*/
+	typedef enum EBorderColor
+	{
+		BORDER_COLOR_FLOAT_TRANSPARENT_BLACK = 0,
+		BORDER_COLOR_INT_TRANSPARENT_BLACK = 1,
+		BORDER_COLOR_FLOAT_OPAQUE_BLACK = 2,
+		BORDER_COLOR_INT_OPAQUE_BLACK = 3,
+		BORDER_COLOR_FLOAT_OPAQUE_WHITE = 4,
+		BORDER_COLOR_INT_OPAQUE_WHITE = 5,
+		MAX_BORDER_COLOR
+	} EBorderColor;
+
 	/*! \struct FSamplerCreateDesc
 	\brief Structure describing the parameters for sampler creation. */
 	struct FSamplerCreateDesc
@@ -61,15 +75,13 @@ namespace Raven
 		ESamplerAddressMode 	addressModeV;
 		ESamplerAddressMode 	addressModeW;
 		bool 					anisotropyEnable;
-		uint32_t 				maxAnisotropy;
-		Math::FVector4				borderColor;
-		bool 					unnormalizedCoordinates;
+		float 					maxAnisotropy;
+		EBorderColor			borderColor;
 		ESamplerComparisonFunc 	comparisonFunc;
 		EMipMode 				mipmapMode;
 		float 					mipLodBias;
 		float 					minLod;
 		float 					maxLod;
-
 	};
 
 	/*! \struct ISampler

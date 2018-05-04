@@ -5,6 +5,7 @@ set (SourceGroup_PublicIncludes
 	"Public/HAL/Platform.h"
 	"Public/HAL/PlatformInfo.h"
 	"Public/HAL/PlatformLogger.h"
+	"Public/HAL/PlatformFileSystem.h"
 	"Public/HAL/PlatformThreading.h"
 	"Public/HAL/PlatformWindow.h"
 )

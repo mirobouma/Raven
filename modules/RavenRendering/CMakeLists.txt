@@ -14,6 +14,8 @@ set (SourceGroup_PublicIncludes
 	"Public/Rendering/Interfaces/IRootSignature.h"
 	"Public/Rendering/Interfaces/ISampler.h"
 	"Public/Rendering/Interfaces/ITexture.h"
+	"Public/Rendering/Interfaces/IFence.h"
+	"Public/Rendering/Interfaces/ISemaphore.h"
 	"Public/Rendering/Interfaces/SharedDefines.h"
 )
 

@@ -4,6 +4,7 @@
 #include "HAL/Platform.h"
 #include "WindowSystem/WindowSystem.h"
 #include "Core/Debug/LogManager.h"
+#include "RenderingVulkan/VulkanRenderer.h"
 
 namespace Raven {
 
@@ -43,8 +44,16 @@ namespace Raven {
 	bool REngine::InitializeSystems()
 	{
 		// Create rendering system.
-		_Renderer = std::unique_ptr<RVulkanTestRenderer>(new RVulkanTestRenderer());
-		_Renderer->Initialize();
+		_Renderer = std::unique_ptr<IRenderer>(new RVulkanRenderer());
+
+		FRendererInitializationDesc initDesc;
+		initDesc.applicationName = "Application";
+		initDesc.enableDebugging = true;
+		initDesc.versionMajor = 1;
+		initDesc.versionMinor = 0;
+		initDesc.versionPatch = 0;
+
+		_Renderer->initialize(&initDesc);
 
 		// Initialization succeeded.
 		return true;
@@ -59,7 +68,7 @@ namespace Raven {
 		}
 
 		// Destroy renderer.
-		GEngine->_Renderer->Destroy();
+		GEngine->_Renderer->destroy();
 
 		// Destroy windowing system interface.
 		RWindowSystem::Destroy();
@@ -86,7 +95,7 @@ namespace Raven {
 		}
 
 		// Render the game.
-		_Renderer->Render();
+		//_Renderer->Render();
 		
 	}
 }

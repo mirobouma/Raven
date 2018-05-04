@@ -3,27 +3,38 @@
 
 namespace Raven
 {
-	/*! \enum EShaderType
-	 \brief Enumeration describing the type of shader an FShaderProperty is.
+	/*! \enum EShaderStage
+	 \brief Enumeration describing the stage of the shader an FShaderProperty is.
 	 \sa FShaderProperty
 	 */
-	typedef enum EShaderType {
-		SHADER_TYPE_VERTEX,
-		SHADER_TYPE_PIXEL,
-		SHADER_TYPE_GEOMETRY,
-		SHADER_TYPE_DOMAIN,
-		SHADER_TYPE_HULL,
-		MAX_SHADER_TYPE
-	}EShaderType;
+	typedef enum EShaderStage 
+	{
+		SHADER_STAGE_VERTEX,
+		SHADER_STAGE_TESSELLATION_CONTROL,
+		SHADER_STAGE_TESSELLATION_EVALUATION,
+		SHADER_STAGE_GEOMETRY,
+		SHADER_STAGE_FRAGMENT,
+		SHADER_STAGE_COMPUTE,
+		MAX_SHADER_STAGE
+	} EShaderStage;
+
+	/*! \enum FShaderDefinition
+	\brief structure describing a shader definition.
+	\sa FShaderProperty
+	*/
+	typedef struct FShaderDefinition
+	{
+		std::string name;
+		std::string value;
+	} FShaderDefinition;
 
 	/*! \struct FShaderProperty
-	 \brief Structure describing a shader to load and its defines.
+	 \brief Structure describing a shader to load.
 	 */
 	typedef struct FShaderProperty
 	{
-		EShaderType type;
+		EShaderStage stage;
 		std::string path;
-		std::string defines;
 	} FShaderProperty;
 
 	/*! \struct FShaderCreateDesc
@@ -31,8 +42,8 @@ namespace Raven
 	 */
 	typedef struct FShaderCreateDesc
 	{
-		uint32_t 		numShaders;
-		FShaderProperty shaders[MAX_SHADER_TYPE];
+		FShaderProperty shaders[MAX_SHADER_STAGE];
+		std::vector<FShaderDefinition> definitions;
 	} FShaderCreateDesc;
 
 	/*! \struct IShader

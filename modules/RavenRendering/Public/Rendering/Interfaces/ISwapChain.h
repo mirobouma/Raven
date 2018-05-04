@@ -5,10 +5,11 @@ namespace Raven
 	/*! \enum ESwapChainPresentMode
 	 \brief Enumeration describing swapchain present modes.
 	 */
-	typedef enum ESwapChainPresentMode {
+	typedef enum ESwapChainPresentMode 
+	{
 		SWAPCHAIN_PRESENT_MODE_FIFO,
 		SWAPCHAIN_PRESENT_MODE_MAILBOX,
-		SWAPCHAIN_PRESENT_MODE_IMMEDIATE
+		SWAPCHAIN_PRESENT_MODE_IMMEDIATE,
 		MAX_SWAPCHAIN_PRESENT_MODE
 	} ESwapChainPresentMode;
 

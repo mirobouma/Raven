@@ -2640,7 +2640,7 @@ namespace Raven
 
 		return RR_SUCCESS;
 	}
-
+	
 	ERenderResult RVulkanRenderer::createDescriptorPool(FVulkanDescriptorPool** ppDescriptorPool, FVulkanDescriptorPoolCreateDesc* pDesc)
 	{
 		RASSERT(pDesc != nullptr);

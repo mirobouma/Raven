@@ -299,6 +299,102 @@ namespace Raven {
 		*/
 		virtual ERenderResult swapChainAcquireNextImage(ISwapChain* pSwapChain, ISemaphore* pSignalSemaphores, IFence* pSignalFence) = 0;
 
+		/*! Begin command list recording.
+		\param[in] pCommandList pCommandList points to the command list in which we want to start recoding commands.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdBegin(ICommandList* pCommandList) = 0;
+
+		/*! End command list recording.
+		\param[in] pCommandList pCommandList points to the command list in which we want to stop recoding commands.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdEnd(ICommandList* pCommandList) = 0;
+
+		/*! Begin command list recording.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdBeginRenderPass(ICommandList* pCommandList, uint32_t numColorAttachments, RenderTarget** ppColorAttachments, RenderTarget* pDepthStencilAttachment) = 0;
+
+		/*! End command list recording.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdEndRenderPass(ICommandList* pCommandList) = 0;
+
+		/*! Bind vertex buffer to the pipeline.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdBindVertexBuffer(ICommandList* pCommandList, uint32_t numBuffers, IBuffer** ppBuffers, uint32_t startSlot = 0) = 0;
+
+		/*! Bind index buffer to the pipeline.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdBindIndexBuffer(ICommandList* pCommandList, IBuffer* pBuffer) = 0;
+
+		/*! Set viewport for this render pass.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdSetViewport(ICommandList* pCommandList, Math::FRect rect, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
+
+		/*! Set scissor rects for this render pass.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdSetScissorRects(ICommandList* pCommandList, Math::FRect rect) = 0;
+
+		/*! bind a pipeline.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdBindPipeline(ICommandList* pCommandList, IPipeline* pPipeline) = 0;
+
+		/*! Bind index buffer to the pipeline.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdResourceBarriers(ICommandList* pCommandList, uint32_t numBufferBarriers, FBufferBarrier** ppBufferBarriers, uint32_t numTextureBarries, FTextureBarrier** ppTextureBarriers, bool flush) = 0;
+
+		/*! Flush all pending barriers into the command list.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdFlushBarriers(ICommandList* pCommandList) = 0;
+
+		/*! Draw vertices.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdDraw(ICommandList* pCommandList, uint32_t vertexCount, uint32_t vertexOffset) = 0;
+
+		/*! Draw vertices using indices.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdDrawIndexed(ICommandList* pCommandList, uint32_t indexCount, uint32_t indexOffset) = 0;
+
+		/*! Draw vertices using indices and instances.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdDrawInstanced(ICommandList* pCommandList, uint32_t vertexCount, uint32_t vertexOffset, uint32_t instanceCount) = 0;
+
+		/*! Draw vertices using indices and instances.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdDrawIndexedInstanced(ICommandList* pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t instanceCount) = 0;
+
+		/*! Dispatch a compute shader.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdDispatch(ICommandList* pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) = 0;
+
 		/*! Check if the renderer has been initialized.
 		\returns If initialized, this command will return true.
 		*/

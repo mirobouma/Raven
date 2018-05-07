@@ -10,9 +10,12 @@ namespace Raven
 	*/
 	struct FVulkanTexture : ITexture
 	{
-		VkImage				mImage;
-		VkImageView			mImageView;
-		VkDeviceMemory		mMemory;
-		FTextureCreateDesc	mDesc;
+		VkImage					mImage;
+		VkImageView				mImageView;
+		VkDeviceMemory			mMemory;
+		FTextureCreateDesc		mDesc;
+		VkImageCreateInfo		mVkImageDesc;
+		VkImageViewCreateInfo	mVkImageViewDesc;
+		FResourceState 			mState;
 	};
 }

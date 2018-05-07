@@ -4,6 +4,8 @@ set(MODULE_NAME "RavenCore")
 set (SourceGroup_PublicIncludes
 	"Public/Core/Service/Service.h"
 	"Public/Core/Service/ServiceProvider.h"
+	"Public/Core/Utility/Enum.h"
+	"Public/Core/Utility/Hash.h"
 	"Public/Core/Debug/LogManager.h"
 	"Public/Core/Threading/Thread.h"
 	"Public/Core/Threading/Fiber.h"

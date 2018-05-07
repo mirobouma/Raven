@@ -4,6 +4,8 @@ set(PROJECT_NAME "RavenGame")
 
 set (SourceGroup_Source
 	"Private/Main.cpp"
+	"Private/GameWindow.h"
+	"Private/GameWindow.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

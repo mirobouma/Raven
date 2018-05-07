@@ -10,6 +10,7 @@
 #include "RenderingVulkan/TestVulkanRenderer.h"
 #include "Core/Debug/LogManager.h"
 #include "Core/Memory/BuddyAllocator.h"
+#include "GameWindow.h"
 #include <chrono>
 #include <thread>
 
@@ -39,12 +40,12 @@ void ApplicationStart(int argc, char*argv[])
 	// Initialize engine systems.
 	GEngine->InitializeSystems();
 
-	IPlatformWindow* Window;
+	RGameWindow* Window;
 
 	// Create window.
 	if (GWindowSystem != nullptr)
 	{
-		Window = GWindowSystem->CreateAWindow<Raven::RRenderableWindow>(
+		Window = GWindowSystem->CreateAWindow<Raven::RGameWindow>(
 			"Raven Game Engine <Vulkan>",
 			FVector2(1024, 800),
 			FVector2(0, 0),
@@ -67,6 +68,11 @@ void ApplicationStart(int argc, char*argv[])
 		if (GWindowSystem->GetNumAliveWindows() == 0)
 		{
 			break;
+		}
+
+		if(Window != nullptr)
+		{
+			Window->Render();
 		}
 
 		GEngine->Render();

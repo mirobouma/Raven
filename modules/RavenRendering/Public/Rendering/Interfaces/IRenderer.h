@@ -18,12 +18,13 @@
 #include "Rendering/Interfaces/ISwapChain.h"
 #include "Rendering/Interfaces/ITexture.h"
 
-namespace Raven {
-
+namespace Raven
+{
 	/*! Enumeration of rendering results. */
 	typedef enum ERenderResult {
-		RR_SUCCESS = 0,
-		RR_UNKNOWN_FAILURE = 0,
+		RR_FAIL = 0,
+		RR_SUCCESS = 1,
+		RR_UNKNOWN_FAILURE,
 		RR_ALREADY_INITIALIZED,
 		RR_OBJECT_DOES_NOT_EXIST,
 		RR_OUT_OF_HOST_MEMORY,
@@ -315,7 +316,7 @@ namespace Raven {
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdBeginRenderPass(ICommandList* pCommandList, uint32_t numColorAttachments, RenderTarget** ppColorAttachments, RenderTarget* pDepthStencilAttachment) = 0;
+		virtual ERenderResult cmdBeginRenderPass(ICommandList* pCommandList, uint32_t numColorAttachments, IRenderTarget** ppColorAttachments, IRenderTarget* pDepthStencilAttachment) = 0;
 
 		/*! End command list recording.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
@@ -357,7 +358,7 @@ namespace Raven {
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdResourceBarriers(ICommandList* pCommandList, uint32_t numBufferBarriers, FBufferBarrier** ppBufferBarriers, uint32_t numTextureBarries, FTextureBarrier** ppTextureBarriers, bool flush) = 0;
+		virtual ERenderResult cmdResourceBarriers(ICommandList* pCommandList, uint32_t numBufferBarriers, FBufferBarrier* pBufferBarriers, uint32_t numTextureBarries, FTextureBarrier* pTextureBarriers, bool flush) = 0;
 
 		/*! Flush all pending barriers into the command list.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.

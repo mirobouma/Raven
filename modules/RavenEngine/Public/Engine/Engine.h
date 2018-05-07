@@ -33,7 +33,7 @@ namespace Raven {
 		*/
 		bool InitializeSystems();
 
-		/*! TEMP Render the current scene. */
+		/*! Render the current scene. */
 		void Render();
 
 		/*! TEMP get reference to the renderer. */

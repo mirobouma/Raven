@@ -67,9 +67,25 @@ namespace Raven
 		virtual ERenderResult queueSubmit(IQueue* pQueue, uint32_t numCmds, ICommandList** ppCmds, IFence* pSignalFence, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores, uint32_t numSignalSemaphores, ISemaphore** ppSignalSemaphores) override;
 		virtual ERenderResult queuePresent(IQueue* pQueue, uint32_t numSwapChains, ISwapChain** ppSwapChains, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores) override;
 		virtual ERenderResult swapChainAcquireNextImage(ISwapChain* pSwapChain, ISemaphore* pSignalSemaphores, IFence* pSignalFence) override;
-		virtual bool isInitialized() const override;
+        virtual ERenderResult cmdBegin(ICommandList *pCommandList) override;
+        virtual ERenderResult cmdEnd(ICommandList *pCommandList) override;
+        virtual ERenderResult cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments, IRenderTarget **ppColorAttachments, IRenderTarget *pDepthStencilAttachment) override;
+        virtual ERenderResult cmdEndRenderPass(ICommandList *pCommandList) override;
+        virtual ERenderResult cmdBindVertexBuffer(ICommandList *pCommandList, uint32_t numBuffers, IBuffer **ppBuffers, uint32_t startSlot) override;
+        virtual ERenderResult cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer) override;
+        virtual ERenderResult cmdSetViewport(ICommandList *pCommandList, Math::FRect rect, float minDepth, float maxDepth) override;
+        virtual ERenderResult cmdSetScissorRects(ICommandList *pCommandList, Math::FRect rect) override;
+        virtual ERenderResult cmdBindPipeline(ICommandList *pCommandList, IPipeline *pPipeline) override;
+        virtual ERenderResult cmdResourceBarriers(ICommandList *pCommandList, uint32_t numBufferBarriers, FBufferBarrier *pBufferBarriers, uint32_t numTextureBarries, FTextureBarrier *pTextureBarriers, bool flush) override;
+        virtual ERenderResult cmdFlushBarriers(ICommandList *pCommandList) override;
+        virtual ERenderResult cmdDraw(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset) override;
+        virtual ERenderResult cmdDrawIndexed(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset) override;
+        virtual ERenderResult cmdDrawInstanced(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset, uint32_t instanceCount) override;
+        virtual ERenderResult cmdDrawIndexedInstanced(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t instanceCount) override;
+        virtual ERenderResult cmdDispatch(ICommandList *pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) override;
+        virtual bool isInitialized() const override;
 
-	protected:
+    protected:
 		/*! Create a vulkan instance.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
@@ -186,7 +202,7 @@ namespace Raven
 		\param[in] aspectFlags aspectFlags is a bitflag which describes which aspects can be used for this image view.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		VkImageView createImageView(FVulkanTexture* pImage, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspectFlags);
+		VkImageView createImageView(FVulkanTexture* pImage, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspectFlags, VkImageViewCreateInfo& desc);
 
 		/*! Find suitable memory type with the specified flags
 		\param[in] typeFilter typeFilter is a bitflag specifying the required memory type bits (Retrieve from VkMemoryRequirements).
@@ -255,6 +271,8 @@ namespace Raven
 		FRendererInitializationDesc				mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
 		bool									mInitialized; /*!< Boolean to store if the renderer is initialized. */
 		FVulkanDescriptorPool*					mDescriptorPool; /*!< Global descriptor pool. */
+		std::map<size_t, FVulkanFrameBuffer*>	mFrameBufferMap; /*!< Cache of frame buffers. */
+		std::map<size_t, FVulkanRenderPass*>	mRenderPassMap; /*!< Cache of render passes. */
 
 };
 }

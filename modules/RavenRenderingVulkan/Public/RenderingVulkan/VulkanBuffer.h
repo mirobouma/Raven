@@ -13,5 +13,6 @@ namespace Raven
 		VkBuffer			mBuffer;
 		VkDeviceMemory		mMemory;
 		FBufferCreateDesc	mDesc;
+		FResourceState		mState;
 	};
 }

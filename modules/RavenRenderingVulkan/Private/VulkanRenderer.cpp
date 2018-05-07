@@ -1,6 +1,7 @@
 #include "RenderingVulkan/VulkanRenderer.h"
 #include "Core/Debug/LogManager.h"
 #include "HAL/PlatformFileSystem.h"
+#include "Core/Utility/Hash.h"
 #include <iostream>
 #include <set>
 
@@ -342,6 +343,12 @@ namespace Raven
 		VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
 	};
 
+	constexpr VkPipelineBindPoint gPipelineTypeTranslator[EPipelineType::MAX_PIPELINE_TYPE]
+	{
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		VK_PIPELINE_BIND_POINT_COMPUTE
+	};
+
 	VkShaderStageFlags shaderStageFlagsToVkShaderStageFlags(FShaderStageFlags flags)
 	{
 		if (flags == SHADER_STAGE_FLAG_ALL)
@@ -388,6 +395,79 @@ namespace Raven
 
 		return rflags;
 	};
+
+	VkAccessFlags translateResourceStateToAccessMask(FResourceState state)
+	{
+		VkAccessFlags rflags = (VkAccessFlags)0;
+
+		if (state & RESOURCE_STATE_COPY_SOURCE) {
+			rflags |= VK_ACCESS_TRANSFER_READ_BIT;
+		}
+		if (state & RESOURCE_STATE_COPY_DEST) {
+			rflags |= VK_ACCESS_TRANSFER_WRITE_BIT;
+		}
+		if (state & RESOURCE_STATE_VERTEX_BUFFER) {
+			rflags |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+		}
+		if (state & RESOURCE_STATE_UNIFORM_BUFFER) {
+			rflags |= VK_ACCESS_UNIFORM_READ_BIT;
+		}
+		if (state & RESOURCE_STATE_INDEX_BUFFER) {
+			rflags |= VK_ACCESS_INDEX_READ_BIT;
+		}
+		if (state & RESOURCE_STATE_UNORDERED_ACCESS) {
+			rflags |= VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+		}
+		if (state & RESOURCE_STATE_INDIRECT_ARGUMENT) {
+			rflags |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+		}
+		if (state & RESOURCE_STATE_RENDER_TARGET) {
+			rflags |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		}
+		if (state & RESOURCE_STATE_DEPTH_WRITE) {
+			rflags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		}
+		if ((state & RESOURCE_STATE_SHADER_RESOURCE) || (state & RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)) {
+			rflags |= VK_ACCESS_SHADER_READ_BIT;
+		}
+		if (state & RESOURCE_STATE_PRESENT) {
+			rflags |= VK_ACCESS_MEMORY_READ_BIT;
+		}
+
+		return rflags;
+	}
+
+	VkImageLayout translateResourceStateToImageLayout(FResourceState state)
+	{
+		if ((state & RESOURCE_STATE_COPY_SOURCE) != 0)
+			return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_COPY_DEST) != 0)
+			return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_RENDER_TARGET) != 0)
+			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_DEPTH_WRITE) != 0)
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
+			return VK_IMAGE_LAYOUT_GENERAL;
+
+		if ((state & RESOURCE_STATE_SHADER_RESOURCE) != 0)
+			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE) != 0)
+			return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_PRESENT) != 0)
+			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		if ((state == RESOURCE_STATE_COMMON) != 0)
+			return VK_IMAGE_LAYOUT_GENERAL;
+
+		return VK_IMAGE_LAYOUT_UNDEFINED;
+	}
 
 	constexpr VkCommandBufferLevel gCommandListTypeTranslator[ECommandListType::MAX_COMMAND_LIST] =
 	{
@@ -684,7 +764,7 @@ namespace Raven
 		}
 
 		// Enable extensions
-		if (enableInstanceExtensions(createInfo, instanceExtensions) != VK_SUCCESS)
+		if (enableInstanceExtensions(createInfo, instanceExtensions) != RR_SUCCESS)
 		{
 			return RR_EXTENSION_NOT_PRESENT;
 		}
@@ -1750,8 +1830,8 @@ namespace Raven
 				attachments[numAttachments].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 				attachments[numAttachments].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				attachments[numAttachments].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-				attachments[numAttachments].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				attachments[numAttachments].finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				attachments[numAttachments].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachments[numAttachments].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				
 				// define color attachment reference.
 				colorAttachmentReferences[numAttachments] = {};
@@ -1775,7 +1855,7 @@ namespace Raven
 			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 			depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 			// define depth attachment reference.
@@ -2071,6 +2151,8 @@ namespace Raven
 
 		// Set the image description of the texture to the one of the created image.
 		texture->mDesc = *pDesc;
+		texture->mVkImageDesc = imageInfo;
+		texture->mState = FResourceState::RESOURCE_STATE_COMMON;
 
 		// Get memory requirements for this image.
 		VkMemoryRequirements memRequirements;
@@ -2132,7 +2214,7 @@ namespace Raven
 		}
 
 		// Create image view.
-		texture->mImageView = createImageView(texture, viewType, imageInfo.format, imageAspectFlagFromFormat(imageInfo.format));
+		texture->mImageView = createImageView(texture, viewType, imageInfo.format, imageAspectFlagFromFormat(imageInfo.format), texture->mVkImageViewDesc);
 
 		*ppTexture = texture;
 
@@ -2201,6 +2283,7 @@ namespace Raven
 		// Bind allocated memory to the buffer object.
 		vkBindBufferMemory(mDevice->mDevice, buffer->mBuffer, buffer->mMemory, 0);
 
+		buffer->mState = FResourceState::RESOURCE_STATE_COMMON;
 
 		*ppBuffer = (IBuffer*)buffer;
 
@@ -2587,25 +2670,24 @@ namespace Raven
 		return requiredExtensions.empty();
 	}
 
-	VkImageView RVulkanRenderer::createImageView(FVulkanTexture* pImage, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspectFlags)
+	VkImageView RVulkanRenderer::createImageView(FVulkanTexture* pImage, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspectFlags, VkImageViewCreateInfo& desc)
 	{
-		VkImageViewCreateInfo viewInfo = {};
-		viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		viewInfo.image = pImage->mImage;
-		viewInfo.viewType = viewType;
-		viewInfo.format = format;
-		viewInfo.subresourceRange.aspectMask = aspectFlags;
-		viewInfo.subresourceRange.baseMipLevel = pImage->mDesc.baseMipLevel;
-		viewInfo.subresourceRange.levelCount = pImage->mDesc.mipLevels;
-		viewInfo.subresourceRange.baseArrayLayer = pImage->mDesc.baseArrayLayer;
-		viewInfo.subresourceRange.layerCount = pImage->mDesc.arrayLayers * (pImage->mDesc.type == TEXTURE_TYPE_CUBE ? 6 : 1);
-		viewInfo.components.a = VK_COMPONENT_SWIZZLE_A;
-		viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
-		viewInfo.components.g = VK_COMPONENT_SWIZZLE_G;
-		viewInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+		desc.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		desc.image = pImage->mImage;
+		desc.viewType = viewType;
+		desc.format = format;
+		desc.subresourceRange.aspectMask = aspectFlags;
+		desc.subresourceRange.baseMipLevel = pImage->mDesc.baseMipLevel;
+		desc.subresourceRange.levelCount = pImage->mDesc.mipLevels;
+		desc.subresourceRange.baseArrayLayer = pImage->mDesc.baseArrayLayer;
+		desc.subresourceRange.layerCount = pImage->mDesc.arrayLayers * (pImage->mDesc.type == TEXTURE_TYPE_CUBE ? 6 : 1);
+		desc.components.a = VK_COMPONENT_SWIZZLE_A;
+		desc.components.r = VK_COMPONENT_SWIZZLE_R;
+		desc.components.g = VK_COMPONENT_SWIZZLE_G;
+		desc.components.b = VK_COMPONENT_SWIZZLE_B;
 
 		VkImageView imageView;
-		if (vkCreateImageView(mDevice->mDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) 
+		if (vkCreateImageView(mDevice->mDevice, &desc, nullptr, &imageView) != VK_SUCCESS)
 		{
 			RLOG_ERROR("failed to create texture image view!");
 			return nullptr;
@@ -2628,6 +2710,9 @@ namespace Raven
 			destroyDebugReportCallbackExtention(mInstance, mDebuggingCallback, nullptr);
 		}
 
+		// Destroy our global descriptor pool.
+		destroyDescriptorPool(mDescriptorPool);
+
 		// Destroy our logical device.
 		vkDestroyDevice(mDevice->mDevice, nullptr);
 
@@ -2644,7 +2729,7 @@ namespace Raven
 	ERenderResult RVulkanRenderer::createDescriptorPool(FVulkanDescriptorPool** ppDescriptorPool, FVulkanDescriptorPoolCreateDesc* pDesc)
 	{
 		RASSERT(pDesc != nullptr);
-		RASSERT(mInitialized);
+		RASSERT(mDevice != nullptr);
 
 		FVulkanDescriptorPool* pool = new FVulkanDescriptorPool();
 
@@ -2872,4 +2957,566 @@ namespace Raven
 
 		return RR_SUCCESS;
 	}
+
+    ERenderResult RVulkanRenderer::cmdBegin(ICommandList *pCommandList)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		// Reset this command buffer.
+		vkResetCommandBuffer(list->mCmdBuffer, 0);
+        list->mCurrentRenderPass = nullptr;
+        list->mBoundPipeline = nullptr;
+
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.flags = 0;
+		beginInfo.pInheritanceInfo = nullptr;
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.pNext = VK_NULL_HANDLE;
+
+		// Begin recording commands in this command buffer.
+		vkBeginCommandBuffer(list->mCmdBuffer, &beginInfo);
+
+        return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdEnd(ICommandList *pCommandList)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		if(list->mCurrentRenderPass != nullptr)
+        {
+            cmdEndRenderPass(list);
+        }
+
+		// Flush commands before ending.
+		if(list->mPendingImageBarriers.size() != 0 || list->mPendingBufferBarriers.size() != 0)
+		{
+			cmdFlushBarriers(list);
+		}
+
+		// Stop recording commands in this command list.
+		vkEndCommandBuffer(list->mCmdBuffer);
+
+        list->mCurrentRenderPass = nullptr;
+        list->mBoundPipeline = nullptr;
+
+        return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments,
+                                                      IRenderTarget **ppColorAttachments,
+                                                      IRenderTarget *pDepthStencilAttachment)
+	{
+		RASSERT(pCommandList != nullptr);
+		RASSERT(numColorAttachments != 0 && pDepthStencilAttachment != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		if(list->mCurrentRenderPass != nullptr)
+		{
+			cmdEndRenderPass(list);
+		}
+
+		// Hash the attachment formats and sample count to check if we already have an existing render pass instance.
+		size_t hash = 0;
+
+		for(uint32_t i = 0; i < numColorAttachments; ++i)
+		{
+			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
+			hash_bytes(&target->mDesc.format, sizeof(ETextureFormat), hash);
+			hash_bytes(&target->mDesc.sampleCount, sizeof(uint32_t), hash);
+			hash_bytes(&target->mDesc.sampleQuality, sizeof(uint32_t), hash);
+		}
+
+		if(pDepthStencilAttachment != nullptr)
+		{
+			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
+			hash_bytes(&target->mDesc.format, sizeof(ETextureFormat), hash);
+			hash_bytes(&target->mDesc.sampleCount, sizeof(uint32_t), hash);
+			hash_bytes(&target->mDesc.sampleQuality, sizeof(uint32_t), hash);
+		}
+
+		FVulkanRenderPass* renderPass = nullptr;
+
+		auto renderPassIt = mRenderPassMap.find(hash);
+		if(renderPassIt != mRenderPassMap.end())
+		{
+			// We already have a pre-created render pass.
+			renderPass = renderPassIt->second;
+		}
+		else
+		{
+			FVulkanRenderPassCreateDesc rpDesc;
+			if(numColorAttachments != 0)
+			{
+				FVulkanRenderTarget* colorTarget = static_cast<FVulkanRenderTarget*>(ppColorAttachments[0]);
+				rpDesc.sampleCount = colorTarget->mTexture->mDesc.sampleCount;
+				rpDesc.sampleQuality = colorTarget->mTexture->mDesc.sampleQuality;
+
+				for(uint32_t i = 0; i < numColorAttachments; ++i)
+				{
+					FVulkanRenderTarget* colorAttachment = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
+					rpDesc.colorAttachmentFormats[i] = colorAttachment->mDesc.format;
+				}
+			}
+
+			if(pDepthStencilAttachment != nullptr)
+			{
+				FVulkanRenderTarget* depthStencil = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
+				rpDesc.depthStencilAttachmentFormat = depthStencil->mDesc.format;
+			}
+			else
+			{
+				rpDesc.depthStencilAttachmentFormat = ETextureFormat::TEXTURE_FORMAT_UNKNOWN;
+			}
+
+			// create a new render pass.
+			if(createRenderPass(&renderPass, &rpDesc) != RR_SUCCESS)
+			{
+				RLOG_ERROR("Failed to create a render pass for the specified formats.");
+				return RR_FAIL;
+			}
+
+			mRenderPassMap[hash] = renderPass;
+		}
+
+		FVulkanFrameBuffer* frameBuffer = nullptr;
+
+		for(uint32_t i = 0; i < numColorAttachments; ++i)
+		{
+			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
+			hash_bytes(&target->mTexture, sizeof(VkImage), hash);
+		}
+
+		if(pDepthStencilAttachment != nullptr)
+		{
+			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
+			hash_bytes(&target->mTexture, sizeof(VkImage), hash);
+		}
+
+		auto frameBufferIt = mFrameBufferMap.find(hash);
+		if(frameBufferIt != mFrameBufferMap.end())
+		{
+			// We already have a pre-created render pass.
+			frameBuffer = frameBufferIt->second;
+		}
+		else
+		{
+			FVulkanFrameBufferCreateDesc fbDesc;
+			fbDesc.renderPass = renderPass;
+
+			std::vector<FVulkanRenderTarget*> attachments(numColorAttachments + (pDepthStencilAttachment != nullptr ? 1 : 0));
+
+			if(numColorAttachments != 0)
+			{
+				FVulkanRenderTarget* colorTarget = static_cast<FVulkanRenderTarget*>(ppColorAttachments[0]);
+				fbDesc.width = colorTarget->mTexture->mDesc.width;
+				fbDesc.height = colorTarget->mTexture->mDesc.height;
+				fbDesc.layers = colorTarget->mTexture->mDesc.arrayLayers;
+
+				for(uint32_t i = 0; i < numColorAttachments; ++i)
+				{
+					FVulkanRenderTarget* colorAttachment = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
+					attachments[i] = colorAttachment;
+				}
+			}
+
+			if(pDepthStencilAttachment != nullptr)
+			{
+				FVulkanRenderTarget* depthAttachment = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
+				attachments[numColorAttachments] = depthAttachment;
+			}
+
+			// Create a new frame buffer referencing the resources.
+			if(createFrameBuffer(&frameBuffer, &fbDesc) != RR_SUCCESS)
+			{
+				RLOG_ERROR("Failed to create a frame buffer for the specified targets.");
+				return RR_FAIL;
+			}
+
+			mFrameBufferMap[hash] = frameBuffer;
+
+		}
+
+		RASSERT(frameBuffer != nullptr);
+		RASSERT(renderPass != nullptr);
+
+		VkRect2D renderArea;
+		renderArea.offset.x = 0;
+		renderArea.offset.y = 0;
+		renderArea.extent.width = frameBuffer->mDesc.width;
+		renderArea.extent.height = frameBuffer->mDesc.height;
+
+		VkRenderPassBeginInfo beginInfo;
+		beginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		beginInfo.pNext = VK_NULL_HANDLE;
+		beginInfo.renderPass = renderPass->mPass;
+		beginInfo.framebuffer = frameBuffer->mFrameBuffer;
+		beginInfo.renderArea = renderArea;
+
+		//TODO CLEARS
+		beginInfo.clearValueCount = 0;
+		beginInfo.pClearValues = nullptr;
+
+		vkCmdBeginRenderPass(list->mCmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		list->mCurrentRenderPass = renderPass;
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdEndRenderPass(ICommandList *pCommandList)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		if(list->mCurrentRenderPass != nullptr)
+		{
+			vkCmdEndRenderPass(list->mCmdBuffer);
+			list->mCurrentRenderPass = nullptr;
+			return RR_SUCCESS;
+		}
+
+		return RR_INITIALIZATION_FAILED;
+    }
+
+    ERenderResult RVulkanRenderer::cmdBindVertexBuffer(ICommandList *pCommandList, uint32_t numBuffers, IBuffer **ppBuffers,
+                                         uint32_t startSlot) {
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		std::vector<VkBuffer> buffers(numBuffers);
+		std::vector<VkDeviceSize > offsets(numBuffers);
+
+		// Fill the buffers and offsets vectors with vulkan data.
+		for(uint32_t i = 0; i < numBuffers; ++i)
+		{
+			FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(ppBuffers[i]);
+
+			buffers[i] = buffer->mBuffer;
+			offsets[i] = 0;
+		}
+
+		vkCmdBindVertexBuffers(list->mCmdBuffer, startSlot, numBuffers, buffers.data(), offsets.data());
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+		FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(pBuffer);
+
+		// TODO, support different index types.
+		// TODO, support memory offsets.
+
+		vkCmdBindIndexBuffer(list->mCmdBuffer, buffer->mBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult
+    RVulkanRenderer::cmdSetViewport(ICommandList *pCommandList, Math::FRect rect, float minDepth, float maxDepth)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		VkViewport viewport;
+		viewport.minDepth = minDepth;
+		viewport.maxDepth = maxDepth;
+		viewport.x = rect.Position.x;
+		viewport.y = rect.Position.y;
+		viewport.width = rect.Size.x;
+		viewport.height = rect.Size.y;
+
+		vkCmdSetViewport(list->mCmdBuffer, 0, 1, &viewport);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdSetScissorRects(ICommandList *pCommandList, Math::FRect rect)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		VkRect2D vkRect = {{(int32_t)rect.Position.x, (int32_t)rect.Position.y}, {(uint32_t)rect.Size.x, (uint32_t)rect.Size.y}};
+
+		vkCmdSetScissor(list->mCmdBuffer, 0, 1, &vkRect);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdBindPipeline(ICommandList *pCommandList, IPipeline *pPipeline)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+		FVulkanPipeline* pipeline = static_cast<FVulkanPipeline*>(pPipeline);
+
+		// This pipeline is already bound so we don't have to re-bind.
+		if(list->mBoundPipeline == pipeline)
+		{
+			return RR_SUCCESS;
+		}
+
+		list->mBoundPipeline = pipeline;
+		vkCmdBindPipeline(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mPipeline);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdResourceBarriers(ICommandList *pCommandList, uint32_t numBufferBarriers,
+                                                       FBufferBarrier *pBufferBarriers, uint32_t numTextureBarries,
+                                                       FTextureBarrier *pTextureBarriers, bool flush)
+	{
+		RASSERT(pCommandList != nullptr);
+		RASSERT(numBufferBarriers < MAX_RESOURCE_BARRIERS);
+		RASSERT(numTextureBarries < MAX_RESOURCE_BARRIERS);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		if(numBufferBarriers == 0 && numTextureBarries == 0)
+		{
+			RLOG_WARNING("For some reason we call resource barriers without any barriers, so we have no need to call the command.");
+			return RR_SUCCESS;
+		}
+
+		// If we want to record more barriers than we can hold at a single time, flush the current pending barriers.
+		if(numBufferBarriers + list->mPendingBufferBarriers.size() > MAX_RESOURCE_BARRIERS
+		   || numTextureBarries + list->mPendingImageBarriers.size() > MAX_RESOURCE_BARRIERS)
+		{
+			cmdFlushBarriers(pCommandList);
+		}
+
+		for(uint32_t i = 0; i < numTextureBarries; ++i)
+		{
+			FTextureBarrier* barrier = &pTextureBarriers[i];
+			FVulkanTexture* texture = static_cast<FVulkanTexture*>(barrier->texture);
+
+			auto pendingBarrier = list->mPendingImageBarriers.find(texture);
+			if(pendingBarrier != list->mPendingImageBarriers.end())
+			{
+				// We already have a barrier which applies to this image.
+				std::get<1>(pendingBarrier->second) = barrier->requiredState;
+			}
+			// If we don't have an existing transition, create a new one instead.
+			else
+			{
+				list->mPendingImageBarriers[texture] = std::make_tuple(texture->mState, barrier->requiredState);
+			}
+		}
+
+		for(uint32_t i = 0; i < numBufferBarriers; ++i)
+		{
+			FBufferBarrier* barrier = &pBufferBarriers[i];
+			FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(barrier->buffer);
+
+			bool hasExistingTransition = false;
+
+			auto pendingBarrier = list->mPendingBufferBarriers.find(buffer);
+			if(pendingBarrier != list->mPendingBufferBarriers.end())
+			{
+				// We already have a barrier which applies to this image.
+				std::get<1>(pendingBarrier->second) = barrier->requiredState;
+
+			}
+			// If we don't have an existing transition, create a new one instead.
+			else
+			{
+				list->mPendingBufferBarriers[buffer] = std::make_tuple(buffer->mState, barrier->requiredState);
+			}
+		}
+
+		// Call the flush command if we want to immediately record these resource barriers into the command buffer.
+		if(flush)
+		{
+			cmdFlushBarriers(pCommandList);
+		}
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdFlushBarriers(ICommandList *pCommandList)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		std::vector<VkBufferMemoryBarrier> bufferBarriers(list->mPendingBufferBarriers.size());
+		std::vector<VkImageMemoryBarrier> imageBarriers(list->mPendingImageBarriers.size());
+
+		uint32_t index = 0;
+
+		for(auto it = list->mPendingBufferBarriers.begin(); it != list->mPendingBufferBarriers.end(); ++it)
+		{
+			VkBufferMemoryBarrier* vkBarrier = &bufferBarriers[index];
+			vkBarrier->sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+			vkBarrier->pNext = VK_NULL_HANDLE;
+			vkBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			vkBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			vkBarrier->srcAccessMask = translateResourceStateToAccessMask(it->first->mState);
+			vkBarrier->dstAccessMask = translateResourceStateToAccessMask(std::get<1>(it->second));
+			vkBarrier->offset = 0;
+			vkBarrier->size = VK_WHOLE_SIZE;
+
+			++index;
+		}
+
+		index = 0;
+		for(auto it = list->mPendingImageBarriers.begin(); it != list->mPendingImageBarriers.end(); ++it)
+		{
+			VkImageMemoryBarrier* vkBarrier = &imageBarriers[index];
+			vkBarrier->sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			vkBarrier->image = it->first->mImage;
+			vkBarrier->pNext = VK_NULL_HANDLE;
+			vkBarrier->dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			vkBarrier->srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			vkBarrier->srcAccessMask = translateResourceStateToAccessMask(it->first->mState);
+			vkBarrier->dstAccessMask = translateResourceStateToAccessMask(std::get<1>(it->second));
+			vkBarrier->oldLayout = translateResourceStateToImageLayout(it->first->mState);
+			vkBarrier->newLayout = translateResourceStateToImageLayout(std::get<1>(it->second));
+			vkBarrier->subresourceRange.aspectMask = it->first->mVkImageViewDesc.subresourceRange.aspectMask;
+			vkBarrier->subresourceRange.baseMipLevel = 0;
+			vkBarrier->subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+			vkBarrier->subresourceRange.baseArrayLayer = 0;
+			vkBarrier->subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+			++index;
+		}
+
+		// Flush pipeline barrier.
+		vkCmdPipelineBarrier(list->mCmdBuffer,
+							 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+							 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+							 0,
+							 0,
+							 nullptr,
+							 bufferBarriers.size(),
+							 bufferBarriers.data(),
+							 imageBarriers.size(),
+							 imageBarriers.data()
+		);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdDraw(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		RASSERT(list->mBoundPipeline != nullptr);
+
+		if(list->mBoundPipeline != nullptr && list->mBoundPipeline->mType != EPipelineType::PIPELINE_TYPE_GRAPHICS)
+		{
+			RLOG_WARNING("Tried to call a draw command on a command list where the currently bound pipeline is not a graphics pipeline.");
+			return RR_FAIL;
+		}
+
+		vkCmdDraw(list->mCmdBuffer, vertexCount, 1, vertexOffset, 0);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdDrawIndexed(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		RASSERT(list->mBoundPipeline != nullptr);
+
+		if(list->mBoundPipeline != nullptr && list->mBoundPipeline->mType != EPipelineType::PIPELINE_TYPE_GRAPHICS)
+		{
+			RLOG_WARNING("Tried to call a draw command on a command list where the currently bound pipeline is not a graphics pipeline.");
+			return RR_FAIL;
+		}
+
+		vkCmdDrawIndexed(list->mCmdBuffer, indexCount, 1, indexOffset, 0, 0);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdDrawInstanced(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset, uint32_t instanceCount)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		RASSERT(list->mBoundPipeline != nullptr);
+
+		if(list->mBoundPipeline != nullptr && list->mBoundPipeline->mType != EPipelineType::PIPELINE_TYPE_GRAPHICS)
+		{
+			RLOG_WARNING("Tried to call a draw command on a command list where the currently bound pipeline is not a graphics pipeline.");
+			return RR_FAIL;
+		}
+
+		vkCmdDraw(list->mCmdBuffer, vertexCount, instanceCount, 0, 0);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdDrawIndexedInstanced(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t instanceCount)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		RASSERT(list->mBoundPipeline != nullptr);
+
+		if(list->mBoundPipeline != nullptr && list->mBoundPipeline->mType != EPipelineType::PIPELINE_TYPE_GRAPHICS)
+		{
+			RLOG_WARNING("Tried to call a draw command on a command list where the currently bound pipeline is not a graphics pipeline.");
+			return RR_FAIL;
+		}
+
+		vkCmdDrawIndexed(list->mCmdBuffer, indexCount, instanceCount, indexOffset, 0, 0);
+
+		return RR_SUCCESS;
+    }
+
+    ERenderResult RVulkanRenderer::cmdDispatch(ICommandList *pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		RASSERT(list->mBoundPipeline != nullptr);
+
+		if(list->mBoundPipeline != nullptr && list->mBoundPipeline->mType != EPipelineType::PIPELINE_TYPE_COMPUTE)
+		{
+			RLOG_WARNING("Tried to call a dispatch command on a command list where the currently bound pipeline is not a compute pipeline.");
+			return RR_FAIL;
+		}
+
+		// Call dispatch command.
+		vkCmdDispatch(list->mCmdBuffer, numGroupsX, numGroupsY, numGroupsZ);
+
+        return RR_SUCCESS;
+    }
 }

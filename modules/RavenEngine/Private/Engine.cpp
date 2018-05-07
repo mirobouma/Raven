@@ -93,9 +93,5 @@ namespace Raven {
 			// The engine isn't initialized so we can't render.
 			return;
 		}
-
-		// Render the game.
-		//_Renderer->Render();
-		
 	}
 }

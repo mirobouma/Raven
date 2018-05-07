@@ -10,42 +10,40 @@
 
 namespace Raven 
 {
-	namespace Memory 
-	{
-		template <typename T> FORCEINLINE T AlignUpWithMask(T value, size_t mask)
-		{
-			return (T)(((size_t)value + mask) & ~mask);
+	namespace Memory {
+		template<typename T>
+		FORCEINLINE T AlignUpWithMask(T value, size_t mask) {
+			return (T) (((size_t) value + mask) & ~mask);
 		}
 
-		template <typename T> FORCEINLINE T AlignDownWithMask(T value, size_t mask)
-		{
-			return (T)((size_t)value & ~mask);
+		template<typename T>
+		FORCEINLINE T AlignDownWithMask(T value, size_t mask) {
+			return (T) ((size_t) value & ~mask);
 		}
 
-		template <typename T> FORCEINLINE T AlignUp(T value, size_t alignment)
-		{
+		template<typename T>
+		FORCEINLINE T AlignUp(T value, size_t alignment) {
 			return AlignUpWithMask(value, alignment - 1);
 		}
 
-		template <typename T> FORCEINLINE T AlignDown(T value, size_t alignment)
-		{
+		template<typename T>
+		FORCEINLINE T AlignDown(T value, size_t alignment) {
 			return AlignDownWithMask(value, alignment - 1);
 		}
 
-		template <typename T> FORCEINLINE bool IsAligned(T value, size_t alignment)
-		{
-			return 0 == ((size_t)value & (alignment - 1));
+		template<typename T>
+		FORCEINLINE bool IsAligned(T value, size_t alignment) {
+			return 0 == ((size_t) value & (alignment - 1));
 		}
 
-		template <typename T> FORCEINLINE T DivideByMultiple(T value, size_t alignment)
-		{
-			return (T)((value + alignment - 1) / alignment);
+		template<typename T>
+		FORCEINLINE T DivideByMultiple(T value, size_t alignment) {
+			return (T) ((value + alignment - 1) / alignment);
 		}
 
 
 		//from http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-		constexpr FORCEINLINE uint32_t AlignUpToNextPowerOfTwo(uint32_t value)
-		{
+		constexpr FORCEINLINE uint32_t AlignUpToNextPowerOfTwo(uint32_t value) {
 			value--;
 			value |= value >> 1;
 			value |= value >> 2;
@@ -56,7 +54,7 @@ namespace Raven
 			return value;
 		}
 
-		void* AlignedMalloc(size_t size, size_t alignment);
-		void AlignedFree(void* pointer);
+		void *AlignedMalloc(size_t size, size_t alignment);
+		void AlignedFree(void *pointer);
 	}
 }

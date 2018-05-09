@@ -14,6 +14,7 @@ namespace Raven
 		uint32_t		numColorAttachments;
 		ETextureFormat	colorAttachmentFormats[8];
 		ETextureFormat	depthStencilAttachmentFormat;
+		FLoadStoreOps*	pLoadStoreOps;
 		uint32_t		sampleCount;
 		uint32_t		sampleQuality;
 	};

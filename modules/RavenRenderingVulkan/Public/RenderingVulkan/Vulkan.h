@@ -6,8 +6,10 @@
 #endif
 
 #include <vulkan/vulkan.h>
+#include "Core/Debug/LogManager.h"
 
 /*! Helper macro to dynamically find the address of a specific vulkan (extension) function. */
 #define GET_VK_FUNC(I, T) (PFN_ ## T)vkGetInstanceProcAddr(I, #T)
 
 #define MAX_RESOURCE_BARRIERS 16
+#define MAX_FRAMES_AT_ONCE 3

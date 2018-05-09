@@ -57,7 +57,6 @@ void ApplicationStart(int argc, char*argv[])
 		// Show the window.
 		Window->Show();
 	}
-
 	
 	// Main loop
 	while (true)
@@ -104,17 +103,17 @@ void ApplicationStart(int argc, char*argv[])
 
 int main(int argc, char *argv[])
 {
-	RTaskAllocator taskAllocator;
-	auto task = FTask<uint32_t>([=](uint32_t i) 
-	{ 
-		ApplicationStart(0, nullptr); 
-	}, 0);
-	
-	gTaskScheduler = new RTaskScheduler();
-	gTaskScheduler->Run(0, 60, &task);
-	
-	taskAllocator.Reset(true);
-	//ApplicationStart(0, nullptr);
+	//RTaskAllocator taskAllocator;
+	//auto task = FTask<uint32_t>([=](uint32_t i) 
+	//{ 
+	//	ApplicationStart(0, nullptr); 
+	//}, 0);
+	//
+	//gTaskScheduler = new RTaskScheduler();
+	//gTaskScheduler->Run(0, 60, &task);
+	//
+	//taskAllocator.Reset(true);
+	ApplicationStart(0, nullptr);
 	return 0;
 }
 

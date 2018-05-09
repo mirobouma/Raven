@@ -14,6 +14,7 @@ set (SourceGroup_PublicIncludes
 	"Public/RenderingVulkan/VulkanRootSignature.h"
 	"Public/RenderingVulkan/VulkanPipeline.h"
 	"Public/RenderingVulkan/VulkanDescriptorPool.h"
+	"Public/RenderingVulkan/VulkanDescriptorSetCache.h"
 	"Public/RenderingVulkan/VulkanCommandPool.h"
 	"Public/RenderingVulkan/VulkanFrameBuffer.h"
 	"Public/RenderingVulkan/VulkanCommandList.h"

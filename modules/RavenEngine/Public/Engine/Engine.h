@@ -36,7 +36,7 @@ namespace Raven {
 		/*! Render the current scene. */
 		void Render();
 
-		/*! TEMP get reference to the renderer. */
+		/*! Get reference to the renderer. */
 		IRenderer* GetRenderer() { return _Renderer.get(); }
 
 	protected:

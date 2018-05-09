@@ -162,6 +162,12 @@ namespace Raven
 		*/
 		virtual ERenderResult destroyFence(IFence* pFence) = 0;
 
+		/*! Wait for fence
+		\param[in] pFence pFence is a IFence handle which we have to wait for.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult waitForFence(IFence* pFence) = 0;
+
 		/*! create a semaphore.
 		\param[in] ppSemaphore ppSemaphore points a ISemaphore handle in which the resulting semaphore object reference is stored.
 		\returns On success, this command returns RR_SUCCESS.
@@ -193,7 +199,7 @@ namespace Raven
 		\param[in] numLists numLists is a the amount of commands lists to destroy.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult destroyCommandLists(ICommandPool* pCmdPool, ICommandList* pCommandLists, uint32_t numLists) = 0;
+		virtual ERenderResult destroyCommandLists(ICommandPool* pCmdPool, ICommandList** pCommandLists, uint32_t numLists) = 0;
 
 		/*! create a graphics pipeline.
 		\param[in] ppPipeline ppPipeline points a IGraphicsPipeline handle in which the resulting graphics pipeline is stored.
@@ -316,7 +322,7 @@ namespace Raven
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdBeginRenderPass(ICommandList* pCommandList, uint32_t numColorAttachments, IRenderTarget** ppColorAttachments, IRenderTarget* pDepthStencilAttachment) = 0;
+		virtual ERenderResult cmdBeginRenderPass(ICommandList* pCommandList, uint32_t numColorAttachments, IRenderTarget** ppColorAttachments, IRenderTarget* pDepthStencilAttachment, FLoadStoreOps* pLoadStoreOps) = 0;
 
 		/*! End command list recording.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
@@ -395,6 +401,38 @@ namespace Raven
 		\returns On success, this command returns RR_SUCCESS.
 		*/
 		virtual ERenderResult cmdDispatch(ICommandList* pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) = 0;
+
+		/*! Update a resource.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdUpdateBuffer(ICommandList* pCommandList, IBuffer* pDstBuffer, void* data, uint32_t dstOffset, uint32_t size) = 0;
+
+		/*! Update a resource.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdUpdateTexture(ICommandList* pCommandList, ITexture* pDstTexture, void* data, uint32_t width, uint32_t height) = 0;
+
+		/*! Bind descriptors to the currently bound pipeline.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\param[in] numDescriptors numDescriptors is the amount of descriptors to bind from pDescriptors.
+		\param[in] pDescriptors pDescriptors points to an array of descriptor bindings to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdBindDescriptors(ICommandList* pCommandList, uint32_t numDescriptors, FDescriptorBinding* pDescriptors) = 0;
+
+		/*! Copy the contents of buffer to another.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdCopyBuffer(ICommandList* pCommandList, IBuffer* pSrcBuffer, IBuffer* pDstBuffer, uint32_t srcOffset, uint32_t dstOffset, uint32_t size) = 0;
+
+		/*! Copy the contents of buffer to an image.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdCopyBufferToTexture(ICommandList* pCommandList, IBuffer* pSrcBuffer, ITexture* pDstImage, uint32_t srcOffset, uint32_t width, uint32_t height) = 0;
 
 		/*! Check if the renderer has been initialized.
 		\returns If initialized, this command will return true.

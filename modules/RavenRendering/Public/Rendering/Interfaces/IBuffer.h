@@ -26,7 +26,7 @@ namespace Raven
 	{
 		FMemoryPropertyFlags	memoryProperties;
 		FBufferUsageFlags		usage;
-		uint32_t				size;
+		size_t					size;
 		void*					data;
 	};
 

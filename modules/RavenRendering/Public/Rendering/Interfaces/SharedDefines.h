@@ -1,4 +1,5 @@
 #pragma once
+#include <cinttypes>
 
 namespace Raven
 {
@@ -196,15 +197,45 @@ namespace Raven
 
 
 	typedef enum ELoadOp {
-		LOAD_OP_STORE,
 		LOAD_OP_LOAD,
-		LOAD_OP_DONTCARE
+		LOAD_OP_CLEAR,
+		LOAD_OP_DONTCARE,
+		MAX_LOAD_OP
 	} ELoadOp;
 
 	typedef enum EStoreOp {
 		STORE_OP_STORE,
-		STORE_OP_LOAD,
-		STORE_OP_DONTCARE
+		STORE_OP_DONTCARE,
+		MAX_STORE_OP
 	} EStoreOp;
+
+	typedef struct FLoadStoreOps 
+	{
+		ELoadOp colorLoadOps[8];
+		EStoreOp colorStoreOps[8];
+		ELoadOp depthLoadOp;
+		EStoreOp depthStoreOp;
+		ELoadOp stencilLoadOp;
+		EStoreOp stencilStoreOp;
+		float depthClearValue;
+		uint32_t stencilClearValue;
+		float colorClearValues[8][4];
+	} FLoadStoreOps;
+	
+
+	typedef struct FDescriptorBinding
+	{
+		EDescriptorType type;
+		uint32_t		set;
+		uint32_t		binding;
+		uint32_t		numDescriptors;
+
+		union
+		{
+			ITexture**   ppTextures; /*!< Array of textures. */
+			IBuffer**    ppBuffers; /*!< Array of buffers. */
+			ISampler**   ppSamplers; /*!< Array of buffers. */
+		};
+	};
 
 }

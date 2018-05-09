@@ -14,5 +14,15 @@ namespace Raven
 	{
 		FVulkanTexture*			mTexture;
 		FRenderTargetCreateDesc	mDesc;
+
+		virtual ITexture* GetTexture() const override
+		{
+			return (ITexture*)mTexture;
+		}
+
+		virtual const FRenderTargetCreateDesc* GetDesc() const override
+		{
+			return &mDesc;
+		}
 	};
 }

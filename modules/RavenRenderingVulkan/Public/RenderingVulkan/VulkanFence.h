@@ -9,6 +9,7 @@ namespace Raven
 	*/
 	struct FVulkanFence : IFence
 	{
+		bool	mSignaled;
 		VkFence mFence;
 	};
 }

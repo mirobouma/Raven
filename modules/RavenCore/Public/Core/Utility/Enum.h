@@ -23,8 +23,8 @@ inline T operator ~ (T t) { return (T) (~static_cast<std::underlying_type_t <T>>
 ENUM_FLAG_OPERATOR(T,|) \
 ENUM_FLAG_OPERATOR(T,^) \
 ENUM_FLAG_OPERATOR(T,&) \
-ENUM_FLAG_OPERATOR_ASSIGN(T,|=,&) \
-ENUM_FLAG_OPERATOR_ASSIGN(T,^=,&) \
+ENUM_FLAG_OPERATOR_ASSIGN(T,|=,|) \
+ENUM_FLAG_OPERATOR_ASSIGN(T,^=,^) \
 ENUM_FLAG_OPERATOR_ASSIGN(T,&=,&)
 
 

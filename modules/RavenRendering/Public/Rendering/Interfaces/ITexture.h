@@ -67,6 +67,8 @@ namespace Raven
 		FTextureUsageFlags		usage;
 		EImageTiling			tiling;
 		FMemoryPropertyFlags	memoryProperties;
+		void*					pData;
+		void*					nativeSwapchainImage;
 	};
 
 	/*! \struct ITexture 

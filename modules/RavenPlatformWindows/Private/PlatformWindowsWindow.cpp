@@ -31,11 +31,10 @@ namespace Raven {
 			Math::FRect(Math::FVector2(800, 600), Math::FVector2(0, 0)),
 			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
 		);
-
-
 	} 
 
-	void RPlatformWindowsWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) {
+	void RPlatformWindowsWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) 
+	{
 		_geometry = geometry;
 		_flags = flags;
 		_title = title;

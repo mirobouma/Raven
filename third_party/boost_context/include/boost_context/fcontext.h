@@ -18,8 +18,6 @@
 #include <cstddef>
 // size_t
 
-#define VALGRIND
-
 #if defined(VALGRIND)
 #include <valgrind/valgrind.h>
 

@@ -3,6 +3,9 @@
 
 namespace Raven {
 
+	uint32_t gCurrWidth = 0;
+	uint32_t gCurrHeight = 0;
+
 	// this is the main message handler for the program
 	LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
@@ -22,6 +25,19 @@ namespace Raven {
 		case WM_DESTROY:
 		{
 			wnd->GetMessageHandler()->HandleWindowClose(wnd);
+		return 0;
+		}
+		case WM_SIZE:
+		{
+			gCurrWidth = LOWORD(lParam);
+			gCurrHeight = HIWORD(lParam);
+		}
+		case WM_EXITSIZEMOVE:
+		{
+			if (gCurrWidth != 0 && gCurrHeight != 0)
+			{
+				wnd->GetMessageHandler()->HandleWindowResize(wnd, gCurrWidth, gCurrHeight);
+			}
 		}
 		return 0;
 		

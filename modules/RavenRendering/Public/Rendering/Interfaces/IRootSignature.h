@@ -76,12 +76,19 @@ namespace Raven
 	\brief Structure describing a resource binding in the shader program. */
 	struct FDescriptorBinding
 	{
+		uint32_t              set;
 		uint32_t              binding;
 		EDescriptorType       descriptorType;
 		uint32_t              descriptorCount;
 		FShaderStageFlags	  stageFlags;
-		const ISampler*		  pImmutableSamplers;
+		ISampler**			  ppImmutableSamplers;
 	};
+
+	//struct FDescriptorSet
+	//{
+	//	uint32_t				numDescriptorBindings;
+	//	FDescriptorBinding*		pDescriptorBindings;
+	//};
 
 	/*! \struct FRootSignatureCreateDesc
 	\brief Structure describing the parameters for root signature creation. */
@@ -89,7 +96,9 @@ namespace Raven
 	{
 		IShader*				pShaderProgram;
 		FInputAssemblerLayout*	pInputAssemblerLayout;
-		uint32_t				pNumDescriptorBindings;
+		//uint32_t				numDescriptorSets;
+		//FDescriptorSet*			pDescriptorSets;
+		uint32_t				numDescriptorBindings;
 		FDescriptorBinding*		pDescriptorBindings;
 		//uint32_t				numStaticSamplers;
 		//ISampler*				pStaticSamplers;

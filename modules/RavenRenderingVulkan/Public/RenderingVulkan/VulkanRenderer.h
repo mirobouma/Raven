@@ -44,12 +44,13 @@ namespace Raven
 		virtual ERenderResult createCommandList(ICommandList** ppCommandList, ICommandPool* pCmdPool, ECommandListType type = COMMAND_LIST_TYPE_PRIMARY) override;
 		virtual ERenderResult createCommandLists(ICommandList** ppCommandLists, uint32_t numCommandLists, ICommandPool* pCmdPool, ECommandListType type = COMMAND_LIST_TYPE_PRIMARY) override;
 		virtual ERenderResult destroyCommandList(ICommandPool* pCmdPool, ICommandList* pCommandList) override;
-		virtual ERenderResult destroyCommandLists(ICommandPool* pCmdPool, ICommandList* pCommandLists, uint32_t numLists) override;
+		virtual ERenderResult destroyCommandLists(ICommandPool* pCmdPool, ICommandList** pCommandLists, uint32_t numLists) override;
 		virtual ERenderResult createPipeline(IPipeline** ppPipeline, FGraphicsPipelineCreateDesc* pDesc) override;
 		virtual ERenderResult createPipeline(IPipeline** ppPipeline, FComputePipelineCreateDesc* pDesc) override;
 		virtual ERenderResult destroyPipeline(IPipeline* pPipeline) override;
 		virtual ERenderResult createFence(IFence** ppFence, uint64_t value = 1) override;
 		virtual ERenderResult destroyFence(IFence* pFence) override;
+		virtual ERenderResult waitForFence(IFence* pFence) override;
 		virtual ERenderResult createSemaphore(ISemaphore** ppSemaphore) override;
 		virtual ERenderResult destroySemaphore(ISemaphore* pSemaphore) override;
 		virtual ERenderResult createRootSignature(IRootSignature** ppRootSignature, FRootSignatureCreateDesc* pDesc) override;
@@ -62,6 +63,10 @@ namespace Raven
 		virtual ERenderResult destroyTexture(ITexture* pTexture) override;
 		virtual ERenderResult createBuffer(IBuffer** ppBuffer, FBufferCreateDesc* pDesc) override;
 		virtual ERenderResult destroyBuffer(IBuffer* pBuffer) override;
+		virtual ERenderResult cmdCopyBuffer(ICommandList* pCommandList, IBuffer* pSrcBuffer, IBuffer* pDstBuffer, uint32_t srcOffset, uint32_t dstOffset, uint32_t size) override;
+		virtual ERenderResult cmdCopyBufferToTexture(ICommandList* pCommandList, IBuffer* pSrcBuffer, ITexture* pDstImage, uint32_t srcOffset, uint32_t width, uint32_t height) override;
+		virtual ERenderResult cmdUpdateBuffer(ICommandList* pCommandList, IBuffer* pDstBuffer, void* data, uint32_t dstOffset, uint32_t size) override;
+		virtual ERenderResult cmdUpdateTexture(ICommandList* pCommandList, ITexture* pDstTexture, void* data, uint32_t width, uint32_t height) override;
 		virtual ERenderResult createRenderTarget(IRenderTarget** ppRenderTarget, FRenderTargetCreateDesc* pDesc) override;
 		virtual ERenderResult destroyRenderTarget(IRenderTarget* pRenderTarget) override;
 		virtual ERenderResult queueSubmit(IQueue* pQueue, uint32_t numCmds, ICommandList** ppCmds, IFence* pSignalFence, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores, uint32_t numSignalSemaphores, ISemaphore** ppSignalSemaphores) override;
@@ -69,7 +74,7 @@ namespace Raven
 		virtual ERenderResult swapChainAcquireNextImage(ISwapChain* pSwapChain, ISemaphore* pSignalSemaphores, IFence* pSignalFence) override;
         virtual ERenderResult cmdBegin(ICommandList *pCommandList) override;
         virtual ERenderResult cmdEnd(ICommandList *pCommandList) override;
-        virtual ERenderResult cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments, IRenderTarget **ppColorAttachments, IRenderTarget *pDepthStencilAttachment) override;
+        virtual ERenderResult cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments, IRenderTarget **ppColorAttachments, IRenderTarget *pDepthStencilAttachment, FLoadStoreOps* pLoadStoreOps) override;
         virtual ERenderResult cmdEndRenderPass(ICommandList *pCommandList) override;
         virtual ERenderResult cmdBindVertexBuffer(ICommandList *pCommandList, uint32_t numBuffers, IBuffer **ppBuffers, uint32_t startSlot) override;
         virtual ERenderResult cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer) override;
@@ -83,6 +88,8 @@ namespace Raven
         virtual ERenderResult cmdDrawInstanced(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset, uint32_t instanceCount) override;
         virtual ERenderResult cmdDrawIndexedInstanced(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t instanceCount) override;
         virtual ERenderResult cmdDispatch(ICommandList *pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) override;
+		virtual ERenderResult cmdBindDescriptors(ICommandList* pCommandList, uint32_t numDescriptors, FDescriptorBinding* pDescriptors) override;
+
         virtual bool isInitialized() const override;
 
     protected:
@@ -238,6 +245,12 @@ namespace Raven
 		*/
 		ERenderResult createFrameBuffer(FVulkanFrameBuffer** ppFrameBuffer, FVulkanFrameBufferCreateDesc* pDesc);
 
+		/*! Destroy a frame buffer.
+		\param[in] pFrameBuffer pFrameBuffer is a reference to the FVulkanFrameBuffer which we have to destroy.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		ERenderResult destroyFrameBuffer(FVulkanFrameBuffer* pFrameBuffer);
+
 		/*! Destroy a render pass.
 		\param[in] pRenderPass pRenderPass is a reference to the VkRenderPass pointer which has to be destroyed.
 		\returns On success, this command returns RR_SUCCESS.
@@ -268,11 +281,14 @@ namespace Raven
 		VkDebugReportCallbackEXT				mDebuggingCallback; // callback extension for validation layers.
 		std::vector<FVulkanPhysicalDevice>		mGPUs; /*!< Logical device associated with this renderer. */
 		FVulkanDevice*							mDevice; /*!< Logical device associated with this renderer. */
+		FVulkanQueue*							mTransferQueue; /*!< Transfer queue for data transfer. */
+		FVulkanCommandPool*						mTransferCommandPool; /*!< Transfer command pool for data transfer. */
 		FRendererInitializationDesc				mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
 		bool									mInitialized; /*!< Boolean to store if the renderer is initialized. */
 		FVulkanDescriptorPool*					mDescriptorPool; /*!< Global descriptor pool. */
 		std::map<size_t, FVulkanFrameBuffer*>	mFrameBufferMap; /*!< Cache of frame buffers. */
 		std::map<size_t, FVulkanRenderPass*>	mRenderPassMap; /*!< Cache of render passes. */
+		FVulkanDescriptorSetCache				mDescriptorSetCaches[MAX_FRAMES_AT_ONCE]; /*!< Descriptor set cache */
 
 };
 }

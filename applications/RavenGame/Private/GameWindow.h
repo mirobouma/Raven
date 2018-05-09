@@ -1,6 +1,7 @@
 #pragma once
 #include "Engine/Windows/RenderableWindow.h"
 #include "Rendering/Interfaces/ISwapChain.h"
+#include "Rendering/Interfaces/IRenderer.h"
 
 namespace Raven
 {
@@ -16,6 +17,8 @@ namespace Raven
 
         /*! Render function */
         void Render();
+
+		void LoadTeapot();
 
     protected:
         /*! Callback function when the window is created. */
@@ -35,5 +38,7 @@ namespace Raven
 
         /*! Callback function when the window posts a quit message. */
         virtual void OnClose() override;
+
+		IRenderer* renderer;
     };
 }

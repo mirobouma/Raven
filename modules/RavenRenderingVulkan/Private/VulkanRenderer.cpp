@@ -270,6 +270,49 @@ namespace Raven
 		VK_FORMAT_BC7_SRGB_BLOCK
 	};
 	
+	ETextureFormat VkFormatToGenericFormat(VkFormat format)
+	{
+		switch (format)
+		{
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return TEXTURE_FORMAT_RGBA8_UNORM;
+			break;
+		case VK_FORMAT_R8G8B8A8_SRGB:
+			return TEXTURE_FORMAT_RGBA8_UNORM_SRGB;
+			break;
+		case VK_FORMAT_R8G8B8A8_UINT:
+			return TEXTURE_FORMAT_RGBA8_UINT;
+			break;
+		case VK_FORMAT_R8G8B8A8_SNORM:
+			return TEXTURE_FORMAT_RGBA8_SNORM;
+			break;
+		case VK_FORMAT_R8G8B8A8_SINT:
+			return TEXTURE_FORMAT_RGBA8_SINT;
+			break;
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return TEXTURE_FORMAT_BGRA8_UNORM;
+			break;
+		case VK_FORMAT_B8G8R8A8_SRGB:
+			return TEXTURE_FORMAT_BGRA8_SRGB;
+			break;
+		case VK_FORMAT_B8G8R8A8_UINT:
+			return TEXTURE_FORMAT_BGRA8;
+			break;
+		case VK_FORMAT_B8G8R8A8_SNORM:
+			return TEXTURE_FORMAT_BGRA8;
+			break;
+		case VK_FORMAT_B8G8R8A8_SINT:
+			return TEXTURE_FORMAT_BGRA8;
+			break;
+		default:
+			RLOG_WARNING("Unsupported backbuffer format, the format in render target will default to RGBA8");
+			return TEXTURE_FORMAT_RGBA8;
+		break;
+		}
+
+		return TEXTURE_FORMAT_UNKNOWN;
+	}
+
 	constexpr VkSamplerAddressMode gSamplerAddressModeTranslator[ESamplerAddressMode::MAX_SAMPLER_ADDRESS_MODE] =
 	{
 		VK_SAMPLER_ADDRESS_MODE_REPEAT,
@@ -568,6 +611,20 @@ namespace Raven
 		VK_COMPARE_OP_ALWAYS
 	};
 
+	constexpr VkAttachmentLoadOp gLoadOpTranslator[ELoadOp::MAX_LOAD_OP] =
+	{
+		VK_ATTACHMENT_LOAD_OP_LOAD,
+		VK_ATTACHMENT_LOAD_OP_CLEAR,
+		VK_ATTACHMENT_LOAD_OP_DONT_CARE
+	};
+
+	constexpr VkAttachmentStoreOp gStoreOpTranslator[EStoreOp::MAX_STORE_OP] =
+	{
+		VK_ATTACHMENT_STORE_OP_STORE,
+		VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		
+	};
+
 	constexpr VkStencilOp gStencilOpTranslator[EStencilOp::MAX_STENCIL_OP] =
 	{
 		VK_STENCIL_OP_KEEP,
@@ -699,6 +756,24 @@ namespace Raven
 		// The renderer has been properly initialized, therefore we can set the initialized member to true.
 		mInitialized = true;
 
+		// Create transfer queue.
+		FQueueCreateDesc queueDesc;
+		queueDesc.type = ECommandType::COMMAND_TYPE_COPY;
+
+		result = createQueue((IQueue**)&mTransferQueue, &queueDesc);
+		if (result != RR_SUCCESS)
+		{
+			mInitialized = false;
+			return result;
+		}
+
+		result = createCommandPool((ICommandPool**)&mTransferCommandPool, mTransferQueue, nullptr);
+		if (result != RR_SUCCESS)
+		{
+			mInitialized = false;
+			return result;
+		}
+
 		return RR_SUCCESS;
 	}
 
@@ -754,12 +829,18 @@ namespace Raven
 		if (pDesc->enableDebugging)
 		{
 			instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
 			if (!pDesc->requiredVulkanInstanceLayers.empty())
 			{
 				for (auto layer : pDesc->requiredVulkanInstanceLayers)
 				{
 					validationLayers.push_back(layer.c_str());
 				}
+			}
+
+			if (enableValidationLayers(createInfo, validationLayers) != RR_SUCCESS)
+			{
+				return RR_LAYER_NOT_PRESENT;
 			}
 		}
 
@@ -1037,6 +1118,14 @@ namespace Raven
 			return RR_INITIALIZATION_FAILED;
 		}
 
+		
+		VkBool32 deviceSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(mDevice->mPhysicalDevice->mPhysicalDevice, mDevice->mQueueIndices.mGraphicsQueueIndex, swapChain->mSurface, &deviceSupport);
+		if (deviceSupport != VK_TRUE)
+		{
+			return RR_INITIALIZATION_FAILED;
+		}
+
 		// Retrieve swapchain support details into the surface object.
 		if(querySwapchainSupport(mDevice, swapChain) != RR_SUCCESS)
 		{
@@ -1112,34 +1201,46 @@ namespace Raven
 			RLOG_ERROR("Failed to create SwapChain object.");
 		}
 
+		std::vector<VkImage>	swapChainImages; /*!< Vector containing a VkImage for each backbuffer in the SwapChain. */
+
 		// Retrieve swap chain images.
 		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, nullptr);
-		swapChain->mSwapChainImages.resize(imageCount);
-		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, swapChain->mSwapChainImages.data());
+		swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, swapChainImages.data());
+
+		swapChain->mNumBackbuffers = imageCount;
+		swapChain->mRenderTargets = (FVulkanRenderTarget**)malloc(sizeof(FVulkanRenderTarget*) * imageCount);
 
 		// Assign the native window to this swapchain.
 		swapChain->mPlatformWindow = pNativeWindow;
 
-		// Create image views.
-		swapChain->mSwapChainImageViews.resize(swapChain->mSwapChainImages.size());
-
-		for (uint32_t i = 0; i < swapChain->mSwapChainImages.size(); i++)
+		for (uint32_t i = 0; i < swapChainImages.size(); i++)
 		{
-			VkImageViewCreateInfo viewInfo = {};
-			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			viewInfo.image = swapChain->mSwapChainImages[i];
-			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			viewInfo.format = swapChain->mSurfaceFormat.format;
-			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			viewInfo.subresourceRange.baseMipLevel = 0;
-			viewInfo.subresourceRange.levelCount = 1;
-			viewInfo.subresourceRange.baseArrayLayer = 0;
-			viewInfo.subresourceRange.layerCount = 1;
+			//VkImageViewCreateInfo viewInfo = {};
+			//viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			//viewInfo.image = swapChain->mSwapChainImages[i];
+			//viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			//viewInfo.format = swapChain->mSurfaceFormat.format;
+			//viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			//viewInfo.subresourceRange.baseMipLevel = 0;
+			//viewInfo.subresourceRange.levelCount = 1;
+			//viewInfo.subresourceRange.baseArrayLayer = 0;
+			//viewInfo.subresourceRange.layerCount = 1;
+			//
+			//if (vkCreateImageView(mDevice->mDevice, &viewInfo, nullptr, &swapChain->mSwapChainImageViews[i]) != VK_SUCCESS)
+			//{
+			//	RLOG_ERROR("Failed to create image views for the swapchain.");
+			//}
 
-			if (vkCreateImageView(mDevice->mDevice, &viewInfo, nullptr, &swapChain->mSwapChainImageViews[i]) != VK_SUCCESS) 
-			{
-				RLOG_ERROR("Failed to create image views for the swapchain.");
-			}
+			FRenderTargetCreateDesc rtDesc = {};
+			rtDesc.format = VkFormatToGenericFormat(swapChain->mSurfaceFormat.format);
+			rtDesc.width = swapChain->mSwapChainExtent.width;
+			rtDesc.height = swapChain->mSwapChainExtent.height;
+			rtDesc.sampleCount = 1;
+			rtDesc.sampleQuality = 0;
+			rtDesc.usage = FRenderTargetUsage::RENDER_TARGET_USAGE_COLOR_ATTACHMENT;
+			rtDesc.nativeSwapchainImage = swapChainImages[i];
+			createRenderTarget((IRenderTarget**)(&swapChain->mRenderTargets[i]), &rtDesc);
 		}
 
 		// Update the pointer argument to point to the newly created swapchain.
@@ -1155,13 +1256,15 @@ namespace Raven
 
 		FVulkanSwapChain* swapChain = static_cast<FVulkanSwapChain*>(pSwapchain);
 
-		for (uint32_t i = 0; i < swapChain->mSwapChainImages.size(); ++i)
+		for (uint32_t i = 0; i < swapChain->mNumBackbuffers; ++i)
 		{
-			vkDestroyImageView(mDevice->mDevice, swapChain->mSwapChainImageViews[i], nullptr);
+			vkDestroyImageView(mDevice->mDevice, swapChain->mRenderTargets[i]->mTexture->mImageView, nullptr);
 		}
 
+		free(swapChain->mRenderTargets);
 		vkDestroySwapchainKHR(mDevice->mDevice, swapChain->mSwapChain, nullptr);
-		
+		vkDestroySurfaceKHR(mInstance, swapChain->mSurface, nullptr);
+
 		delete pSwapchain;
 		return RR_SUCCESS;
 	}
@@ -1219,6 +1322,12 @@ namespace Raven
 		{
 			// Get the first available queue index and increment the counter.
 			queueIndex = mDevice->mQueueCounters[queueFamilyIndex];
+
+			if (queueIndex >= mDevice->mPhysicalDevice->mQueueFamilyProperties[queueFamilyIndex].queueCount)
+			{
+				queueIndex = mDevice->mPhysicalDevice->mQueueFamilyProperties[queueFamilyIndex].queueCount - 1;
+			}
+
 			mDevice->mQueueCounters[queueFamilyIndex]++;
 		}
 
@@ -1262,7 +1371,7 @@ namespace Raven
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.queueFamilyIndex = queue->mQueueFamilyIndex;
-		poolInfo.flags = 0; // Optional
+		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 		// Create command pool for this queue.
 		if (vkCreateCommandPool(mDevice->mDevice, &poolInfo, nullptr, &pool->mPool) != VK_SUCCESS) 
@@ -1296,7 +1405,6 @@ namespace Raven
 	ERenderResult RVulkanRenderer::createCommandLists(ICommandList** ppCommandLists, uint32_t numCommandLists, ICommandPool* pCmdPool, ECommandListType type)
 	{
 		RASSERT(ppCommandLists != nullptr);
-		RASSERT(*ppCommandLists != nullptr);
 		RASSERT(pCmdPool != nullptr);
 
 		FVulkanCommandPool* pool = static_cast<FVulkanCommandPool*>(pCmdPool);
@@ -1339,27 +1447,26 @@ namespace Raven
 
 	ERenderResult RVulkanRenderer::destroyCommandList(ICommandPool* pCmdPool, ICommandList* pCommandList)
 	{
-		return destroyCommandLists(pCmdPool, pCommandList, 1);
+		return destroyCommandLists(pCmdPool, &pCommandList, 1);
 	}
 
-	ERenderResult RVulkanRenderer::destroyCommandLists(ICommandPool* pCmdPool, ICommandList* pCommandLists, uint32_t numLists)
+	ERenderResult RVulkanRenderer::destroyCommandLists(ICommandPool* pCmdPool, ICommandList** ppCommandLists, uint32_t numLists)
 	{
 		RASSERT(pCmdPool != nullptr);
-		RASSERT(pCommandLists != nullptr);
+		RASSERT(ppCommandLists != nullptr);
 		RASSERT(numLists > 0);
 
 		FVulkanCommandPool* pool = static_cast<FVulkanCommandPool*>(pCmdPool);
-		FVulkanCommandList* lists = static_cast<FVulkanCommandList*>(pCommandLists);
 
 		std::vector<VkCommandBuffer> buffers;
 		buffers.resize(numLists);
 
 		for (uint32_t i = 0; i < numLists; ++i)
 		{
-			RASSERT(&lists[i] != nullptr);
+			FVulkanCommandList* list = static_cast<FVulkanCommandList*>(ppCommandLists[i]);
 
-			buffers[i] = lists[i].mCmdBuffer;
-			delete &lists[i];
+			buffers[i] = list->mCmdBuffer;
+			delete list;
 		}
 
 		vkFreeCommandBuffers(mDevice->mDevice, pool->mPool, numLists, buffers.data());
@@ -1461,7 +1568,7 @@ namespace Raven
 
 		for (uint32_t i = 0; i < pDesc->numRenderTargets; i++)
 		{
-			if (pDesc->pBlendState->renderTargetBlendStates[i].blendEnable)
+			if (pDesc->pBlendState != nullptr && pDesc->pBlendState->renderTargetBlendStates[i].blendEnable)
 			{
 				colorBlendAttachments[i] = {};
 				colorBlendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -1475,6 +1582,7 @@ namespace Raven
 			}
 			else
 			{
+				colorBlendAttachments[i] = {};
 				colorBlendAttachments[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 				colorBlendAttachments[i].blendEnable = VK_FALSE;
 			}
@@ -1582,8 +1690,8 @@ namespace Raven
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = 0; // Optional
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &rootSignature->mDescriptorSetLayout;
+		pipelineLayoutInfo.setLayoutCount = rootSignature->mDescriptorSetLayouts.size();
+		pipelineLayoutInfo.pSetLayouts = rootSignature->mDescriptorSetLayouts.data();
 
 		if (vkCreatePipelineLayout(mDevice->mDevice, &pipelineLayoutInfo, nullptr, &pipeline->mLayout) != VK_SUCCESS) 
 		{
@@ -1600,6 +1708,7 @@ namespace Raven
 		passDesc.depthStencilAttachmentFormat = pDesc->depthStencilFormat;
 		passDesc.sampleCount = pDesc->sampleCount;
 		passDesc.sampleQuality = pDesc->sampleQuality;
+		passDesc.pLoadStoreOps = nullptr;
 
 		// Create temporary render pass for this pipeline.
 		if (createRenderPass(&pass, &passDesc) != RR_SUCCESS)
@@ -1685,8 +1794,8 @@ namespace Raven
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = 0; // Optional
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &rootSignature->mDescriptorSetLayout;
+		pipelineLayoutInfo.setLayoutCount = rootSignature->mDescriptorSetLayouts.size();
+		pipelineLayoutInfo.pSetLayouts = rootSignature->mDescriptorSetLayouts.data();
 
 		if (vkCreatePipelineLayout(mDevice->mDevice, &pipelineLayoutInfo, nullptr, &pipeline->mLayout) != VK_SUCCESS)
 		{
@@ -1750,6 +1859,7 @@ namespace Raven
 			delete fence;
 		}
 
+		fence->mSignaled = false;
 		*ppFence = (IFence*)fence;
 
 		return RR_SUCCESS;
@@ -1764,6 +1874,17 @@ namespace Raven
 		vkDestroyFence(mDevice->mDevice, fence->mFence, nullptr);
 
 		delete pFence;
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::destroyFrameBuffer(FVulkanFrameBuffer* pFrameBuffer)
+	{
+		RASSERT(pFrameBuffer != nullptr);
+		
+		// Destroy fence object.
+		vkDestroyFramebuffer(mDevice->mDevice, pFrameBuffer->mFrameBuffer, nullptr);
+
+		delete pFrameBuffer;
 		return RR_SUCCESS;
 	}
 
@@ -1811,11 +1932,8 @@ namespace Raven
 		FVulkanRenderPass* pass = new FVulkanRenderPass();
 		pass->mDesc = *pDesc;
 
-		std::vector<VkAttachmentReference> colorAttachmentReferences;
-		colorAttachmentReferences.resize(pDesc->numColorAttachments);
-
-		std::vector<VkAttachmentDescription> attachments;
-		attachments.resize(pDesc->numColorAttachments);
+		std::vector<VkAttachmentReference> colorAttachmentReferences(pDesc->numColorAttachments);
+		std::vector<VkAttachmentDescription> attachments(pDesc->numColorAttachments);
 
 		uint32_t numAttachments = 0;
 
@@ -1826,10 +1944,21 @@ namespace Raven
 				attachments[numAttachments] = {};
 				attachments[numAttachments].format = gTextureFormatTranslator[pDesc->colorAttachmentFormats[i]];
 				attachments[numAttachments].samples = textureSamplesToVkSamples(pDesc->sampleCount);
-				attachments[numAttachments].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				attachments[numAttachments].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-				attachments[numAttachments].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-				attachments[numAttachments].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+				if (pDesc->pLoadStoreOps != nullptr)
+				{
+					attachments[numAttachments].loadOp = gLoadOpTranslator[pDesc->pLoadStoreOps->colorLoadOps[i]];
+					attachments[numAttachments].storeOp = gStoreOpTranslator[pDesc->pLoadStoreOps->colorStoreOps[i]];
+					//attachments[numAttachments].stencilLoadOp = gLoadOpTranslator[pDesc->pLoadStoreOps->stencilLoadOp];
+					//attachments[numAttachments].stencilStoreOp = gStoreOpTranslator[pDesc->pLoadStoreOps->stencilStoreOp];
+				}
+				else
+				{
+					attachments[numAttachments].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+					attachments[numAttachments].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+					//attachments[numAttachments].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+					//attachments[numAttachments].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+				}
 				attachments[numAttachments].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				attachments[numAttachments].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				
@@ -1851,10 +1980,22 @@ namespace Raven
 			// Create depth attachment
 			depthAttachment.format = gTextureFormatTranslator[pDesc->depthStencilAttachmentFormat];
 			depthAttachment.samples = textureSamplesToVkSamples(pDesc->sampleCount);
-			depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+			if (pDesc->pLoadStoreOps != nullptr)
+			{
+				depthAttachment.loadOp = gLoadOpTranslator[pDesc->pLoadStoreOps->depthLoadOp];
+				depthAttachment.storeOp = gStoreOpTranslator[pDesc->pLoadStoreOps->depthStoreOp];
+				depthAttachment.stencilLoadOp = gLoadOpTranslator[pDesc->pLoadStoreOps->stencilLoadOp];
+				depthAttachment.stencilStoreOp = gStoreOpTranslator[pDesc->pLoadStoreOps->stencilStoreOp];
+			}
+			else
+			{
+				depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+				depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+				depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+			}
+
 			depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 			depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -1878,7 +2019,7 @@ namespace Raven
 		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.dependencyCount = 0;
 		renderPassInfo.pDependencies = nullptr;
 
 		// Create a render pass using the specified attachments.
@@ -1907,43 +2048,71 @@ namespace Raven
 		RASSERT(mDevice != nullptr);
 
 		FVulkanRootSignature* rootSignature = new FVulkanRootSignature();
-		
-		// Create vector of descriptor set bindings.
-		std::vector<VkDescriptorSetLayoutBinding> descriptorSetBindings;
-		descriptorSetBindings.resize(pDesc->pNumDescriptorBindings);
 
-		// Create descriptor set binding layout.
-		for (uint32_t i = 0; i < pDesc->pNumDescriptorBindings; ++i)
+		uint32_t numSets = 0;
+		for (uint32_t i = 0; i < pDesc->numDescriptorBindings; ++i)
 		{
-			descriptorSetBindings[i] = {};
-			descriptorSetBindings[i].binding = pDesc->pDescriptorBindings[i].binding;
-			descriptorSetBindings[i].descriptorType = gDescriptorTypeTranslator[pDesc->pDescriptorBindings[i].descriptorType];
-			descriptorSetBindings[i].descriptorCount = pDesc->pDescriptorBindings[i].descriptorCount;
-			descriptorSetBindings[i].stageFlags = shaderStageFlagsToVkShaderStageFlags(pDesc->pDescriptorBindings[i].stageFlags);
-
-			// Create array of VkSampler objects to bind.
-			if (pDesc->pDescriptorBindings[i].descriptorType == DESCRIPTOR_TYPE_SAMPLER)
+			if (numSets < pDesc->pDescriptorBindings[i].set)
 			{
-				RLOG_WARNING("Trying to create static samplers but this has not been fully implemented yet.");
-				descriptorSetBindings[i].pImmutableSamplers = nullptr;
-			}
-			else
-			{
-				descriptorSetBindings[i].pImmutableSamplers = nullptr;
+				numSets = pDesc->pDescriptorBindings[i].set;
 			}
 		}
 
-		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(descriptorSetBindings.size());
-		layoutInfo.pBindings = descriptorSetBindings.data();
+		// Increment numSets since the current value is the highest set number.
+		++numSets;
 
-		// Create vulkan descriptor set layout.
-		if (vkCreateDescriptorSetLayout(mDevice->mDevice, &layoutInfo, nullptr, &rootSignature->mDescriptorSetLayout) != VK_SUCCESS) 
+		rootSignature->mDescriptorSetLayouts.resize(numSets);
+
+		for (uint32_t set = 0; set < numSets; ++set)
 		{
-			RLOG_ERROR("failed to create descriptor set layout!");
-			delete rootSignature;
-			return RR_INITIALIZATION_FAILED;
+			// Create vector of descriptor set bindings.
+			std::vector<VkDescriptorSetLayoutBinding> descriptorSetBindings;
+
+			// Create descriptor set binding layout.
+			for (uint32_t i = 0; i < pDesc->numDescriptorBindings; ++i)
+			{
+				if (pDesc->pDescriptorBindings[i].set != set)
+				{
+					// Skip this descriptor.
+					continue;
+				}
+
+				FDescriptorBinding& descBinding = pDesc->pDescriptorBindings[i];
+
+				VkDescriptorSetLayoutBinding binding;
+				binding.binding = descBinding.binding;
+				binding.descriptorType = gDescriptorTypeTranslator[descBinding.descriptorType];
+				binding.descriptorCount = descBinding.descriptorCount;
+				binding.stageFlags = shaderStageFlagsToVkShaderStageFlags(descBinding.stageFlags);
+
+				// Create array of VkSampler objects to bind.
+				if (descBinding.descriptorType == DESCRIPTOR_TYPE_SAMPLER)
+				{
+					FVulkanSampler* sampler = static_cast<FVulkanSampler*>(descBinding.ppImmutableSamplers[0]);
+					RASSERT(sampler != nullptr);
+
+					binding.pImmutableSamplers = &sampler->mSampler;
+				}
+				else
+				{
+					binding.pImmutableSamplers = nullptr;
+				}
+
+				descriptorSetBindings.push_back(binding);
+			}
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+			layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			layoutInfo.bindingCount = static_cast<uint32_t>(descriptorSetBindings.size());
+			layoutInfo.pBindings = descriptorSetBindings.data();
+
+			// Create vulkan descriptor set layout.
+			if (vkCreateDescriptorSetLayout(mDevice->mDevice, &layoutInfo, nullptr, &rootSignature->mDescriptorSetLayouts[set]) != VK_SUCCESS)
+			{
+				RLOG_ERROR("failed to create descriptor set layout!");
+				delete rootSignature;
+				return RR_INITIALIZATION_FAILED;
+			}
 		}
 
 		rootSignature->mInputAttributeDescriptions.resize(pDesc->pInputAssemblerLayout->numInputAttributeDescriptions);
@@ -1980,7 +2149,12 @@ namespace Raven
 		RASSERT(pRootSignature != nullptr);
 		
 		FVulkanRootSignature* rootSignature = static_cast<FVulkanRootSignature*>(pRootSignature);
-		vkDestroyDescriptorSetLayout(mDevice->mDevice, rootSignature->mDescriptorSetLayout, nullptr);
+
+		for (uint32_t i = 0; i < rootSignature->mDescriptorSetLayouts.size(); ++i)
+		{
+			vkDestroyDescriptorSetLayout(mDevice->mDevice, rootSignature->mDescriptorSetLayouts[i], nullptr);
+		}
+
 		delete pRootSignature;
 
 		return RR_SUCCESS;
@@ -2141,41 +2315,94 @@ namespace Raven
 		imageInfo.samples = textureSamplesToVkSamples(pDesc->sampleCount);
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		// Create image object.
-		if (vkCreateImage(mDevice->mDevice, &imageInfo, nullptr, &texture->mImage) != VK_SUCCESS)
+		if (pDesc->nativeSwapchainImage == nullptr)
+		{		
+			// Create image object.
+			if (vkCreateImage(mDevice->mDevice, &imageInfo, nullptr, &texture->mImage) != VK_SUCCESS)
+			{
+				RLOG_ERROR("failed to create image!");
+				delete texture;
+				return RR_INITIALIZATION_FAILED;
+			}
+		}
+		else
 		{
-			RLOG_ERROR("failed to create image!");
-			delete texture;
-			return RR_INITIALIZATION_FAILED;
+			texture->mImage = (VkImage)pDesc->nativeSwapchainImage;
 		}
 
 		// Set the image description of the texture to the one of the created image.
 		texture->mDesc = *pDesc;
 		texture->mVkImageDesc = imageInfo;
-		texture->mState = FResourceState::RESOURCE_STATE_COMMON;
+		texture->mState = FResourceState::RESOURCE_STATE_UNDEFINED;
 
-		// Get memory requirements for this image.
-		VkMemoryRequirements memRequirements;
-		vkGetImageMemoryRequirements(mDevice->mDevice, texture->mImage, &memRequirements);
-		uint32_t memoryTypeIndex = findSuitableMemoryType(memRequirements.memoryTypeBits, translateMemoryPropertyFlagsToVk(pDesc->memoryProperties));
-
-		RASSERT(memoryTypeIndex != UINT32_MAX);
-
-		// Allocate memory for this image.
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-		if (vkAllocateMemory(mDevice->mDevice, &allocInfo, nullptr, &texture->mMemory) != VK_SUCCESS)
+		if (pDesc->nativeSwapchainImage == nullptr)
 		{
-			RLOG_ERROR("failed to allocate image memory!");
-			delete texture;
-			return RR_OUT_OF_DEVICE_MEMORY;
-		}
+			// Get memory requirements for this image.
+			VkMemoryRequirements memRequirements;
+			vkGetImageMemoryRequirements(mDevice->mDevice, texture->mImage, &memRequirements);
+			uint32_t memoryTypeIndex = findSuitableMemoryType(memRequirements.memoryTypeBits, translateMemoryPropertyFlagsToVk(pDesc->memoryProperties));
 
-		// Bind allocated memory to the image object.
-		vkBindImageMemory(mDevice->mDevice, texture->mImage, texture->mMemory, 0);
+			RASSERT(memoryTypeIndex != UINT32_MAX);
+
+			// Allocate memory for this image.
+			VkMemoryAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+			allocInfo.allocationSize = memRequirements.size;
+			allocInfo.memoryTypeIndex = memoryTypeIndex;
+
+			if (vkAllocateMemory(mDevice->mDevice, &allocInfo, nullptr, &texture->mMemory) != VK_SUCCESS)
+			{
+				RLOG_ERROR("failed to allocate image memory!");
+				delete texture;
+				return RR_OUT_OF_DEVICE_MEMORY;
+			}
+
+			// Bind allocated memory to the image object.
+			vkBindImageMemory(mDevice->mDevice, texture->mImage, texture->mMemory, 0);
+
+			// Copy initial data inside the buffer.
+			if (texture->mDesc.pData != nullptr)
+			{
+				//create a staging buffer.
+				FVulkanBuffer* stagingBuffer = nullptr;
+
+				FBufferCreateDesc stagingCreateDesc = {};
+				stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+				stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
+				stagingCreateDesc.data = nullptr;
+				stagingCreateDesc.size = (uint32_t)memRequirements.size;
+
+				if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
+				{
+					RLOG_WARNING("Failed to allocate a staging buffer, therefore the newly created buffer won't have any contents.");
+				}
+
+				// Copy data into staging buffer.
+				void* data;
+				vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+				memcpy(data, pDesc->pData, memRequirements.size);
+				vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+
+				FVulkanFence* pTransferCompleteFence = nullptr;
+				FVulkanCommandList* pTransferCmd = nullptr;
+				createCommandList((ICommandList**)&pTransferCmd, mTransferCommandPool);
+				createFence((IFence**)&pTransferCompleteFence);
+
+				// copy buffer.
+				cmdBegin(pTransferCmd);
+				cmdCopyBufferToTexture(pTransferCmd, stagingBuffer, texture, 0, pDesc->width, pDesc->height);
+				cmdEnd(pTransferCmd);
+
+				// Submit command 
+				queueSubmit(mTransferQueue, 1, (ICommandList**)&pTransferCmd, pTransferCompleteFence, 0, nullptr, 0, nullptr);
+
+				// Wait for transfer to complete.
+				waitForFence(pTransferCompleteFence);
+				destroyFence(pTransferCompleteFence);
+				destroyCommandList(mTransferCommandPool, pTransferCmd);
+				destroyBuffer(stagingBuffer);
+			}
+		}
 
 		VkImageViewType viewType;
 
@@ -2260,7 +2487,7 @@ namespace Raven
 		// Set the image description of the texture to the one of the created image.
 		buffer->mDesc = *pDesc;
 
-		// Get memory requirements for this image.
+		// Get memory requirements for this buffer.
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(mDevice->mDevice, buffer->mBuffer, &memRequirements);
 		uint32_t memoryTypeIndex = findSuitableMemoryType(memRequirements.memoryTypeBits, translateMemoryPropertyFlagsToVk(pDesc->memoryProperties));
@@ -2284,6 +2511,60 @@ namespace Raven
 		vkBindBufferMemory(mDevice->mDevice, buffer->mBuffer, buffer->mMemory, 0);
 
 		buffer->mState = FResourceState::RESOURCE_STATE_COMMON;
+		
+		// Copy initial data inside the buffer.
+		if (buffer->mDesc.data != nullptr)
+		{
+			// If we have coherent memory, copy directly into the memory.
+			if ((buffer->mDesc.memoryProperties & (MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE)) != 0)
+			{
+				void* data;
+				vkMapMemory(mDevice->mDevice, buffer->mMemory, 0, pDesc->size, 0, &data);
+				memcpy(data, pDesc->data, pDesc->size);
+				vkUnmapMemory(mDevice->mDevice, buffer->mMemory);
+			}
+			else
+			{
+				//create a staging buffer.
+				FVulkanBuffer* stagingBuffer = nullptr;
+
+				FBufferCreateDesc stagingCreateDesc = {};
+				stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+				stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
+				stagingCreateDesc.data = nullptr;
+				stagingCreateDesc.size = pDesc->size;
+
+				if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
+				{
+					RLOG_WARNING("Failed to allocate a staging buffer, therefore the newly created buffer won't have any contents.");
+				}
+
+				// Copy data into staging buffer.
+				void* data;
+				vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+				memcpy(data, pDesc->data, pDesc->size);
+				vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+
+				FVulkanFence* pTransferCompleteFence = nullptr;
+				FVulkanCommandList* pTransferCmd = nullptr;
+				createCommandList((ICommandList**)&pTransferCmd, mTransferCommandPool);
+				createFence((IFence**)&pTransferCompleteFence);
+
+				// copy buffer.
+				cmdBegin(pTransferCmd);
+				cmdCopyBuffer(pTransferCmd, stagingBuffer, buffer, 0, 0, pDesc->size);
+				cmdEnd(pTransferCmd);
+
+				// Submit command 
+				queueSubmit(mTransferQueue, 1, (ICommandList**)&pTransferCmd, pTransferCompleteFence, 0, nullptr, 0, nullptr);
+
+				// Wait for transfer to complete.
+				waitForFence(pTransferCompleteFence);
+				destroyFence(pTransferCompleteFence);
+				destroyCommandList(mTransferCommandPool, pTransferCmd);
+				destroyBuffer(stagingBuffer);
+			}
+		}
 
 		*ppBuffer = (IBuffer*)buffer;
 
@@ -2300,6 +2581,179 @@ namespace Raven
 		vkFreeMemory(mDevice->mDevice, buffer->mMemory, nullptr);
 
 		delete pBuffer;
+
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::cmdCopyBuffer(ICommandList* pCommandList, IBuffer* pSrcBuffer, IBuffer* pDstBuffer, uint32_t srcOffset, uint32_t dstOffset, uint32_t size)
+	{
+		RASSERT(pCommandList != nullptr);
+		RASSERT(pSrcBuffer != nullptr);
+		RASSERT(pDstBuffer != nullptr);
+
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+		FVulkanBuffer* srcBuffer = static_cast<FVulkanBuffer*>(pSrcBuffer);
+		FVulkanBuffer* dstBuffer = static_cast<FVulkanBuffer*>(pDstBuffer);
+
+		FBufferBarrier bBarriers[2];
+
+		bBarriers[0].buffer = pSrcBuffer;
+		bBarriers[0].requiredState = FResourceState::RESOURCE_STATE_COPY_SOURCE;
+
+		bBarriers[1].buffer = pDstBuffer;
+		bBarriers[1].requiredState = FResourceState::RESOURCE_STATE_COPY_DEST;
+
+		cmdResourceBarriers(pCommandList, 2, &bBarriers[0], 0, nullptr, true);
+
+		// Set copy region.
+		VkBufferCopy copyRegion = {};
+		copyRegion.srcOffset = srcOffset; // Optional
+		copyRegion.dstOffset = dstOffset; // Optional
+		copyRegion.size = size;
+
+		// Copy the buffer.
+		vkCmdCopyBuffer(list->mCmdBuffer, srcBuffer->mBuffer, dstBuffer->mBuffer, 1, &copyRegion);
+
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::cmdCopyBufferToTexture(ICommandList* pCommandList, IBuffer* pSrcBuffer, ITexture* pDstImage, uint32_t srcOffset, uint32_t width, uint32_t height)
+	{
+		FBufferBarrier bBarrier;
+		bBarrier.buffer = pSrcBuffer;
+		bBarrier.requiredState = FResourceState::RESOURCE_STATE_COPY_SOURCE;
+
+		FTextureBarrier tBarrier;
+		tBarrier.texture = pDstImage;
+		tBarrier.requiredState = FResourceState::RESOURCE_STATE_COPY_DEST;
+
+		cmdResourceBarriers(pCommandList, 1, &bBarrier, 1, &tBarrier, true);
+
+		RASSERT(pCommandList != nullptr);
+		RASSERT(pSrcBuffer != nullptr);
+		RASSERT(pDstImage != nullptr);
+
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+		FVulkanBuffer* srcBuffer = static_cast<FVulkanBuffer*>(pSrcBuffer);
+		FVulkanTexture* dstImage = static_cast<FVulkanTexture*>(pDstImage);
+
+		VkBufferImageCopy region = {};
+		region.bufferOffset = srcOffset;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+
+		region.imageOffset = { 0, 0, 0 };
+		region.imageExtent = {
+			width,
+			height,
+			1
+		};
+
+		vkCmdCopyBufferToImage(
+			list->mCmdBuffer,
+			srcBuffer->mBuffer,
+			dstImage->mImage,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1,
+			&region
+		);
+
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::cmdUpdateBuffer(ICommandList* pCommandList, IBuffer* pDstBuffer, void* pData, uint32_t dstOffset, uint32_t size)
+	{
+		RASSERT(pData != nullptr);
+		RASSERT(pCommandList != nullptr);
+		RASSERT(pDstBuffer != nullptr);
+		RASSERT(size != 0);
+
+		FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(pDstBuffer);
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		if (buffer->mDesc.memoryProperties & (FMemoryPropertyFlags::MEMORY_PROPERTY_HOST_VISIBLE | FMemoryPropertyFlags::MEMORY_PROPERTY_HOST_COHERENT))
+		{
+			void* data;
+			vkMapMemory(mDevice->mDevice, buffer->mMemory, 0, buffer->mDesc.size, 0, &data);
+			memcpy(data, pData, size);
+			vkUnmapMemory(mDevice->mDevice, buffer->mMemory);
+
+			return RR_SUCCESS;
+		}
+		else
+		{
+			//create a staging buffer.
+			FVulkanBuffer* stagingBuffer = nullptr;
+
+			FBufferCreateDesc stagingCreateDesc = {};
+			stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+			stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
+			stagingCreateDesc.data = nullptr;
+			stagingCreateDesc.size = size;
+
+			if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
+			{
+				RLOG_ERROR("Failed to allocate a staging buffer, therefore the newly created buffer won't have any contents.");
+				return RR_FAIL;
+			}
+
+			// Copy data into staging buffer.
+			void* data;
+			vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+			memcpy(data, pData, size);
+			vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+
+			// copy buffer.
+			cmdCopyBuffer(list, stagingBuffer, buffer, 0, dstOffset, size);
+
+			destroyBuffer(stagingBuffer);
+
+			return RR_SUCCESS;
+		}
+	}
+
+	ERenderResult RVulkanRenderer::cmdUpdateTexture(ICommandList* pCommandList, ITexture* pDstTexture, void* pData, uint32_t width, uint32_t height)
+	{
+		RASSERT(pData != nullptr);
+		RASSERT(pCommandList != nullptr);
+		RASSERT(pDstTexture != nullptr);
+		RASSERT(!(width == 0 && height == 0));
+
+		FVulkanTexture* texture = static_cast<FVulkanTexture*>(pDstTexture);
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+	
+		//create a staging buffer.
+		FVulkanBuffer* stagingBuffer = nullptr;
+
+		VkMemoryRequirements memRequirements;
+		vkGetImageMemoryRequirements(mDevice->mDevice, texture->mImage, &memRequirements);
+
+		FBufferCreateDesc stagingCreateDesc = {};
+		stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+		stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
+		stagingCreateDesc.data = nullptr;
+		stagingCreateDesc.size = memRequirements.size;
+
+		if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
+		{
+			RLOG_WARNING("Failed to allocate a staging buffer, therefore the newly created buffer won't have any contents.");
+		}
+
+		// Copy data into staging buffer.
+		void* data;
+		vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+		memcpy(data, pData, memRequirements.size);
+		vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+
+		// copy buffer.
+		cmdCopyBufferToTexture(list, stagingBuffer, texture, 0, width, height);
+
+		destroyBuffer(stagingBuffer);
 
 		return RR_SUCCESS;
 	}
@@ -2336,6 +2790,8 @@ namespace Raven
 		createDesc.tiling = pDesc->tiling;
 		createDesc.type = ETextureType::TEXTURE_TYPE_2D;
 		createDesc.usage = usage;
+		createDesc.nativeSwapchainImage = pDesc->nativeSwapchainImage;
+		createDesc.pData = nullptr;
 
 		// Create a texture for this render target.
 		if (createTexture((ITexture**)&renderTarget->mTexture, &createDesc) != RR_SUCCESS)
@@ -2591,15 +3047,21 @@ namespace Raven
 		// Vector of queue creation information structures.
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
 
-		float queuePriority = 1.0f;
+		std::vector<std::vector<float>>queuePriorities(pPhysicalDevice->mQueueFamilyProperties.size());
 
 		for (uint32_t i = 0; i < pPhysicalDevice->mQueueFamilyProperties.size(); ++i)
 		{
+			queuePriorities[i].resize(pPhysicalDevice->mQueueFamilyProperties[i].queueCount);
+			for (uint32_t j = 0; j < pPhysicalDevice->mQueueFamilyProperties[i].queueCount; ++j)
+			{
+				queuePriorities[i][j] = 1.0f;
+			}
+
 			VkDeviceQueueCreateInfo queueCreateInfo = {};
 			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueCreateInfo.queueFamilyIndex = i;
 			queueCreateInfo.queueCount = pPhysicalDevice->mQueueFamilyProperties[i].queueCount;
-			queueCreateInfo.pQueuePriorities = &queuePriority;
+			queueCreateInfo.pQueuePriorities = queuePriorities[i].data();
 			queueInfos.push_back(queueCreateInfo);
 		}
 
@@ -2713,6 +3175,23 @@ namespace Raven
 		// Destroy our global descriptor pool.
 		destroyDescriptorPool(mDescriptorPool);
 
+		// Destroy transfer queue and pool.
+		destroyCommandPool(mTransferCommandPool);
+		destroyQueue(mTransferQueue);
+
+		for (auto it = mFrameBufferMap.begin(); it != mFrameBufferMap.end(); ++it)
+		{
+			destroyFrameBuffer(it->second);
+		}
+
+		for (auto it = mRenderPassMap.begin(); it != mRenderPassMap.end(); ++it)
+		{
+			destroyRenderPass(it->second);
+		}
+
+		mFrameBufferMap.clear();
+		mRenderPassMap.clear();
+
 		// Destroy our logical device.
 		vkDestroyDevice(mDevice->mDevice, nullptr);
 
@@ -2814,11 +3293,17 @@ namespace Raven
 		submitInfo.pWaitDstStageMask = numWaitSemaphores != 0 ? waitSemaphoreDestMasks.data() : VK_NULL_HANDLE;
 		submitInfo.pNext = VK_NULL_HANDLE;
 		
+		VkResult res = vkQueueSubmit(queue->mQueue, 1, &submitInfo, fence != nullptr ? fence->mFence : nullptr);
 		// Submit the commands to the queue.
-		if (vkQueueSubmit(queue->mQueue, 1, &submitInfo, fence != nullptr ? fence->mFence : nullptr) != VK_SUCCESS)
+		if (res != VK_SUCCESS)
 		{
 			RLOG_ERROR("Failed to submit command lists to the specified command queue.");
 			return RR_UNKNOWN_FAILURE;
+		}
+
+		if (fence != nullptr)
+		{
+			fence->mSignaled = true;
 		}
 
 		// We successfully submitted our commands to the queue.
@@ -2863,6 +3348,7 @@ namespace Raven
 		presentInfo.pNext = VK_NULL_HANDLE;
 		presentInfo.swapchainCount = numSwapChains;
 		presentInfo.pSwapchains = swapchains.data();
+		presentInfo.pImageIndices = swapchainImageIndices.data();
 		presentInfo.waitSemaphoreCount = numWaitSemaphores;
 		presentInfo.pWaitSemaphores = waitSemaphores.data();
 		presentInfo.pResults = results.data();
@@ -2901,6 +3387,11 @@ namespace Raven
 
 		RASSERT(swapChain != nullptr);
 
+		if (fence != nullptr)
+		{
+			fence->mSignaled = true;
+		}
+
 		if (vkAcquireNextImageKHR(mDevice->mDevice,
 			swapChain->mSwapChain,
 			UINT64_MAX,
@@ -2909,9 +3400,47 @@ namespace Raven
 			&swapChain->mImageIndex) != VK_SUCCESS)
 		{
 			RLOG_ERROR("Failed to acquire next swapchain image.");
+
+			if (fence != nullptr)
+			{
+				fence->mSignaled = false;
+			}
+
 			return RR_OBJECT_DOES_NOT_EXIST;
 		}
+		
+		if (fence != nullptr)
+		{
+			if (vkWaitForFences(mDevice->mDevice, 1, &fence->mFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+			{
+				RLOG_WARNING("Failed to wait for a fence while aquiring a swapchain image.");
+			}
 
+			vkResetFences(mDevice->mDevice, 1, &fence->mFence);
+			fence->mSignaled = false;
+		}
+
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::waitForFence(IFence* pFence)
+	{
+		RASSERT(pFence != nullptr);
+		FVulkanFence* fence = static_cast<FVulkanFence*>(pFence);
+
+		if (!fence->mSignaled)
+		{
+			return RR_SUCCESS;
+		}
+
+		if (vkWaitForFences(mDevice->mDevice, 1, &fence->mFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+		{
+			RLOG_WARNING("Failed to wait for a fence.");
+		}
+
+		vkResetFences(mDevice->mDevice, 1, &fence->mFence);
+
+		fence->mSignaled = false;
 		return RR_SUCCESS;
 	}
 
@@ -3011,10 +3540,11 @@ namespace Raven
 
     ERenderResult RVulkanRenderer::cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments,
                                                       IRenderTarget **ppColorAttachments,
-                                                      IRenderTarget *pDepthStencilAttachment)
+                                                      IRenderTarget *pDepthStencilAttachment,
+													  FLoadStoreOps* pLoadStoreOps)
 	{
 		RASSERT(pCommandList != nullptr);
-		RASSERT(numColorAttachments != 0 && pDepthStencilAttachment != nullptr);
+		RASSERT(!(numColorAttachments == 0 && pDepthStencilAttachment == nullptr));
 
 		// Cast the command list interface to the vulkan type.
 		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
@@ -3030,18 +3560,21 @@ namespace Raven
 		for(uint32_t i = 0; i < numColorAttachments; ++i)
 		{
 			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
-			hash_bytes(&target->mDesc.format, sizeof(ETextureFormat), hash);
-			hash_bytes(&target->mDesc.sampleCount, sizeof(uint32_t), hash);
-			hash_bytes(&target->mDesc.sampleQuality, sizeof(uint32_t), hash);
+			hash = hash_bytes(&target->mDesc.format, sizeof(ETextureFormat), hash);
+			hash = hash_bytes(&target->mDesc.sampleCount, sizeof(uint32_t), hash);
+			hash = hash_bytes(&target->mDesc.sampleQuality, sizeof(uint32_t), hash);
 		}
 
 		if(pDepthStencilAttachment != nullptr)
 		{
 			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
-			hash_bytes(&target->mDesc.format, sizeof(ETextureFormat), hash);
-			hash_bytes(&target->mDesc.sampleCount, sizeof(uint32_t), hash);
-			hash_bytes(&target->mDesc.sampleQuality, sizeof(uint32_t), hash);
+			hash = hash_bytes(&target->mDesc.format, sizeof(ETextureFormat), hash);
+			hash = hash_bytes(&target->mDesc.sampleCount, sizeof(uint32_t), hash);
+			hash = hash_bytes(&target->mDesc.sampleQuality, sizeof(uint32_t), hash);
 		}
+
+		size_t hash2 = hash; // we don't need to take the load/store ops in account for frame buffer creation.
+		hash = hash_bytes(pLoadStoreOps, sizeof(FLoadStoreOps), hash);
 
 		FVulkanRenderPass* renderPass = nullptr;
 
@@ -3054,6 +3587,9 @@ namespace Raven
 		else
 		{
 			FVulkanRenderPassCreateDesc rpDesc;
+			rpDesc.numColorAttachments = numColorAttachments;
+			rpDesc.pLoadStoreOps = pLoadStoreOps;
+
 			if(numColorAttachments != 0)
 			{
 				FVulkanRenderTarget* colorTarget = static_cast<FVulkanRenderTarget*>(ppColorAttachments[0]);
@@ -3071,6 +3607,12 @@ namespace Raven
 			{
 				FVulkanRenderTarget* depthStencil = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
 				rpDesc.depthStencilAttachmentFormat = depthStencil->mDesc.format;
+
+				if (numColorAttachments == 0)
+				{
+					rpDesc.sampleCount = depthStencil->mTexture->mDesc.sampleCount;
+					rpDesc.sampleQuality = depthStencil->mTexture->mDesc.sampleQuality;
+				}
 			}
 			else
 			{
@@ -3092,16 +3634,16 @@ namespace Raven
 		for(uint32_t i = 0; i < numColorAttachments; ++i)
 		{
 			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
-			hash_bytes(&target->mTexture, sizeof(VkImage), hash);
+			hash2 = hash_bytes(&target->mTexture, sizeof(VkImage), hash2);
 		}
 
 		if(pDepthStencilAttachment != nullptr)
 		{
 			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
-			hash_bytes(&target->mTexture, sizeof(VkImage), hash);
+			hash2 = hash_bytes(&target->mTexture, sizeof(VkImage), hash2);
 		}
 
-		auto frameBufferIt = mFrameBufferMap.find(hash);
+		auto frameBufferIt = mFrameBufferMap.find(hash2);
 		if(frameBufferIt != mFrameBufferMap.end())
 		{
 			// We already have a pre-created render pass.
@@ -3111,7 +3653,7 @@ namespace Raven
 		{
 			FVulkanFrameBufferCreateDesc fbDesc;
 			fbDesc.renderPass = renderPass;
-
+			
 			std::vector<FVulkanRenderTarget*> attachments(numColorAttachments + (pDepthStencilAttachment != nullptr ? 1 : 0));
 
 			if(numColorAttachments != 0)
@@ -3134,6 +3676,9 @@ namespace Raven
 				attachments[numColorAttachments] = depthAttachment;
 			}
 
+			fbDesc.numAttachments = (uint32_t)attachments.size();
+			fbDesc.ppAttachments = attachments.data();
+
 			// Create a new frame buffer referencing the resources.
 			if(createFrameBuffer(&frameBuffer, &fbDesc) != RR_SUCCESS)
 			{
@@ -3141,7 +3686,7 @@ namespace Raven
 				return RR_FAIL;
 			}
 
-			mFrameBufferMap[hash] = frameBuffer;
+			mFrameBufferMap[hash2] = frameBuffer;
 
 		}
 
@@ -3161,9 +3706,20 @@ namespace Raven
 		beginInfo.framebuffer = frameBuffer->mFrameBuffer;
 		beginInfo.renderArea = renderArea;
 
-		//TODO CLEARS
-		beginInfo.clearValueCount = 0;
-		beginInfo.pClearValues = nullptr;
+		std::vector<VkClearValue> clearValues(numColorAttachments + (pDepthStencilAttachment != nullptr ? 1 : 0));
+		for (uint32_t i = 0; i < numColorAttachments; ++i)
+		{
+			memcpy(&clearValues[i].color, pLoadStoreOps->colorClearValues[i], sizeof(float) * 4);
+		}
+
+		if (pDepthStencilAttachment != nullptr)
+		{
+			clearValues[numColorAttachments].depthStencil.depth = pLoadStoreOps->depthClearValue;
+			clearValues[numColorAttachments].depthStencil.stencil = pLoadStoreOps->stencilClearValue;
+		}
+
+		beginInfo.clearValueCount = clearValues.size();
+		beginInfo.pClearValues = clearValues.data();
 
 		vkCmdBeginRenderPass(list->mCmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -3222,7 +3778,7 @@ namespace Raven
 		// TODO, support different index types.
 		// TODO, support memory offsets.
 
-		vkCmdBindIndexBuffer(list->mCmdBuffer, buffer->mBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(list->mCmdBuffer, buffer->mBuffer, 0, VkIndexType::VK_INDEX_TYPE_UINT32);
 
 		return RR_SUCCESS;
     }
@@ -3377,7 +3933,9 @@ namespace Raven
 			vkBarrier->dstAccessMask = translateResourceStateToAccessMask(std::get<1>(it->second));
 			vkBarrier->offset = 0;
 			vkBarrier->size = VK_WHOLE_SIZE;
+			vkBarrier->buffer = it->first->mBuffer;
 
+			it->first->mState = std::get<1>(it->second);
 			++index;
 		}
 
@@ -3400,8 +3958,13 @@ namespace Raven
 			vkBarrier->subresourceRange.baseArrayLayer = 0;
 			vkBarrier->subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
+			it->first->mState = std::get<1>(it->second);
+
 			++index;
 		}
+
+		list->mPendingBufferBarriers.clear();
+		list->mPendingImageBarriers.clear();
 
 		// Flush pipeline barrier.
 		vkCmdPipelineBarrier(list->mCmdBuffer,
@@ -3410,9 +3973,9 @@ namespace Raven
 							 0,
 							 0,
 							 nullptr,
-							 bufferBarriers.size(),
+							 (uint32_t)bufferBarriers.size(),
 							 bufferBarriers.data(),
-							 imageBarriers.size(),
+							 (uint32_t)imageBarriers.size(),
 							 imageBarriers.data()
 		);
 
@@ -3519,4 +4082,39 @@ namespace Raven
 
         return RR_SUCCESS;
     }
+
+	ERenderResult RVulkanRenderer::cmdBindDescriptors(ICommandList* pCommandList, uint32_t numDescriptors, FDescriptorBinding* pDescriptors)
+	{
+		RASSERT(pCommandList != nullptr);
+		RASSERT(numDescriptors != 0);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		// We need to have a pipeline and render pass bound to the pipeline.
+		if (list->mBoundPipeline == nullptr || list->mCurrentRenderPass == nullptr)
+		{
+			return RR_FAIL;
+		}
+
+		FVulkanPipeline* pipeline = list->mBoundPipeline;
+		FVulkanRenderPass* renderpass = list->mCurrentRenderPass;
+
+		std::vector<VkDescriptorSet> bindDescriptorSets;
+
+		//for (uint32_t i = 0; i < numDescriptors; ++i)
+		//{
+		//	FDescriptorBinding& binding = pDescriptors[i];
+		//	size_t hash = 0;
+		//
+		//	if(hash does not exist)
+		//}
+		//// TODO.
+		//
+		//
+		//// Bind descriptor sets.
+		//vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, , x, x, x, x);
+
+		return RR_SUCCESS;
+	}
 }

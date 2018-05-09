@@ -29,9 +29,14 @@ namespace Raven
 		uint32_t				sampleQuality;
 		EImageTiling			tiling;
 		FMemoryPropertyFlags	memoryProperties;
+		void*					nativeSwapchainImage; //optional.
 	};
 
 	/*! \struct IRenderTarget
 	\brief Interface for a render target. */
-	struct IRenderTarget {};
+	struct IRenderTarget 
+	{
+		virtual ITexture* GetTexture() const = 0;
+		virtual const FRenderTargetCreateDesc* GetDesc() const = 0;
+	};
 }

@@ -277,18 +277,18 @@ namespace Raven
 		};
 
         // Renderer variables.
-		VkInstance								mInstance; /*!< Vulkan instance for this renderer. */
-		VkDebugReportCallbackEXT				mDebuggingCallback; // callback extension for validation layers.
-		std::vector<FVulkanPhysicalDevice>		mGPUs; /*!< Logical device associated with this renderer. */
-		FVulkanDevice*							mDevice; /*!< Logical device associated with this renderer. */
-		FVulkanQueue*							mTransferQueue; /*!< Transfer queue for data transfer. */
-		FVulkanCommandPool*						mTransferCommandPool; /*!< Transfer command pool for data transfer. */
-		FRendererInitializationDesc				mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
-		bool									mInitialized; /*!< Boolean to store if the renderer is initialized. */
-		FVulkanDescriptorPool*					mDescriptorPool; /*!< Global descriptor pool. */
-		std::map<size_t, FVulkanFrameBuffer*>	mFrameBufferMap; /*!< Cache of frame buffers. */
-		std::map<size_t, FVulkanRenderPass*>	mRenderPassMap; /*!< Cache of render passes. */
-		FVulkanDescriptorSetCache				mDescriptorSetCaches[MAX_FRAMES_AT_ONCE]; /*!< Descriptor set cache */
+		VkInstance								            mInstance; /*!< Vulkan instance for this renderer. */
+		VkDebugReportCallbackEXT				            mDebuggingCallback; // callback extension for validation layers.
+		std::vector<FVulkanPhysicalDevice>		            mGPUs; /*!< Logical device associated with this renderer. */
+		FVulkanDevice*							            mDevice; /*!< Logical device associated with this renderer. */
+		FVulkanQueue*							            mTransferQueue; /*!< Transfer queue for data transfer. */
+		FVulkanCommandPool*						            mTransferCommandPool; /*!< Transfer command pool for data transfer. */
+		FRendererInitializationDesc				            mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
+		bool									            mInitialized; /*!< Boolean to store if the renderer is initialized. */
+		FVulkanDescriptorPool*					            mDescriptorPool; /*!< Global descriptor pool. */
+		std::map<size_t, FVulkanFrameBuffer*>	            mFrameBufferMap; /*!< Cache of frame buffers. */
+		std::map<size_t, FVulkanRenderPass*>	            mRenderPassMap; /*!< Cache of render passes. */
+        std::map<size_t, std::vector<VkDescriptorSet>>	    mDescriptorSetCache; /*!< Descriptor set cache */
 
 };
 }

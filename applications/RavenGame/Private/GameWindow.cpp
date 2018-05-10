@@ -139,29 +139,27 @@ namespace Raven
 		iaLayout.pInputAttributeDescriptions = &iaAttributes[0];
 
 		// Create descriptor bindings.
-		FDescriptorBinding bindings[2];
+		FDescriptorLayoutBinding bindings[2];
+        bindings[0].set = 0;
 		bindings[0].binding = 0;
 		bindings[0].descriptorCount = 1;
 		bindings[0].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[0].stageFlags = SHADER_STAGE_FLAG_ALL_GRAPHICS;
 
+        bindings[1].set = 0;
 		bindings[1].binding = 1;
 		bindings[1].descriptorCount = 1;
 		bindings[1].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_SAMPLER;
 		bindings[1].ppImmutableSamplers = &gSampler;
 		bindings[1].stageFlags = SHADER_STAGE_FLAG_ALL_GRAPHICS;
 
-		// Create descriptor set.
-		FDescriptorSet set;
-		set.numDescriptorBindings = 2;
-		set.pDescriptorBindings = &bindings[0];
 
 		// Create root signature.
 		FRootSignatureCreateDesc rsDesc;
 		rsDesc.pShaderProgram = gShader;
 		rsDesc.pInputAssemblerLayout = &iaLayout;
-		rsDesc.numDescriptorSets = 1;
-		rsDesc.pDescriptorSets = &set;
+		rsDesc.numDescriptorBindings = 2;
+		rsDesc.pDescriptorBindings = &bindings[0];
 
 		renderer->createRootSignature(&gRootSignature, &rsDesc);
 
@@ -396,7 +394,17 @@ namespace Raven
 		renderer->cmdBindIndexBuffer(cmd, gIndexBuffer);
 		renderer->cmdBindVertexBuffer(cmd, 1, &gVertexBuffer);
 		renderer->cmdDrawIndexed(cmd, (uint32_t)3, 0);
-		
+
+		FDescriptorBinding binding;
+		binding.set = 0;
+		binding.binding = 0;
+		binding.numDescriptors = 1;
+		binding.type = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		binding.ppBuffers = &gUniformBuffers[gCurrentImage];
+
+		// Bind uniform buffer.
+		renderer->cmdBindDescriptors(cmd, 1, &binding);
+
 		// Finish rendering pass.
 		renderer->cmdEndRenderPass(cmd);
 

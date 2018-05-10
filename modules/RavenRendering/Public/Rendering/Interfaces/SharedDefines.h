@@ -222,6 +222,25 @@ namespace Raven
 		float colorClearValues[8][4];
 	} FLoadStoreOps;
 	
+	struct ISampler;
+
+	/*! Enumeration describing a descriptor type. */
+	typedef enum EDescriptorType
+	{
+		DESCRIPTOR_TYPE_SAMPLER = 0,
+		DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER = 1,
+		DESCRIPTOR_TYPE_SAMPLED_IMAGE = 2,
+		DESCRIPTOR_TYPE_STORAGE_IMAGE = 3,
+		DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER = 4,
+		DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER = 5,
+		DESCRIPTOR_TYPE_UNIFORM_BUFFER = 6,
+		DESCRIPTOR_TYPE_STORAGE_BUFFER = 7,
+		DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC = 8,
+		DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC = 9,
+		DESCRIPTOR_TYPE_INPUT_ATTACHMENT = 10,
+		MAX_DESCRIPTOR_TYPE
+	} EDescriptorType;
+
 
 	typedef struct FDescriptorBinding
 	{
@@ -236,6 +255,6 @@ namespace Raven
 			IBuffer**    ppBuffers; /*!< Array of buffers. */
 			ISampler**   ppSamplers; /*!< Array of buffers. */
 		};
-	};
+	} FDescriptorBinding;
 
 }

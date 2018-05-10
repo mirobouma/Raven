@@ -19,8 +19,10 @@ namespace Raven
 		template <typename F, typename... Args>
 		FTask<Args...>* MakeTask(F&& f, Args... args)
 		{
-			// Allocate memory for the task.
-			//FLinearAllocation memory = _allocator.Allocate(sizeof...(FTask<Args...>));
+			//constexpr size_t expectedSize = sizeof(FTask<Args...>);
+
+			//// Allocate memory for the task.
+			//FLinearAllocation memory = _allocator.Allocate(expectedSize);
 
 			// Initialize the task in the memory of the task.
 			FTask<Args...>* task = new FTask<Args...>(std::forward<F>(f), std::forward<Args>(args)...);

@@ -42,23 +42,6 @@ namespace Raven
 	};
 
 	/*! Enumeration describing a descriptor type. */
-	typedef enum EDescriptorType
-	{
-		DESCRIPTOR_TYPE_SAMPLER = 0,
-		DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER = 1,
-		DESCRIPTOR_TYPE_SAMPLED_IMAGE = 2,
-		DESCRIPTOR_TYPE_STORAGE_IMAGE = 3,
-		DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER = 4,
-		DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER = 5,
-		DESCRIPTOR_TYPE_UNIFORM_BUFFER = 6,
-		DESCRIPTOR_TYPE_STORAGE_BUFFER = 7,
-		DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC = 8,
-		DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC = 9,
-		DESCRIPTOR_TYPE_INPUT_ATTACHMENT = 10,
-		MAX_DESCRIPTOR_TYPE
-	} EDescriptorType;
-
-	/*! Enumeration describing a descriptor type. */
 	typedef enum FShaderStageFlags
 	{
 		SHADER_STAGE_FLAG_VERTEX = 0x00000001,
@@ -72,9 +55,9 @@ namespace Raven
 	} FShaderStageFlags;
 	DECL_ENUM_AS_FLAGS(FShaderStageFlags);
 
-	/*! \struct FDescriptorBinding
+	/*! \struct FDescriptorLayoutBinding
 	\brief Structure describing a resource binding in the shader program. */
-	struct FDescriptorBinding
+	struct FDescriptorLayoutBinding
 	{
 		uint32_t              set;
 		uint32_t              binding;
@@ -99,7 +82,7 @@ namespace Raven
 		//uint32_t				numDescriptorSets;
 		//FDescriptorSet*			pDescriptorSets;
 		uint32_t				numDescriptorBindings;
-		FDescriptorBinding*		pDescriptorBindings;
+		FDescriptorLayoutBinding*pDescriptorBindings;
 		//uint32_t				numStaticSamplers;
 		//ISampler*				pStaticSamplers;
 	};

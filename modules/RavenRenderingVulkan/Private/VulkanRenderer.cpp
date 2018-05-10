@@ -2077,7 +2077,7 @@ namespace Raven
 					continue;
 				}
 
-				FDescriptorBinding& descBinding = pDesc->pDescriptorBindings[i];
+				FDescriptorLayoutBinding& descBinding = pDesc->pDescriptorBindings[i];
 
 				VkDescriptorSetLayoutBinding binding;
 				binding.binding = descBinding.binding;
@@ -4088,6 +4088,7 @@ namespace Raven
 		RASSERT(pCommandList != nullptr);
 		RASSERT(numDescriptors != 0);
 
+		/*
 		// Cast the command list interface to the vulkan type.
 		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
 
@@ -4100,21 +4101,122 @@ namespace Raven
 		FVulkanPipeline* pipeline = list->mBoundPipeline;
 		FVulkanRenderPass* renderpass = list->mCurrentRenderPass;
 
-		std::vector<VkDescriptorSet> bindDescriptorSets;
+		size_t rsHash = 0;
+		rsHash = hash_bytes(pipeline->mPipeline, sizeof(VkPipeline), rsHash);
 
-		//for (uint32_t i = 0; i < numDescriptors; ++i)
-		//{
-		//	FDescriptorBinding& binding = pDescriptors[i];
-		//	size_t hash = 0;
-		//
-		//	if(hash does not exist)
-		//}
-		//// TODO.
-		//
-		//
-		//// Bind descriptor sets.
-		//vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, , x, x, x, x);
+		for(uint32_t i = 0; i < pipeline->mRootSignature->mDescriptorSetLayouts.size(); ++i)
+		{
+			rsHash = hash_bytes(pipeline->mRootSignature->mDescriptorSetLayouts[i], sizeof(VkDescriptorSetLayout), rsHash);
+		}
 
+		std::vector<VkDescriptorSet>* bindDescriptorSets;
+
+		// Try to find the descriptor set for this pipeline/descriptor set layout combination.
+		auto setCacheIt = mDescriptorSetCache.find(rsHash);
+
+		if(setCacheIt == mDescriptorSetCache.end())
+		{
+			mDescriptorSetCache[rsHash] = std::vector<VkDescriptorSet>(pipeline->mRootSignature->mDescriptorSetLayouts.size());
+
+			VkDescriptorSet tempSet;
+
+			VkDescriptorSetAllocateInfo dsAllocInfo;
+			dsAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			dsAllocInfo.pNext = VK_NULL_HANDLE;
+			dsAllocInfo.descriptorPool = mDescriptorPool->mDescriptorPool;
+			dsAllocInfo.descriptorSetCount = 1;
+			//pipeline->mRootSignature->mDescriptorSetLayouts.size()
+			vkAllocateDescriptorSets(mDevice->mDevice, &dsAllocInfo, &tempSet);
+
+			bindDescriptorSets = &mDescriptorSetCache[rsHash];
+		}
+		else
+		{
+			bindDescriptorSets = &setCacheIt->second;
+		}
+
+		// Create list of descriptor sets we have to update.
+		std::vector<VkWriteDescriptorSet> writeSets;
+		std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
+		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
+
+        descriptorBufferInfos.reserve(64);
+        descriptorImageInfos.reserve(64);
+
+		for (uint32_t i = 0; i < numDescriptors; ++i)
+		{
+			FDescriptorBinding& binding = pDescriptors[i];
+
+			VkWriteDescriptorSet writeSet;
+			writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			writeSet.pNext = VK_NULL_HANDLE;
+			writeSet.descriptorCount = binding.numDescriptors;
+			writeSet.descriptorType = gDescriptorTypeTranslator[binding.type];
+			writeSet.dstBinding = binding.binding;
+			writeSet.dstSet = (*bindDescriptorSets)[binding.set];
+			writeSet.dstArrayElement = 0;
+
+			switch(binding.type)
+			{
+				case EDescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+				case EDescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_BUFFER:
+				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+				{
+					uint32_t firstDescriptor = descriptorBufferInfos.size();
+
+					for(uint32_t j = 0; j < binding.numDescriptors; ++j)
+					{
+						descriptorBufferInfos.push_back({});
+						VkDescriptorBufferInfo& bufferInfo = descriptorBufferInfos.back();
+						bufferInfo.buffer = static_cast<FVulkanBuffer*>(binding.ppBuffers[j])->mBuffer;
+						bufferInfo.offset = 0;
+						bufferInfo.range = VK_WHOLE_SIZE;
+					}
+
+					writeSet.pBufferInfo = &descriptorBufferInfos[firstDescriptor];
+				}
+				break;
+				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+				case EDescriptorType::DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+				{
+					RLOG_ERROR("Texel buffers are unimplemented");
+				}
+					break;
+				case EDescriptorType::DESCRIPTOR_TYPE_SAMPLER:
+				{
+					RLOG_ERROR("Tried to bind a sampler, but a sampler should be compiled with the descriptor set layout.");
+					return RR_FAIL;
+				}
+				break;
+				case EDescriptorType::DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_IMAGE:
+				{
+                    uint32_t firstDescriptor = descriptorImageInfos.size();
+
+                    for(uint32_t j = 0; j < binding.numDescriptors; ++j)
+                    {
+                        descriptorImageInfos.push_back({});
+                        VkDescriptorImageInfo &imageInfo = descriptorImageInfos.back();
+                        imageInfo.imageView = static_cast<FVulkanTexture *>(binding.ppTextures[j])->mImageView;
+                        imageInfo.imageLayout = translateResourceStateToImageLayout(static_cast<FVulkanTexture *>(binding.ppTextures[j])->mState);
+                        imageInfo.sampler = nullptr;
+                    }
+
+					writeSet.pImageInfo = &descriptorImageInfos[firstDescriptor];
+				}
+				break;
+
+			}
+
+			writeSets.push_back(writeSet);
+		}
+
+		vkUpdateDescriptorSets(mDevice->mDevice, writeSets.size(), writeSets.data(), 0, nullptr);
+
+		// Bind descriptor sets.
+		vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, 0, bindDescriptorSets->size(), bindDescriptorSets->data(), 0, nullptr);
+        */
 		return RR_SUCCESS;
 	}
 }

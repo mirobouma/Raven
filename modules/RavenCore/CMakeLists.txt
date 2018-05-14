@@ -7,6 +7,7 @@ set (SourceGroup_PublicIncludes
 	"Public/Core/Utility/Enum.h"
 	"Public/Core/Utility/Hash.h"
 	"Public/Core/Debug/LogManager.h"
+	"Public/Core/Debug/Profiler.h"
 	"Public/Core/Threading/Thread.h"
 	"Public/Core/Threading/Fiber.h"
 	"Public/Core/Threading/TaskScheduler.h"

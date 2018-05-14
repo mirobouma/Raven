@@ -32,5 +32,8 @@ namespace Raven
 
 	/*! \struct IBuffer
 	\brief Interface for a buffer. */
-	struct IBuffer {};
+	struct IBuffer 
+	{
+		virtual size_t getSize() = 0;
+	};
 }

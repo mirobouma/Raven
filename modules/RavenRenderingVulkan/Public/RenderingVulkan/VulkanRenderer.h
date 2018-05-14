@@ -30,7 +30,7 @@ namespace Raven
 	class RVulkanRenderer : public IRenderer 
 	{
 	public:
-		RVulkanRenderer() : mDevice(nullptr), mInitialized(false), mDescriptorPool(nullptr) {}
+		RVulkanRenderer() : mDevice(nullptr), mInitialized(false), mDescriptorPool(nullptr), mCurrentFrameIndex(0) {}
 
 		// Inherited via IRenderer
 		virtual ERenderResult initialize(FRendererInitializationDesc* pDesc) override;
@@ -71,22 +71,25 @@ namespace Raven
 		virtual ERenderResult destroyRenderTarget(IRenderTarget* pRenderTarget) override;
 		virtual ERenderResult queueSubmit(IQueue* pQueue, uint32_t numCmds, ICommandList** ppCmds, IFence* pSignalFence, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores, uint32_t numSignalSemaphores, ISemaphore** ppSignalSemaphores) override;
 		virtual ERenderResult queuePresent(IQueue* pQueue, uint32_t numSwapChains, ISwapChain** ppSwapChains, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores) override;
+		virtual ERenderResult waitForQueue(IQueue* pQueue) override;
+		virtual ERenderResult waitForDevice() override;
 		virtual ERenderResult swapChainAcquireNextImage(ISwapChain* pSwapChain, ISemaphore* pSignalSemaphores, IFence* pSignalFence) override;
         virtual ERenderResult cmdBegin(ICommandList *pCommandList) override;
         virtual ERenderResult cmdEnd(ICommandList *pCommandList) override;
         virtual ERenderResult cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments, IRenderTarget **ppColorAttachments, IRenderTarget *pDepthStencilAttachment, FLoadStoreOps* pLoadStoreOps) override;
         virtual ERenderResult cmdEndRenderPass(ICommandList *pCommandList) override;
         virtual ERenderResult cmdBindVertexBuffer(ICommandList *pCommandList, uint32_t numBuffers, IBuffer **ppBuffers, uint32_t startSlot) override;
-        virtual ERenderResult cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer) override;
+        virtual ERenderResult cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer, EIndexType type) override;
         virtual ERenderResult cmdSetViewport(ICommandList *pCommandList, Math::FRect rect, float minDepth, float maxDepth) override;
         virtual ERenderResult cmdSetScissorRects(ICommandList *pCommandList, Math::FRect rect) override;
         virtual ERenderResult cmdBindPipeline(ICommandList *pCommandList, IPipeline *pPipeline) override;
         virtual ERenderResult cmdResourceBarriers(ICommandList *pCommandList, uint32_t numBufferBarriers, FBufferBarrier *pBufferBarriers, uint32_t numTextureBarries, FTextureBarrier *pTextureBarriers, bool flush) override;
         virtual ERenderResult cmdFlushBarriers(ICommandList *pCommandList) override;
         virtual ERenderResult cmdDraw(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset) override;
-        virtual ERenderResult cmdDrawIndexed(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset) override;
+        virtual ERenderResult cmdDrawIndexed(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t vertexOffset) override;
         virtual ERenderResult cmdDrawInstanced(ICommandList *pCommandList, uint32_t vertexCount, uint32_t vertexOffset, uint32_t instanceCount) override;
-        virtual ERenderResult cmdDrawIndexedInstanced(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t instanceCount) override;
+        virtual ERenderResult cmdDrawIndexedInstanced(ICommandList *pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t vertexOffset, uint32_t instanceCount) override;
+		virtual ERenderResult cmdPushConstant(ICommandList* pCommandList, FShaderStageFlags stages, uint32_t size, uint32_t offset, void* values) override;
         virtual ERenderResult cmdDispatch(ICommandList *pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) override;
 		virtual ERenderResult cmdBindDescriptors(ICommandList* pCommandList, uint32_t numDescriptors, FDescriptorBinding* pDescriptors) override;
 
@@ -288,7 +291,8 @@ namespace Raven
 		FVulkanDescriptorPool*					            mDescriptorPool; /*!< Global descriptor pool. */
 		std::map<size_t, FVulkanFrameBuffer*>	            mFrameBufferMap; /*!< Cache of frame buffers. */
 		std::map<size_t, FVulkanRenderPass*>	            mRenderPassMap; /*!< Cache of render passes. */
-        std::map<size_t, std::vector<VkDescriptorSet>>	    mDescriptorSetCache; /*!< Descriptor set cache */
+        std::map<size_t, std::vector<VkDescriptorSet>>	    mDescriptorSetCache[MAX_FRAMES_AT_ONCE]; /*!< Descriptor set cache */
+		uint32_t											mCurrentFrameIndex;
 
 };
 }

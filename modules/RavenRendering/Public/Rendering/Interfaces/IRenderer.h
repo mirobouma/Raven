@@ -298,6 +298,18 @@ namespace Raven
 		*/
 		virtual ERenderResult queuePresent(IQueue* pQueue, uint32_t numSwapChains, ISwapChain** ppSwapChains, uint32_t numWaitSemaphores, ISemaphore** ppWaitSemaphores) = 0;
 
+		/*! Waits for all current work in a queue to complete.
+		\param[in] pQueue Pointer to the queue to wait for.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult waitForQueue(IQueue* pQueue) = 0;
+
+
+		/*! Waits for all current work in a device to complete.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult waitForDevice() = 0;
+
 		/*! Acquire next image on the swapchain.
 		\param[in] pSwapChain Pointer to the swapchain we have to retrieve the next image index from.
 		\param[in] pSignalSemaphores pointer to a semaphore we have to signal once we have acquired the next image.
@@ -340,7 +352,14 @@ namespace Raven
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdBindIndexBuffer(ICommandList* pCommandList, IBuffer* pBuffer) = 0;
+		virtual ERenderResult cmdBindIndexBuffer(ICommandList* pCommandList, IBuffer* pBuffer, EIndexType type = INDEX_TYPE_UINT32) = 0;
+
+		/*! Adds push constants to the currently bound pipeline
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdPushConstant(ICommandList* pCommandList, FShaderStageFlags stages, uint32_t size, uint32_t offset, void* values) = 0;
+
 
 		/*! Set viewport for this render pass.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
@@ -382,7 +401,7 @@ namespace Raven
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdDrawIndexed(ICommandList* pCommandList, uint32_t indexCount, uint32_t indexOffset) = 0;
+		virtual ERenderResult cmdDrawIndexed(ICommandList* pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t vertexOffset) = 0;
 
 		/*! Draw vertices using indices and instances.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
@@ -394,7 +413,7 @@ namespace Raven
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdDrawIndexedInstanced(ICommandList* pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t instanceCount) = 0;
+		virtual ERenderResult cmdDrawIndexedInstanced(ICommandList* pCommandList, uint32_t indexCount, uint32_t indexOffset, uint32_t vertexOffset, uint32_t instanceCount) = 0;
 
 		/*! Dispatch a compute shader.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.

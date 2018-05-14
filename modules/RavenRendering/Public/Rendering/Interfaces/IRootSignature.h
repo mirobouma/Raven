@@ -41,20 +41,6 @@ namespace Raven
 		uint32_t					numInputAttributeDescriptions;
 	};
 
-	/*! Enumeration describing a descriptor type. */
-	typedef enum FShaderStageFlags
-	{
-		SHADER_STAGE_FLAG_VERTEX = 0x00000001,
-		SHADER_STAGE_FLAG_TESSELLATION_CONTROL = 0x00000002,
-		SHADER_STAGE_FLAG_TESSELLATION_EVALUATION = 0x00000004,
-		SHADER_STAGE_FLAG_GEOMETRY = 0x00000008,
-		SHADER_STAGE_FLAG_FRAGMENT = 0x00000010,
-		SHADER_STAGE_FLAG_COMPUTE = 0x00000020,
-		SHADER_STAGE_FLAG_ALL_GRAPHICS = 0x0000001F,
-		SHADER_STAGE_FLAG_ALL = 0x7FFFFFFF,
-	} FShaderStageFlags;
-	DECL_ENUM_AS_FLAGS(FShaderStageFlags);
-
 	/*! \struct FDescriptorLayoutBinding
 	\brief Structure describing a resource binding in the shader program. */
 	struct FDescriptorLayoutBinding

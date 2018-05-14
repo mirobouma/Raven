@@ -1,6 +1,6 @@
 #pragma once
 #include <cinttypes>
-
+#include "Rendering/Interfaces/SharedDefines.h"
 namespace Raven
 {
 	// Forward declarations.
@@ -196,6 +196,15 @@ namespace Raven
 		MAX_PIPELINE_TYPE
 	} EPipelineType;
 
+	/*! \struct FPushConstantRange
+	\brief Structure describing push constants. */
+	typedef struct FPushConstantRange
+	{
+		FShaderStageFlags	  stageFlags;
+		uint32_t              offset;
+		uint32_t              size;
+	} FPushConstantRange;
+
 	/*! \struct FGraphicsPipelineCreateDesc
 	\brief Structure describing the parameters for graphics pipeline creation. */
 	typedef struct FGraphicsPipelineCreateDesc
@@ -262,6 +271,8 @@ namespace Raven
 		ETextureFormat			depthStencilFormat;
 		FRasterizerState*		pRasterizerState;
 		FDepthStencilState*		pDepthStencilState;
+		uint32_t				numPushConstantRanges;
+		FPushConstantRange*		pPushConstantRanges;
 		uint32_t				sampleCount;
 		uint32_t				sampleQuality;
 		EPrimitiveTopology		primitiveTopology;

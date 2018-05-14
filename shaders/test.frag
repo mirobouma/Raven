@@ -6,8 +6,10 @@ layout(location = 1) in vec3 normal;
 layout(location = 2) in vec2 fragTexCoord;
 
 layout(location = 0) out vec4 outColor;
-layout(set = 0, binding = 1) uniform sampler Sampler0;
+layout (set=1, binding=0) uniform texture2D uTex;
+layout (set=1, binding=1) uniform sampler   uSampler0;
 
-void main() {
-    outColor = vec4(0.5, 0.5, 0.5, 1.0);
+void main() 
+{
+    outColor = texture(sampler2D(uTex, uSampler0), fragTexCoord);
 }

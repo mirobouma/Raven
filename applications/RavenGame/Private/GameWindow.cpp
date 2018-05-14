@@ -1,6 +1,7 @@
 #include "GameWindow.h"
 #include "Engine/Globals.h"
 #include "Engine/Engine.h"
+#include "Core/Debug/LogManager.h"
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_RADIANS
@@ -15,6 +16,8 @@
 #include <assimp/postprocess.h>
 #include <assimp/Logger.hpp> // logger
 #include <assimp/DefaultLogger.hpp> // logger
+#include <chrono>
+#include "UI/UI.h"
 
 namespace Raven
 {
@@ -39,9 +42,20 @@ namespace Raven
 	UniformBufferObject gUniformBuffer;
 	IBuffer* gIndexBuffer = nullptr;
 	IBuffer* gVertexBuffer = nullptr;
+	IRenderTarget* gDepthStencil = nullptr;
 	ISampler* gSampler = nullptr;
+	ITexture* gTexture = nullptr;
+	IRenderTarget* gBackbuffer = nullptr;
 	std::vector<glm::vec3> gVertices;
 	std::vector<uint32_t> gIndices;
+	RUIRenderer	gUIRenderer;
+
+	ImVec2 gameWindowSize = {1, 1};
+	ImVec2 gameWindowPos = {0, 0};
+
+	bool d_gameWindowOpen = true;
+	bool d_consoleWindowOpen = true;
+	bool d_propertyWindowOpen = true;
 
     RGameWindow::RGameWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
             : RRenderableWindow(title, size, position, flags, handler)
@@ -79,9 +93,9 @@ namespace Raven
 		}
 
 		FSamplerCreateDesc samplerDesc;
-		samplerDesc.addressModeU = ESamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		samplerDesc.addressModeV = ESamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-		samplerDesc.addressModeW = ESamplerAddressMode::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerDesc.addressModeU = ESamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerDesc.addressModeV = ESamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerDesc.addressModeW = ESamplerAddressMode::SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerDesc.anisotropyEnable = true;
 		samplerDesc.comparisonFunc = ESamplerComparisonFunc::SAMPLER_COMPARISON_NONE;
 		samplerDesc.anisotropyEnable = true;
@@ -111,17 +125,17 @@ namespace Raven
 		// Create input assembler layout
 		FInputAttributeDescription iaAttributes[3];
 		iaAttributes[0].binding = 0;
-		iaAttributes[0].format = TEXTURE_FORMAT_RGB32_F;
+		iaAttributes[0].format = TEXTURE_FORMAT_RGB32_FLOAT;
 		iaAttributes[0].location = 0;
 		iaAttributes[0].offset = 0;
 
 		iaAttributes[1].binding = 0;
-		iaAttributes[1].format = TEXTURE_FORMAT_RGB32_F;
+		iaAttributes[1].format = TEXTURE_FORMAT_RGB32_FLOAT;
 		iaAttributes[1].location = 1;
 		iaAttributes[1].offset = sizeof(glm::vec3);
 
 		iaAttributes[2].binding = 0;
-		iaAttributes[2].format = TEXTURE_FORMAT_RGB32_F;
+		iaAttributes[2].format = TEXTURE_FORMAT_RGB32_FLOAT;
 		iaAttributes[2].location = 2;
 		iaAttributes[2].offset = sizeof(glm::vec3) * 2;
 
@@ -139,45 +153,54 @@ namespace Raven
 		iaLayout.pInputAttributeDescriptions = &iaAttributes[0];
 
 		// Create descriptor bindings.
-		FDescriptorLayoutBinding bindings[2];
+		FDescriptorLayoutBinding bindings[3];
         bindings[0].set = 0;
 		bindings[0].binding = 0;
 		bindings[0].descriptorCount = 1;
 		bindings[0].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[0].stageFlags = SHADER_STAGE_FLAG_ALL_GRAPHICS;
+		bindings[0].stageFlags = SHADER_STAGE_FLAG_VERTEX;
 
-        bindings[1].set = 0;
-		bindings[1].binding = 1;
+        bindings[1].set = 1;
+		bindings[1].binding = 0;
 		bindings[1].descriptorCount = 1;
-		bindings[1].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_SAMPLER;
-		bindings[1].ppImmutableSamplers = &gSampler;
-		bindings[1].stageFlags = SHADER_STAGE_FLAG_ALL_GRAPHICS;
+		bindings[1].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+		bindings[1].stageFlags = SHADER_STAGE_FLAG_FRAGMENT;
+
+		bindings[2].set = 1;
+		bindings[2].binding = 1;
+		bindings[2].descriptorCount = 1;
+		bindings[2].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_SAMPLER;
+		bindings[2].ppImmutableSamplers = &gSampler;
+		bindings[2].stageFlags = SHADER_STAGE_FLAG_FRAGMENT;
 
 
 		// Create root signature.
 		FRootSignatureCreateDesc rsDesc;
 		rsDesc.pShaderProgram = gShader;
 		rsDesc.pInputAssemblerLayout = &iaLayout;
-		rsDesc.numDescriptorBindings = 2;
+		rsDesc.numDescriptorBindings = 3;
 		rsDesc.pDescriptorBindings = &bindings[0];
 
 		renderer->createRootSignature(&gRootSignature, &rsDesc);
 
+		// Create game backbuffer.
+		createGameWindow();
+
 		IRenderTarget* target = _SwapChain->getRenderTarget(_SwapChain->getCurrentImageIndex());
 
 		// Create graphics pipeline.
-		FGraphicsPipelineCreateDesc pipelineDesc;
+		FGraphicsPipelineCreateDesc pipelineDesc = {};
 		pipelineDesc.pRootSignature = gRootSignature;
 		pipelineDesc.pShader = gShader;
 		pipelineDesc.pBlendState = nullptr;
 		pipelineDesc.pDepthStencilState = nullptr;
 		pipelineDesc.pRasterizerState = nullptr;
-		pipelineDesc.depthStencilFormat = TEXTURE_FORMAT_UNKNOWN;
+		pipelineDesc.depthStencilFormat = TEXTURE_FORMAT_D32_FLOAT;
 		pipelineDesc.numRenderTargets = 1;
-		pipelineDesc.renderTargetFormats[0] = target->GetDesc()->format;
+		pipelineDesc.renderTargetFormats[0] = gBackbuffer->GetDesc()->format;
 		pipelineDesc.primitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE;
-		pipelineDesc.sampleCount = target->GetDesc()->sampleCount;
-		pipelineDesc.sampleQuality = target->GetDesc()->sampleQuality;
+		pipelineDesc.sampleCount = gBackbuffer->GetDesc()->sampleCount;
+		pipelineDesc.sampleQuality = gBackbuffer->GetDesc()->sampleQuality;
 
 		renderer->createPipeline(&gRenderPipeline, &pipelineDesc);
 
@@ -219,6 +242,38 @@ namespace Raven
 		vBufferDesc.data = gVertices.data();
 
 		renderer->createBuffer(&gVertexBuffer, &vBufferDesc);
+
+		// Create texture.
+		
+		int texWidth, texHeight, texChannels;
+		stbi_uc* pixels = stbi_load("textures/pepe.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+		uint32_t imageSize = texWidth * texHeight * 4;
+
+		if (pixels == nullptr) 
+		{
+			RLOG_ERROR("failed to load texture image!");
+		}
+
+		FTextureCreateDesc texDesc = {};
+		texDesc.type = TEXTURE_TYPE_2D;
+		texDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		texDesc.arrayLayers = 1;
+		texDesc.baseArrayLayer = 0;
+		texDesc.baseMipLevel = 0;
+		texDesc.depth = 1;
+		texDesc.format = TEXTURE_FORMAT_RGBA8;
+		texDesc.width = texWidth;
+		texDesc.height = texHeight;
+		texDesc.mipLevels = 1;
+		texDesc.pData = pixels;
+		texDesc.sampleCount = 1;
+		texDesc.sampleQuality = 0;
+		texDesc.tiling = IMAGE_TILING_OPTIMAL;
+		texDesc.usage = TEXTURE_USAGE_SAMPLED | TEXTURE_USAGE_TRANSFER_DST;
+
+		renderer->createTexture(&gTexture, &texDesc);
+
+		gUIRenderer.initialize(renderer, this, _SwapChain);
     }
 
 	void RGameWindow::LoadTeapot()
@@ -286,10 +341,14 @@ namespace Raven
 
 		if (GEngine->GetRenderer()->isInitialized())
 		{
-			GEngine->GetRenderer()->waitForFence(gRenderCompleteFences[gCurrentImage]);
+			for (uint32_t i = 0; i < 3; ++i)
+			{
+				renderer->waitForFence(gRenderCompleteFences[i]);
+			}
 
 			GEngine->GetRenderer()->destroySwapChain(_SwapChain);
 			GEngine->GetRenderer()->createSwapChain(this, &_SwapChain);
+
 		}
     }
 
@@ -311,12 +370,60 @@ namespace Raven
 		RRenderableWindow::OnFocusLost();
     }
 
-    void RGameWindow::OnClose()
-    {
+	void RGameWindow::createGameWindow()
+	{
 		for (uint32_t i = 0; i < 3; ++i)
 		{
 			renderer->waitForFence(gRenderCompleteFences[i]);
 		}
+
+		if (gameWindowSize.x == 0 || gameWindowSize.y == 0)
+		{
+			return;
+		}
+
+		if (gBackbuffer != nullptr)
+		{
+			renderer->destroyRenderTarget(gBackbuffer);
+			gBackbuffer = nullptr;
+		}
+
+		if (gDepthStencil != nullptr)
+		{
+			renderer->destroyRenderTarget(gDepthStencil);
+			gDepthStencil = nullptr;
+		}
+
+
+		FRenderTargetCreateDesc texDesc = {};
+		texDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		texDesc.format = TEXTURE_FORMAT_RGBA8;
+		texDesc.width = (uint32_t)gameWindowSize.x;
+		texDesc.height = (uint32_t)gameWindowSize.y;
+		texDesc.sampleCount = 1;
+		texDesc.sampleQuality = 0;
+		texDesc.tiling = IMAGE_TILING_OPTIMAL;
+		texDesc.usage = FRenderTargetUsage::RENDER_TARGET_USAGE_COLOR_ATTACHMENT;
+			
+		renderer->createRenderTarget(&gBackbuffer, &texDesc);
+
+
+		FRenderTargetCreateDesc dsDesc = {};
+		dsDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		dsDesc.format = TEXTURE_FORMAT_D32_FLOAT;
+		dsDesc.width = gameWindowSize.x;
+		dsDesc.height = gameWindowSize.y;
+		dsDesc.sampleCount = 1;
+		dsDesc.sampleQuality = 0;
+		dsDesc.tiling = IMAGE_TILING_OPTIMAL;
+		dsDesc.usage = RENDER_TARGET_USAGE_DEPTH_STENCIL_ATTACHMENT;
+
+		renderer->createRenderTarget(&gDepthStencil, &dsDesc);
+	}
+
+    void RGameWindow::OnClose()
+    {
+		renderer->waitForDevice();
 
 		renderer->destroyQueue(gGraphicsQueue);
 		renderer->destroyCommandLists(gCommandPool, &gCommandLists[0], 3);
@@ -324,10 +431,21 @@ namespace Raven
 
 		renderer->destroyBuffer(gIndexBuffer);
 		renderer->destroyBuffer(gVertexBuffer);
+		renderer->destroyTexture(gTexture);
 		renderer->destroyShader(gShader);
 		renderer->destroySampler(gSampler);
 		renderer->destroyRootSignature(gRootSignature);
 		renderer->destroyPipeline(gRenderPipeline);
+
+		if (gDepthStencil != nullptr)
+		{
+			renderer->destroyRenderTarget(gDepthStencil);
+		}
+
+		if (gBackbuffer != nullptr)
+		{
+			renderer->destroyRenderTarget(gBackbuffer);
+		}
 
 		for (uint32_t i = 0; i < 3; ++i)
 		{
@@ -338,12 +456,105 @@ namespace Raven
 
 		renderer->destroySemaphore(gImageAquiredSemaphore);
 
+		gUIRenderer.destroy();
+
         // Call super.
 		RRenderableWindow::OnClose();
     }
 
     void RGameWindow::Render()
     {
+		gUIRenderer.newFrame(_SwapChain);
+		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
+		ImGui::SetNextWindowSize(ImVec2(_SwapChain->getWidth(), _SwapChain->getHeight()));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+		if (ImGui::Begin("Editor", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNav))
+		{
+			ImGui::PopStyleVar(2);
+			if (ImGui::BeginMenuBar())
+			{
+				if (ImGui::BeginMenu("Windows"))
+				{
+					ImGui::MenuItem("Game", NULL, &d_gameWindowOpen);
+					ImGui::MenuItem("Console", NULL, &d_consoleWindowOpen);
+					ImGui::MenuItem("Properties", NULL, &d_propertyWindowOpen);
+					ImGui::MenuItem("Profiler", NULL, nullptr);
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenuBar();
+			}
+
+			// dock layout by hard-coded or .ini file
+			ImGui::BeginDockspace();
+
+			if (ImGui::BeginDock("Game", &d_gameWindowOpen)) {
+				gameWindowPos = ImGui::GetCursorPos();
+
+
+				if ((gameWindowSize.x != ImGui::GetContentRegionAvail().x || gameWindowSize.y != ImGui::GetContentRegionAvail().y) &&
+					ImGui::GetContentRegionAvail().x > 1 && ImGui::GetContentRegionAvail().y > 1)
+				{
+					gameWindowSize = ImGui::GetContentRegionAvail();
+					createGameWindow();
+				}
+
+				ImGui::Image(gBackbuffer->GetTexture(), ImGui::GetContentRegionAvail());
+			}
+			ImGui::EndDock();
+
+			// Console.
+			if (ImGui::BeginDock("Console", &d_consoleWindowOpen)) 
+			{
+				static ImGuiTextFilter Filter;
+
+				if (ImGui::Button("Clear"))
+				{ 
+					//clear
+				}
+				ImGui::SameLine();
+				Filter.Draw("Filter", -40.0f);
+				ImGui::Separator();
+				ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+				
+				if (Filter.IsActive())
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+					ImGui::TextUnformatted("Hi log", 0);
+					ImGui::PopStyleColor();
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+					ImGui::TextUnformatted("Hi log", 0);
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::EndChild();
+			}
+			ImGui::EndDock();
+
+			if (ImGui::BeginDock("Properties", &d_propertyWindowOpen)) {
+				ImGui::Text("I'm LonelyWaiting!");
+			}
+			ImGui::EndDock();
+
+			ImGui::EndDockspace();
+		}
+		else
+		{
+			ImGui::PopStyleVar(2);
+		}
+		
+		ImGui::End();
+		ImGui::ShowDemoWindow();
+
+		// update uniforms.
+		static auto startTime = std::chrono::high_resolution_clock::now();
+
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() / 10.0f;
+
 		// Aquire next swapchain image.
 		renderer->swapChainAcquireNextImage(_SwapChain, gImageAquiredSemaphore, NULL);
 
@@ -364,50 +575,80 @@ namespace Raven
 		renderer->cmdBegin(cmd);
 
 		// Update uniform.
+		gUniformBuffer.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		gUniformBuffer.view = glm::lookAt(glm::vec3(5.0f, 7.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		gUniformBuffer.proj = glm::perspective(glm::radians(45.0f), gameWindowSize.x / gameWindowSize.y, 0.1f, 20.0f);
+		gUniformBuffer.proj[1][1] *= -1;
+
 		renderer->cmdUpdateBuffer(cmd, gUniformBuffers[gCurrentImage], &gUniformBuffer, 0, sizeof(UniformBufferObject));
 
 		FBufferBarrier uBarrier;
 		uBarrier.buffer = gUniformBuffers[gCurrentImage];
 		uBarrier.requiredState = RESOURCE_STATE_UNIFORM_BUFFER;
 
+		FTextureBarrier tBarriers[4];
+		tBarriers[0].requiredState = RESOURCE_STATE_RENDER_TARGET;
+		tBarriers[0].texture = pRenderTarget->GetTexture();
+
+		tBarriers[1].requiredState = RESOURCE_STATE_RENDER_TARGET;
+		tBarriers[1].texture = gBackbuffer->GetTexture();
+
+		tBarriers[2].requiredState = RESOURCE_STATE_DEPTH_WRITE;
+		tBarriers[2].texture = gDepthStencil->GetTexture();
+
+		tBarriers[3].requiredState = RESOURCE_STATE_SHADER_RESOURCE;
+		tBarriers[3].texture = gTexture;
+
+		renderer->cmdResourceBarriers(cmd, 1, &uBarrier, 4, &tBarriers[0], true);
+
+		if (d_gameWindowOpen)
+		{
+			FLoadStoreOps loadStoreOps = {};
+			loadStoreOps.colorLoadOps[0] = LOAD_OP_CLEAR;
+			loadStoreOps.colorStoreOps[0] = STORE_OP_STORE;
+			loadStoreOps.colorClearValues[0][0] = 0.0f;
+			loadStoreOps.colorClearValues[0][1] = 0.0f;
+			loadStoreOps.colorClearValues[0][2] = 0.0f;
+			loadStoreOps.colorClearValues[0][3] = 1.0f;
+			loadStoreOps.depthLoadOp = LOAD_OP_CLEAR;
+			loadStoreOps.depthStoreOp = STORE_OP_STORE;
+			loadStoreOps.depthClearValue = 1.0f;
+			
+			// Begin rendering pass.
+			renderer->cmdBeginRenderPass(cmd, 1, &gBackbuffer, gDepthStencil, &loadStoreOps);
+			
+			// Bind graphics pipeline.
+			renderer->cmdBindPipeline(cmd, gRenderPipeline);
+			renderer->cmdSetViewport(cmd, Math::FRect({ gBackbuffer->GetDesc()->width,  gBackbuffer->GetDesc()->height }, { 0, 0 }));
+			renderer->cmdSetScissorRects(cmd, Math::FRect({ gBackbuffer->GetDesc()->width,  gBackbuffer->GetDesc()->height }, { 0, 0 }));
+			renderer->cmdBindIndexBuffer(cmd, gIndexBuffer);
+			renderer->cmdBindVertexBuffer(cmd, 1, &gVertexBuffer);
+			
+			FDescriptorBinding bindings[2];
+			bindings[0].set = 0;
+			bindings[0].binding = 0;
+			bindings[0].numDescriptors = 1;
+			bindings[0].type = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[0].ppBuffers = &gUniformBuffers[gCurrentImage];
+			
+			bindings[1].set = 1;
+			bindings[1].binding = 0;
+			bindings[1].numDescriptors = 1;
+			bindings[1].type = DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+			bindings[1].ppTextures = &gTexture;
+			
+			// Bind uniform buffer.
+			renderer->cmdBindDescriptors(cmd, 2, &bindings[0]);
+			renderer->cmdDrawIndexed(cmd, (uint32_t)gIndices.size(), 0, 0);
+			
+			// Finish rendering pass.
+			renderer->cmdEndRenderPass(cmd);
+		}
+
+		// Draw UI
+		gUIRenderer.render(cmd, pRenderTarget);
+
 		FTextureBarrier rtBarrier;
-		rtBarrier.texture = pRenderTarget->GetTexture();
-		rtBarrier.requiredState = RESOURCE_STATE_RENDER_TARGET;
-
-		renderer->cmdResourceBarriers(cmd, 1, &uBarrier, 1, &rtBarrier, true);
-
-		FLoadStoreOps loadStoreOps;
-		loadStoreOps.colorLoadOps[0] = LOAD_OP_CLEAR;
-		loadStoreOps.colorStoreOps[0] = STORE_OP_STORE;
-		loadStoreOps.colorClearValues[0][0] = 0.0f;
-		loadStoreOps.colorClearValues[0][1] = 0.0f;
-		loadStoreOps.colorClearValues[0][2] = 1.0f;
-		loadStoreOps.colorClearValues[0][3] = 1.0f;
-
-		// Begin rendering pass.
-		renderer->cmdBeginRenderPass(cmd, 1, &pRenderTarget, nullptr, &loadStoreOps);
-		
-		// Bind graphics pipeline.
-		renderer->cmdBindPipeline(cmd, gRenderPipeline);
-		renderer->cmdSetViewport(cmd, Math::FRect({ pRenderTarget->GetDesc()->width,  pRenderTarget->GetDesc()->height }, { 0, 0 }));
-		renderer->cmdSetScissorRects(cmd, Math::FRect({ pRenderTarget->GetDesc()->width,  pRenderTarget->GetDesc()->height }, { 0, 0 }));
-		renderer->cmdBindIndexBuffer(cmd, gIndexBuffer);
-		renderer->cmdBindVertexBuffer(cmd, 1, &gVertexBuffer);
-		renderer->cmdDrawIndexed(cmd, (uint32_t)3, 0);
-
-		FDescriptorBinding binding;
-		binding.set = 0;
-		binding.binding = 0;
-		binding.numDescriptors = 1;
-		binding.type = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		binding.ppBuffers = &gUniformBuffers[gCurrentImage];
-
-		// Bind uniform buffer.
-		renderer->cmdBindDescriptors(cmd, 1, &binding);
-
-		// Finish rendering pass.
-		renderer->cmdEndRenderPass(cmd);
-
 		rtBarrier.texture = pRenderTarget->GetTexture();
 		rtBarrier.requiredState = RESOURCE_STATE_PRESENT;
 

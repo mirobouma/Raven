@@ -17,7 +17,7 @@ namespace Raven
 
         /*! Render function */
         void Render();
-
+		void createGameWindow();
 		void LoadTeapot();
 
     protected:

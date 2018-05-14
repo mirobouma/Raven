@@ -73,5 +73,7 @@ namespace Raven
 
 	/*! \struct ITexture 
 	\brief Interface for texture resource. */
-	struct ITexture {};
+	struct ITexture {
+		virtual const FTextureCreateDesc* GetDesc() const = 0;
+	};
 }

@@ -14,5 +14,10 @@ namespace Raven
 		VkDeviceMemory		mMemory;
 		FBufferCreateDesc	mDesc;
 		FResourceState		mState;
+
+		size_t getSize() override
+		{
+			return mDesc.size;
+		}
 	};
 }

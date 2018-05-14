@@ -1,5 +1,6 @@
 #include "PlatformWindows/PlatformWindows.h"
 #include "PlatformWindows/PlatformWindowsWindow.h"
+#include "imgui/imgui.h"
 
 namespace Raven {
 
@@ -41,6 +42,63 @@ namespace Raven {
 		}
 		return 0;
 		
+		}
+
+		if (ImGui::GetCurrentContext() != nullptr)
+		{
+			ImGuiIO& io = ImGui::GetIO();
+
+			switch (message)
+			{
+			case WM_LBUTTONDOWN:
+				io.MouseDown[0] = true;
+				return true;
+			case WM_LBUTTONUP:
+				io.MouseDown[0] = false;
+				return true;
+			case WM_RBUTTONDOWN:
+				io.MouseDown[1] = true;
+				return true;
+			case WM_RBUTTONUP:
+				io.MouseDown[1] = false;
+				return true;
+			case WM_MOUSEWHEEL:
+				io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
+				return true;
+			case WM_MOUSEMOVE:
+				io.MousePos.x = (signed short)(lParam);
+				io.MousePos.y = (signed short)(lParam >> 16);
+				return true;
+			case WM_KEYDOWN:
+				if (wParam < 512)
+				{
+					io.KeysDown[wParam] = 1;
+				}
+
+				io.KeyCtrl = io.KeysDown[VK_CONTROL];
+				io.KeyShift = io.KeysDown[VK_SHIFT];
+				io.KeyAlt = io.KeysDown[VK_MENU];
+				io.KeySuper = io.KeysDown[VK_LWIN] | io.KeysDown[VK_RWIN];
+
+				return true;
+			case WM_KEYUP:
+				if (wParam < 512)
+				{
+					io.KeysDown[wParam] = 0;
+				}
+
+				io.KeyCtrl = io.KeysDown[VK_CONTROL];
+				io.KeyShift = io.KeysDown[VK_SHIFT];
+				io.KeyAlt = io.KeysDown[VK_MENU];
+				io.KeySuper = io.KeysDown[VK_LWIN] | io.KeysDown[VK_RWIN];
+
+				return true;
+			case WM_CHAR:
+				// You can also use ToAscii()+GetKeyboardState() to retrieve characters.
+				if (wParam > 0 && wParam < 0x10000)
+					io.AddInputCharacter((unsigned short)wParam);
+				return true;
+			}
 		}
 
 		// Handle any messages the switch statement didn't

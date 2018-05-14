@@ -10,6 +10,12 @@ namespace Raven
 	*/
 	struct FVulkanTexture : ITexture
 	{
+
+		virtual const FTextureCreateDesc* GetDesc() const
+		{
+			return &mDesc;
+		}
+
 		VkImage					mImage;
 		VkImageView				mImageView;
 		VkDeviceMemory			mMemory;

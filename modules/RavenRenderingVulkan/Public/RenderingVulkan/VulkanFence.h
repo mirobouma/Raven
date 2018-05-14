@@ -9,7 +9,7 @@ namespace Raven
 	*/
 	struct FVulkanFence : IFence
 	{
-		bool	mSignaled;
+		bool	mSubmitted;
 		VkFence mFence;
 	};
 }

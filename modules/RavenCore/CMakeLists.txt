@@ -26,6 +26,7 @@ source_group("Include" FILES ${SourceGroup_PublicIncludes})
 set (SourceGroup_Source
 	"Private/Core.cpp"
 	"Private/Debug/LogManager.cpp"
+	"Private/Debug/Profiler.cpp"
 	"Private/Service/ServiceProvider.cpp"
 	"Private/Threading/TaskScheduler.cpp"
 	"Private/Threading/TaskCounter.cpp"

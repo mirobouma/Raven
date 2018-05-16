@@ -4,6 +4,7 @@
 #include "WindowSystem/WindowSystem.h"
 #include "Engine/Windows/RenderableWindow.h"
 #include "Core/Threading/TaskScheduler.h"
+#include "Core/Debug/Profiler.h"
 
 #include "HAL/Platform.h"
 
@@ -23,9 +24,6 @@
 using namespace Raven;
 using namespace Raven::Math;
 
-RTaskScheduler* gTaskScheduler = nullptr;
-
-
 void ApplicationStart(int argc, char*argv[])
 {
 	// Initialize platform specific systems.
@@ -36,6 +34,8 @@ void ApplicationStart(int argc, char*argv[])
 		// Initialization of engine fail, end application.
 		return;
 	}
+
+	RProfiler::Initialize();
 
 	// Initialize engine systems.
 	GEngine->InitializeSystems();
@@ -80,8 +80,11 @@ void ApplicationStart(int argc, char*argv[])
 
 	delete Window;
 
+	RProfiler::Destroy();
+
 	// Destroy platform specific systems.
 	REngine::Destroy();
+
 }
 
 #ifdef PLATFORM_WINDOWS
@@ -93,8 +96,8 @@ void ApplicationStart(int argc, char*argv[])
 			ApplicationStart(0, nullptr);
 		}, 0);
 
-		gTaskScheduler = new RTaskScheduler();
-		gTaskScheduler->Run(0, 60, &task);
+		GTaskScheduler = new RTaskScheduler();
+		GTaskScheduler->Run(0, 60, &task);
 
 		taskAllocator.Reset(true);
 		return 0;
@@ -103,17 +106,18 @@ void ApplicationStart(int argc, char*argv[])
 
 int main(int argc, char *argv[])
 {
-	//RTaskAllocator taskAllocator;
-	//auto task = FTask<uint32_t>([=](uint32_t i)
-	//{
-	//	ApplicationStart(0, nullptr);
-	//}, 0);
-	//
-	//gTaskScheduler = new RTaskScheduler();
-	//gTaskScheduler->Run(1, 60, &task);
-	//
-	//taskAllocator.Reset(true);
-	ApplicationStart(0, nullptr);
+	RTaskAllocator taskAllocator;
+	auto task = FTask<uint32_t>([=](uint32_t i)
+	{
+		ApplicationStart(0, nullptr);
+	}, 0);
+	
+	GTaskScheduler = new RTaskScheduler();
+	GTaskScheduler->Run(4, 60, &task);
+	
+	taskAllocator.Reset(true);
+	delete GTaskScheduler;
+	//ApplicationStart(0, nullptr);
 	return 0;
 }
 

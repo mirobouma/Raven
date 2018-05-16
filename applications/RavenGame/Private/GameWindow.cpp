@@ -2,6 +2,7 @@
 #include "Engine/Globals.h"
 #include "Engine/Engine.h"
 #include "Core/Debug/LogManager.h"
+#include "Core/Debug/Profiler.h"
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_RADIANS
@@ -52,10 +53,13 @@ namespace Raven
 
 	ImVec2 gameWindowSize = {1, 1};
 	ImVec2 gameWindowPos = {0, 0};
+	float gProfilerBlockHeight = 40;
 
+	bool d_demoWindowOpen = false;
 	bool d_gameWindowOpen = true;
 	bool d_consoleWindowOpen = true;
 	bool d_propertyWindowOpen = true;
+	bool d_profilerWindowOpen = true;
 
     RGameWindow::RGameWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
             : RRenderableWindow(title, size, position, flags, handler)
@@ -65,6 +69,8 @@ namespace Raven
 
     void RGameWindow::OnCreate()
     {
+		GLogManager->RegisterLogger(&mLogger);
+
         // Call super.
 		RRenderableWindow::OnCreate();
 		renderer = GEngine->GetRenderer();
@@ -460,6 +466,8 @@ namespace Raven
 
         // Call super.
 		RRenderableWindow::OnClose();
+
+		GLogManager->DeregisterLogger(&mLogger);
     }
 
     void RGameWindow::Render()
@@ -479,7 +487,9 @@ namespace Raven
 					ImGui::MenuItem("Game", NULL, &d_gameWindowOpen);
 					ImGui::MenuItem("Console", NULL, &d_consoleWindowOpen);
 					ImGui::MenuItem("Properties", NULL, &d_propertyWindowOpen);
-					ImGui::MenuItem("Profiler", NULL, nullptr);
+					ImGui::MenuItem("Profiler", NULL, &d_profilerWindowOpen);
+					ImGui::MenuItem("ImGui Demo", NULL, &d_demoWindowOpen);
+
 					ImGui::EndMenu();
 				}
 				ImGui::EndMenuBar();
@@ -510,7 +520,7 @@ namespace Raven
 
 				if (ImGui::Button("Clear"))
 				{ 
-					//clear
+					mLogger.mMessages.clear();
 				}
 				ImGui::SameLine();
 				Filter.Draw("Filter", -40.0f);
@@ -519,15 +529,50 @@ namespace Raven
 				
 				if (Filter.IsActive())
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-					ImGui::TextUnformatted("Hi log", 0);
-					ImGui::PopStyleColor();
+
+					for (uint32_t i = 0; i < mLogger.mMessages.size(); ++i)
+					{
+						
+						if (Filter.PassFilter(mLogger.mMessages[i].c_str()))
+						{
+							ImVec4 col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+							if (strstr(mLogger.mMessages[i].c_str(), "[Error]"))
+							{
+								col = ImVec4(1.0f, 0.4f, 0.4f, 1.0f);
+							}
+							else if (strstr(mLogger.mMessages[i].c_str(), "[Warning]"))
+							{
+								col = ImVec4(1.0f, 0.78f, 0.58f, 1.0f);
+							}
+
+							ImGui::PushStyleColor(ImGuiCol_Text, col);
+							ImGui::TextUnformatted(mLogger.mMessages[i].c_str(), 0);
+							ImGui::PopStyleColor();
+						}
+							
+					}
+
 				}
 				else
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
-					ImGui::TextUnformatted("Hi log", 0);
-					ImGui::PopStyleColor();
+					for (uint32_t i = 0; i < mLogger.mMessages.size(); ++i)
+					{
+						ImVec4 col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+						if (strstr(mLogger.mMessages[i].c_str(), "[Error]"))
+						{
+							col = ImVec4(1.0f, 0.4f, 0.4f, 1.0f);
+						}
+						else if (strstr(mLogger.mMessages[i].c_str(), "[Warning]"))
+						{
+							col = ImVec4(1.0f, 0.78f, 0.58f, 1.0f);
+						}
+
+						ImGui::PushStyleColor(ImGuiCol_Text, col);
+						ImGui::TextUnformatted(mLogger.mMessages[i].c_str(), 0);
+						ImGui::PopStyleColor();
+					}
 				}
 
 				ImGui::EndChild();
@@ -539,6 +584,59 @@ namespace Raven
 			}
 			ImGui::EndDock();
 
+			if (ImGui::BeginDock("Profiler", &d_profilerWindowOpen)) 
+			{
+				if (GProfiler == nullptr)
+				{
+					ImGui::Text("The profiler is not initialized.");
+				}
+				else
+				{
+					if (ImGui::Button("Capture"))
+					{
+
+					}
+					ImGui::Separator();
+					ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+					
+					for (uint32_t i = 0; i < GTaskScheduler->GetNumThreads(); ++i)
+					{
+						ImGui::BeginGroup();
+						ImGui::Text("Thread %i", i);
+						ImGui::Separator();
+						ImVec4 buttonColor = ImGui::GetStyleColorVec4(ImGuiCol_Button);
+						
+						ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColor);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColor);
+						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2);
+						ImGui::SameLine();
+						ImGui::Button("Test", ImVec2(100, gProfilerBlockHeight));
+						if (ImGui::IsItemHovered())
+						{
+							ImGui::SetTooltip("Test job\nStart %5.3f ms\nEnd %5.3f ms\nDuration %5.3f ms");
+						}
+						ImGui::SameLine();
+						ImGui::InvisibleButton("", ImVec2(50, gProfilerBlockHeight));
+						ImGui::SameLine();
+						ImGui::Button("Test", ImVec2(150, gProfilerBlockHeight));
+						ImGui::SameLine();
+						ImGui::Button("Test", ImVec2(100, gProfilerBlockHeight));
+						ImGui::SameLine();
+						ImGui::InvisibleButton("", ImVec2(100, gProfilerBlockHeight));
+						ImGui::SameLine();
+						ImGui::PopStyleColor(3);
+						ImGui::PopStyleVar(1);
+						ImGui::Separator();
+						ImGui::EndGroup();
+						
+					}
+
+					ImGui::EndChild();
+				}
+			}
+			ImGui::EndDock();
+
 			ImGui::EndDockspace();
 		}
 		else
@@ -547,7 +645,9 @@ namespace Raven
 		}
 		
 		ImGui::End();
-		ImGui::ShowDemoWindow();
+
+		if(d_demoWindowOpen)
+			ImGui::ShowDemoWindow();
 
 		// update uniforms.
 		static auto startTime = std::chrono::high_resolution_clock::now();

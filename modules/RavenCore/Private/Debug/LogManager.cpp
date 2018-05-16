@@ -1,4 +1,5 @@
 #include "Core/Debug/LogManager.h"
+#include <algorithm>
 
 namespace Raven 
 {
@@ -7,7 +8,8 @@ namespace Raven
 
 	RLogManager::RLogManager(ELogSeverity minSeverity)
 	{
-		mLogger = std::unique_ptr<IPlatformLogger>(new RPlatformLogger(minSeverity));
+		_pLogger = new RPlatformLogger(minSeverity);
+		mLoggers.push_back(_pLogger);
 	}
 
 	bool RLogManager::Initialize(ELogSeverity minSeverity)
@@ -31,8 +33,32 @@ namespace Raven
 			return;
 		}
 
+		delete GLogManager->_pLogger;
+
 		delete GLogManager;
 		GLogManager = nullptr;
+	}
+
+	void RLogManager::RegisterLogger(ILogger* logger)
+	{
+		if (GLogManager == nullptr)
+		{
+			// The log manager does not exist.
+			return;
+		}
+
+		GLogManager->mLoggers.push_back(logger);
+	}
+
+	void RLogManager::DeregisterLogger(ILogger* logger)
+	{
+		if (GLogManager == nullptr)
+		{
+			// The log manager does not exist.
+			return;
+		}
+
+		GLogManager->mLoggers.erase(std::remove(GLogManager->mLoggers.begin(), GLogManager->mLoggers.end(), logger));
 	}
 
 	void RLogManager::Log(ELogSeverity severity, std::string message, ...)
@@ -45,7 +71,11 @@ namespace Raven
 
 		va_list args;
 		va_start(args, message);
-		GLogManager->mLogger->Log(severity, message, args);
+
+		for (uint32_t i = 0; i < GLogManager->mLoggers.size(); ++i)
+		{
+			GLogManager->mLoggers[i]->Log(severity, message, args);
+		}
 		va_end(args);
 
 	}

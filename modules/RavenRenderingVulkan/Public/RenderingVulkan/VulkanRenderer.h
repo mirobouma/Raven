@@ -279,6 +279,24 @@ namespace Raven
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 },
 		};
 
+		static const uint32_t gDynamicDescriptorPoolSize = gDescriptorPoolSize / 16;
+		static const uint32_t gDynamicDescriptorSets = gDynamicDescriptorPoolSize * VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+
+		VkDescriptorPoolSize gDynamicDescriptorPoolSizes[VK_DESCRIPTOR_TYPE_RANGE_SIZE] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1, },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 },
+		};
+
         // Renderer variables.
 		VkInstance								            mInstance; /*!< Vulkan instance for this renderer. */
 		VkDebugReportCallbackEXT				            mDebuggingCallback; // callback extension for validation layers.

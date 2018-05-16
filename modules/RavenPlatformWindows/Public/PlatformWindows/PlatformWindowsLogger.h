@@ -8,7 +8,7 @@ namespace Raven
 	\class RPlatformWindowsLogger
 	\brief Windows implementation of a logger.
 	*/
-	class RPlatformWindowsLogger : public IPlatformLogger
+	class RPlatformWindowsLogger : public ILogger
 	{
 	public:
 		/*! Initialize the windows platform logger.

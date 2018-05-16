@@ -22,6 +22,6 @@ namespace Raven
 		FVulkanRenderPass*														mCurrentRenderPass;
 		std::map<FVulkanTexture*, std::tuple<FResourceState, FResourceState>>	mPendingImageBarriers;
 		std::map<FVulkanBuffer*, std::tuple<FResourceState, FResourceState>>	mPendingBufferBarriers;
-		FVulkanDescriptorSetCache												mDescriptorSetCache;
+		FVulkanDynamicDescriptorSetCache*										mDescriptorSetCache;
 	};
 }

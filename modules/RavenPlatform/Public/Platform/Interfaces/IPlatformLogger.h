@@ -19,10 +19,10 @@ namespace Raven
 	\class IPlatformLogger
 	\brief Abstract interface for platform-specific logging.
 	*/
-	class IPlatformLogger
+	class ILogger
 	{
 	protected:
-		IPlatformLogger() = default; /*!< This is an abstract interface so we don't have to instantiate it. */
+		ILogger() = default; /*!< This is an abstract interface so we don't have to instantiate it. */
 
 	public:
 		/*! Log a message with a certain severity. */

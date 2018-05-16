@@ -2,6 +2,7 @@
 #include "HAL/PlatformLogger.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 #define ENABLE_LOGGING
 
@@ -29,11 +30,18 @@ namespace Raven {
 		/*! Destroy the global log manager. */
 		static void Destroy(); 
 
+		/*! Register a logger. */
+		static void RegisterLogger(ILogger* logger);
+		
+		/*! Deegister a logger. */
+		static void DeregisterLogger(ILogger* logger);
+
 		/*! Destroy the global log manager. */
 		static void Log(ELogSeverity severity, std::string message, ...);
 
 	protected:
-		std::unique_ptr<IPlatformLogger> mLogger; /*! Logger instance. */
+		std::vector<ILogger*> mLoggers; /*! Logger instance. */
+		ILogger* _pLogger;
 	};
 
 	extern RLogManager* GLogManager; /*!< Global reference to logging manager. */

@@ -6,6 +6,8 @@ set (SourceGroup_Source
 	"Private/Main.cpp"
 	"Private/GameWindow.h"
 	"Private/GameWindow.cpp"
+	"Private/ConsoleLogger.h"
+	"Private/ConsoleLogger.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

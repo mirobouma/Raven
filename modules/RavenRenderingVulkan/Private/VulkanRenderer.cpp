@@ -1421,7 +1421,12 @@ namespace Raven
 		// Create command list wrapper objects.
 		for (uint32_t i = 0; i < numCommandLists; ++i)
 		{
-			ppCommandLists[i] = new FVulkanCommandList();
+			FVulkanCommandList* newList = new FVulkanCommandList();
+			newList->mBoundPipeline = nullptr;
+			newList->mCurrentRenderPass = nullptr;
+			newList->mDescriptorSetCache = nullptr;
+
+			ppCommandLists[i] = newList;
 		}
 
 		VkCommandBufferAllocateInfo allocInfo = {};
@@ -1470,6 +1475,11 @@ namespace Raven
 		for (uint32_t i = 0; i < numLists; ++i)
 		{
 			FVulkanCommandList* list = static_cast<FVulkanCommandList*>(ppCommandLists[i]);
+
+			if (list->mDescriptorSetCache != nullptr)
+			{
+				destroyDescriptorPool(list->mDescriptorSetCache->mDescriptorPool);
+			}
 
 			buffers[i] = list->mCmdBuffer;
 			delete list;
@@ -3549,6 +3559,12 @@ namespace Raven
         list->mCurrentRenderPass = nullptr;
         list->mBoundPipeline = nullptr;
 
+		if (list->mDescriptorSetCache != nullptr)
+		{
+			list->mDescriptorSetCache->mSetMap.clear();
+			vkResetDescriptorPool(mDevice->mDevice, list->mDescriptorSetCache->mDescriptorPool->mDescriptorPool, 0);
+		}
+
 		VkCommandBufferBeginInfo beginInfo = {};
 		beginInfo.flags = 0;
 		beginInfo.pInheritanceInfo = nullptr;
@@ -4164,7 +4180,8 @@ namespace Raven
 			rsHash = hash_bytes(&pipeline->mRootSignature->mDescriptorSetLayouts[i], sizeof(VkDescriptorSetLayout), rsHash);
 		}
 
-		std::vector<VkDescriptorSet>* bindDescriptorSets;
+		std::vector<VkDescriptorSet>* descriptorSetTemplates;
+		std::vector<VkDescriptorSet> dynamicDescriptorSets;
 
 		// Try to find the descriptor set for this pipeline/descriptor set layout combination.
 		auto setCacheIt = mDescriptorSetCache[mCurrentFrameIndex].find(rsHash);
@@ -4181,24 +4198,40 @@ namespace Raven
 			dsAllocInfo.pSetLayouts = pipeline->mRootSignature->mDescriptorSetLayouts.data();
 
 			vkAllocateDescriptorSets(mDevice->mDevice, &dsAllocInfo, mDescriptorSetCache[mCurrentFrameIndex][rsHash].data());
-			bindDescriptorSets = &mDescriptorSetCache[mCurrentFrameIndex][rsHash];
+			descriptorSetTemplates = &mDescriptorSetCache[mCurrentFrameIndex][rsHash];
 		}
 		else
 		{
-			bindDescriptorSets = &setCacheIt->second;
+			descriptorSetTemplates = &setCacheIt->second;
 		}
 
 		// Create list of descriptor sets we have to update.
 		std::vector<VkWriteDescriptorSet> writeSets;
+		std::vector<VkCopyDescriptorSet> copySets;
+		std::vector<uint32_t> copySetIds;
 		std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
 		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
-
-        descriptorBufferInfos.reserve(64);
-        descriptorImageInfos.reserve(64);
 
 		for (uint32_t i = 0; i < numDescriptors; ++i)
 		{
 			FDescriptorBinding& binding = pDescriptors[i];
+
+			bool requireAddCopySetIds = true;
+
+			// Check if we need to add this set to pending copy sets.
+			for (uint32_t j = 0; j < copySetIds.size(); ++j)
+			{
+				if (copySetIds[j] == binding.set)
+				{
+					requireAddCopySetIds = false;
+					break;
+				}		
+			}
+
+			if (requireAddCopySetIds)
+			{
+				copySetIds.push_back(binding.set);
+			}
 
 			VkWriteDescriptorSet writeSet;
 			writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -4206,7 +4239,7 @@ namespace Raven
 			writeSet.descriptorCount = binding.numDescriptors;
 			writeSet.descriptorType = gDescriptorTypeTranslator[binding.type];
 			writeSet.dstBinding = binding.binding;
-			writeSet.dstSet = (*bindDescriptorSets)[binding.set];
+			writeSet.dstSet = (*descriptorSetTemplates)[binding.set];
 			writeSet.dstArrayElement = 0;
 
 			switch(binding.type)
@@ -4265,11 +4298,67 @@ namespace Raven
 			writeSets.push_back(writeSet);
 		}
 
-		vkUpdateDescriptorSets(mDevice->mDevice, static_cast<uint32_t>(writeSets.size()), writeSets.data(), 0, nullptr);
+		if (list->mDescriptorSetCache == nullptr)
+		{
+			list->mDescriptorSetCache = new FVulkanDynamicDescriptorSetCache();
 
-		// Bind descriptor sets.
-		vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, 0, static_cast<uint32_t>(bindDescriptorSets->size()), bindDescriptorSets->data(), 0, nullptr);
-        
+			FVulkanDescriptorPoolCreateDesc desc;
+			desc.flags = 0;
+			desc.maxDescriptorSets = gDynamicDescriptorSets;
+			desc.numPoolSizes = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+			desc.pPoolSizes = gDynamicDescriptorPoolSizes;
+
+			createDescriptorPool(&list->mDescriptorSetCache->mDescriptorPool, &desc);		
+		}
+
+		dynamicDescriptorSets.resize(copySetIds.size());
+
+		// Copy global descriptors into dynamic descriptors
+		for(uint32_t i = 0; i < copySetIds.size(); ++i)
+		{
+			VkDescriptorSetAllocateInfo dsAllocInfo;
+			dsAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			dsAllocInfo.pNext = VK_NULL_HANDLE;
+			dsAllocInfo.descriptorPool = list->mDescriptorSetCache->mDescriptorPool->mDescriptorPool;
+			dsAllocInfo.descriptorSetCount = 1;
+			dsAllocInfo.pSetLayouts = &pipeline->mRootSignature->mDescriptorSetLayouts[copySetIds[i]];
+
+			vkAllocateDescriptorSets(mDevice->mDevice, &dsAllocInfo, &dynamicDescriptorSets[i]);
+		}
+
+		for (uint32_t i = 0; i < writeSets.size(); ++i)
+		{
+			uint32_t dstSet = -1;
+			for (uint32_t j = 0; j < copySetIds.size(); ++j)
+			{
+				if ((*descriptorSetTemplates)[copySetIds[j]] == writeSets[i].dstSet)
+					dstSet = j;
+			}
+
+			RASSERT(dstSet != -1);
+
+			VkCopyDescriptorSet copySet;
+			copySet.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
+			copySet.pNext = VK_NULL_HANDLE;
+			copySet.descriptorCount = writeSets[i].descriptorCount;
+			copySet.dstArrayElement = writeSets[i].dstArrayElement;
+			copySet.dstBinding = writeSets[i].dstBinding;
+			copySet.dstSet = dynamicDescriptorSets[dstSet];
+			copySet.srcArrayElement = writeSets[i].dstArrayElement;
+			copySet.srcBinding = writeSets[i].dstBinding;
+			copySet.srcSet = writeSets[i].dstSet;
+
+			copySets.push_back(copySet);
+		}
+	
+		vkUpdateDescriptorSets(mDevice->mDevice, static_cast<uint32_t>(writeSets.size()), writeSets.data(), static_cast<uint32_t>(copySets.size()), copySets.data());
+
+		for (uint32_t i = 0; i < copySetIds.size(); ++i)
+		{
+			// Bind descriptor sets.
+			vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, copySetIds[i], 1, &dynamicDescriptorSets[i], 0, nullptr);
+		}
+
 		return RR_SUCCESS;
 	}
 

@@ -2,6 +2,7 @@
 #include "Engine/Windows/RenderableWindow.h"
 #include "Rendering/Interfaces/ISwapChain.h"
 #include "Rendering/Interfaces/IRenderer.h"
+#include "ConsoleLogger.h"
 
 namespace Raven
 {
@@ -40,5 +41,6 @@ namespace Raven
         virtual void OnClose() override;
 
 		IRenderer* renderer;
+		FConsoleLogger mLogger;
     };
 }

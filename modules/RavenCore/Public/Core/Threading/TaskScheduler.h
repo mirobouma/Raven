@@ -118,6 +118,9 @@ namespace Raven
 		/*! Reset any allocated tasks. (Should be called at the end of each frame (after waiting for all counters). */
 		void ResetTaskAllocations();
 
+		/*! Get amount of threads. */
+		uint32_t GetNumThreads() const { return _mNumThreads; }
+
 		/*! Get thread index for the currently executing thread. */
 		inline uint32_t GetCurrentThreadIndex() const 
 		{
@@ -168,4 +171,6 @@ namespace Raven
 		FThreadLocalStorage* _mTLS; /*!< Array of thread local storage objects (one for each thread.) */
 
 	};
+
+	extern RTaskScheduler* GTaskScheduler;
 }

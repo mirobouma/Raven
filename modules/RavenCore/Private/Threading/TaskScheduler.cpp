@@ -6,6 +6,8 @@
 
 namespace Raven 
 {
+	RTaskScheduler* GTaskScheduler = nullptr;
+
 	void RTaskScheduler::Run(uint32_t numThreads, uint32_t numFibers, FTaskBase* mainTask)
 	{
 		RASSERT(numThreads <= numFibers);
@@ -51,7 +53,7 @@ namespace Raven
 		// Set the first thread to be the current thread, and set it's affinity.
 		new (&_mThreads[0]) RThread();
 		_mThreads[0].FromCurrentThread();
-		//_mThreads[0].SetAffinity(0);
+		_mThreads[0].SetAffinity(0);
 
 		// Create worker threads.
 		for (uint32_t i = 1; i < _mNumThreads; ++i)
@@ -61,7 +63,7 @@ namespace Raven
 			args->threadId = i;
 
 			// Create threads and set their affinity.
-			new (&_mThreads[i]) RThread(ThreadStart, (void*)args, -1);
+			new (&_mThreads[i]) RThread(ThreadStart, (void*)args, i);
 		}
 
 		// Signal the worker threads that we're fully initialized

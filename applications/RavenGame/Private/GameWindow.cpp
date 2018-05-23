@@ -657,8 +657,8 @@ namespace Raven
 
 					if (GProfiler->mSavedThreadProfilers.size() != 0)
 					{
-						std::chrono::steady_clock::time_point beginTime;
-						std::chrono::steady_clock::time_point endTime;
+                        std::chrono::time_point<std::chrono::high_resolution_clock> beginTime;
+                        std::chrono::time_point<std::chrono::high_resolution_clock> endTime;
 
 						for (uint32_t i = 0; i <  GProfiler->mSavedThreadProfilers.size(); ++i)
 						{
@@ -698,7 +698,7 @@ namespace Raven
 							ImGui::InvisibleButton("", ImVec2(gProfilerZoom * scale * std::chrono::duration<float, std::chrono::seconds::period>(beginTime - prof._startTime).count(), gProfilerBlockHeight));
 							ImGui::SameLine();
 
-							std::chrono::steady_clock::time_point prevEnd = prof._startTime;
+                            std::chrono::time_point<std::chrono::high_resolution_clock> prevEnd = prof._startTime;
 							for (uint32_t j = 0; j < prof.data.size(); ++j)
 							{
 								ImGui::InvisibleButton("", ImVec2(gProfilerZoom* scale * std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].begin - prevEnd).count(), gProfilerBlockHeight));

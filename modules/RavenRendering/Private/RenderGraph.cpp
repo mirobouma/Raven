@@ -1,5 +1,6 @@
 #include "Rendering/RenderGraph.h"
 #include "Core/Debug/LogManager.h"
+#include <algorithm>
 
 namespace Raven
 {

@@ -22,7 +22,6 @@
 #endif
 
 using namespace Raven;
-using namespace Raven::Math;
 
 void ApplicationStart(int argc, char*argv[])
 {
@@ -35,8 +34,9 @@ void ApplicationStart(int argc, char*argv[])
 		return;
 	}
 
+#ifdef ENABLE_PROFILING
 	RProfiler::Initialize();
-
+#endif
 	// Initialize engine systems.
 	GEngine->InitializeSystems();
 
@@ -61,26 +61,54 @@ void ApplicationStart(int argc, char*argv[])
 	// Main loop
 	while (true)
 	{
-		GWindowSystem->ProcessWindowMessages();
-
-		// All windows are destroyed, therefore we should shut down.
-		if (GWindowSystem->GetNumAliveWindows() == 0)
+		PROFILER_BEGIN
 		{
-			break;
+			PROFILER_START_SCOPE("Process Windows Messages");
+			GWindowSystem->ProcessWindowMessages();
+			
+			// All windows are destroyed, therefore we should shut down.
+			if (GWindowSystem->GetNumAliveWindows() == 0)
+			{
+				break;
+			}
+			PROFILER_END_SCOPE
+
+			//auto t = GTaskScheduler->MakeTask([=] {
+			//	PROFILER_START_SCOPE("Sleep first");
+			//	Sleep(10);
+			//
+			//	auto t2 = GTaskScheduler->MakeTask([=] {
+			//		PROFILER_START_SCOPE("Sleep second");
+			//		Sleep(20);
+			//	});
+			//
+			//	RTaskCounter counter;
+			//	GTaskScheduler->ExecuteTask(&counter, t2);
+			//	GTaskScheduler->WaitForCounter(&counter);
+			//	
+			//});
+			//
+			//RTaskCounter c2;
+			//GTaskScheduler->ExecuteTask(&c2, t);
+			//GTaskScheduler->WaitForCounter(&c2);
+			
+			PROFILER_START_SCOPE("Render Window");
+			if (Window != nullptr)
+			{
+				Window->Render();
+			}
+			PROFILER_END_SCOPE
+
+			GEngine->Render();
 		}
-
-		if(Window != nullptr)
-		{
-			Window->Render();
-		}
-
-		GEngine->Render();
-
+		PROFILER_END
 	}
 
 	delete Window;
 
+#ifdef ENABLE_PROFILING
 	RProfiler::Destroy();
+#endif
 
 	// Destroy platform specific systems.
 	REngine::Destroy();

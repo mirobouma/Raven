@@ -11,7 +11,7 @@ namespace Raven
 	struct FVulkanBuffer : IBuffer
 	{
 		VkBuffer			mBuffer;
-		VkDeviceMemory		mMemory;
+		VmaAllocation		mAllocation;
 		FBufferCreateDesc	mDesc;
 		FResourceState		mState;
 

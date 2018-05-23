@@ -5,7 +5,7 @@ namespace Raven
 {
 	RProfiler* GProfiler = nullptr;
 
-	RProfiler::RProfiler() : _mProfilerMutex()
+	RProfiler::RProfiler() : _mProfilerMutex(), _mProfiling(false), _mProfileNext(false)
 	{
 
 	}
@@ -43,10 +43,14 @@ namespace Raven
 			return;
 		}
 
+		if (!GProfiler->_mProfiling)
+			return;
+
 		uint32_t threadId = GTaskScheduler->GetCurrentThreadIndex();
 		if (threadId == UINT32_MAX)
 		{
 			RLOG_WARNING("Tried to profile function but the thread is not registered in the task scheduler.");
+			return;
 		}
 
 		auto it = GProfiler->_mThreadProfilers.find(threadId);
@@ -54,7 +58,12 @@ namespace Raven
 		if (it != GProfiler->_mThreadProfilers.end())
 		{
 			FThreadProfiler* profiler = &it->second;
-			profiler->currentScope = FProfilerScope(task);
+			if (profiler->inScope)
+			{
+				ExitScope();
+			}
+			profiler->inScope = true;
+			profiler->currentScope = FProfilerScopeData(task);
 		}
 		else
 		{
@@ -62,6 +71,10 @@ namespace Raven
 			GProfiler->_mProfilerMutex.lock();
 		
 			GProfiler->_mThreadProfilers[threadId] = FThreadProfiler(threadId);
+			GProfiler->_mThreadProfilers[threadId].currentScope = FProfilerScopeData(task);
+			GProfiler->_mThreadProfilers[threadId]._startTime = GProfiler->_startTime;
+			GProfiler->_mThreadProfilers[threadId].inScope = true;
+			GProfiler->_mThreadProfilers[threadId].threadId = threadId;
 
 			// Unlock
 			GProfiler->_mProfilerMutex.unlock();
@@ -98,12 +111,17 @@ namespace Raven
 		{
 			FThreadProfiler* profiler = &it->second;
 
-			FProfilerData data;
-			auto currentTime = std::chrono::high_resolution_clock::now();
-			data.length = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - profiler->currentScope._startTime).count() / 10.0f;
-			data.name = profiler->currentScope._name;
+			if (profiler->inScope)
+			{
+				FProfilerData data;
+				auto currentTime = std::chrono::high_resolution_clock::now();
+				data.end = currentTime;
+				data.begin = profiler->currentScope._startTime;
+				data.name = profiler->currentScope._name;
+				profiler->inScope = false;
 
-			profiler->data.push_back(data);
+				profiler->data.push_back(data);
+			}
 		}
 		else
 		{
@@ -134,7 +152,7 @@ namespace Raven
 			}
 
 			GProfiler->_mProfiling = false;
-			GProfiler->_mSavedThreadProfilers = GProfiler->_mThreadProfilers;
+			GProfiler->mSavedThreadProfilers = GProfiler->_mThreadProfilers;
 		}
 
 		GProfiler->_mProfilerMutex.unlock();
@@ -151,6 +169,29 @@ namespace Raven
 		GProfiler->_mProfileNext = true;
 	}
 
+	FThreadProfiler* RProfiler::GetThreadProfiler()
+	{
+		if (GProfiler == nullptr)
+		{
+			return nullptr;
+		}
+
+		uint32_t threadId = GTaskScheduler->GetCurrentThreadIndex();
+		if (threadId == UINT32_MAX)
+		{
+			return nullptr;
+		}
+
+		auto profiler = GProfiler->_mThreadProfilers.find(threadId);
+
+		if (profiler != GProfiler->_mThreadProfilers.end())
+		{
+			return &profiler->second;
+		}
+
+		return nullptr;
+	}
+
 	void RProfiler::StartProfiling()
 	{
 		if (GProfiler == nullptr)
@@ -159,27 +200,31 @@ namespace Raven
 			return;
 		}
 
+		if (GProfiler->_mProfiling)
+		{
+			RLOG_WARNING("Already started profiling, resetting profiler data.");
+		}
+
 		if (GProfiler->_mProfileNext)
 		{
 			GProfiler->_mProfiling = true;
 			GProfiler->_mProfileNext = false;
 		}
 
+
 		if (GProfiler->_mProfiling)
 		{
-			RLOG_WARNING("Already started profiling, resetting profiler data.");
+			GProfiler->_mProfilerMutex.lock();
+
+			auto currentTime = std::chrono::high_resolution_clock::now();
+
+			for (uint32_t i = 0; i < GProfiler->_mThreadProfilers.size(); ++i)
+			{
+				GProfiler->_mThreadProfilers[i].data.clear();
+				GProfiler->_mThreadProfilers[i]._startTime = currentTime;
+			}
+			GProfiler->_startTime = currentTime;
+			GProfiler->_mProfilerMutex.unlock();
 		}
-
-		GProfiler->_mProfilerMutex.lock();
-
-		auto currentTime = std::chrono::high_resolution_clock::now();
-
-		for (uint32_t i = 0; i < GProfiler->_mThreadProfilers.size(); ++i)
-		{
-			GProfiler->_mThreadProfilers[i].data.clear();
-			GProfiler->_mThreadProfilers[i]._startTime = currentTime;
-		}
-
-		GProfiler->_mProfilerMutex.unlock();
 	}
 }

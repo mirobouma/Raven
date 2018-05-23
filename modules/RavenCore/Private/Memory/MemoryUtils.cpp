@@ -5,6 +5,7 @@
 	#include <stdlib.h>
 #elif defined(_WIN32)
 	#include <crtdbg.h>
+	#include <malloc.h>
 #else
 // https://sites.google.com/site/ruslancray/lab/bookshelf/interview/ci/low-level/write-an-aligned-malloc-free-function
 	#include <stdlib.h>

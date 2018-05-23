@@ -126,7 +126,7 @@ namespace Raven
 		{
 			for (uint32_t i = 0; i < _mNumThreads; i++)
 			{
-				if (_mThreads[i].IsCurrentThread())
+				if (_mThreads[i]->IsCurrentThread())
 					return i;
 			}
 
@@ -167,7 +167,7 @@ namespace Raven
 		std::atomic<bool> *_mFreeFibers; /*! Array of atomic boolean to signify if a fiber is free for usage. */
 
 		uint32_t _mNumThreads; /*!< Amount of worker threads in this task scheduler. */
-		RThread* _mThreads; /*!< Thread pool for this task scheduler. */
+		std::vector<RThread*> _mThreads; /*!< Thread pool for this task scheduler. */
 		FThreadLocalStorage* _mTLS; /*!< Array of thread local storage objects (one for each thread.) */
 
 	};

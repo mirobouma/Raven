@@ -9,7 +9,7 @@ namespace Raven {
 	*/
 	class RRenderableWindow : public RPlatformWindow {
 	public:
-		RRenderableWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
+		RRenderableWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
 		RRenderableWindow(const RRenderableWindow&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a window. */
 		RRenderableWindow& operator= (const RRenderableWindow&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a window. */
 

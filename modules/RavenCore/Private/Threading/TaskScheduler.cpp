@@ -1,6 +1,7 @@
 #include "Core/Threading/TaskScheduler.h"
 #include "HAL/PlatformInfo.h"
 #include "Core/Debug/LogManager.h"
+#include "Core/Debug/Profiler.h"
 
 // Task scheduler based on https://github.com/RichieSams/FiberTaskingLib/
 
@@ -40,7 +41,7 @@ namespace Raven
 		}
 
 		// Allocate memory for fibers (set them to null objects).
-		_mThreads = (RThread*)malloc(_mNumThreads * sizeof(RThread));
+		_mThreads = std::vector<RThread*>(_mNumThreads);
 
 		// Allocate thread-local storage.
 		_mTLS = new FThreadLocalStorage[_mNumThreads];
@@ -51,9 +52,9 @@ namespace Raven
 		}
 
 		// Set the first thread to be the current thread, and set it's affinity.
-		new (&_mThreads[0]) RThread();
-		_mThreads[0].FromCurrentThread();
-		_mThreads[0].SetAffinity(0);
+		_mThreads[0] = new RThread();
+		_mThreads[0]->FromCurrentThread();
+		_mThreads[0]->SetAffinity(0);
 
 		// Create worker threads.
 		for (uint32_t i = 1; i < _mNumThreads; ++i)
@@ -63,7 +64,7 @@ namespace Raven
 			args->threadId = i;
 
 			// Create threads and set their affinity.
-			new (&_mThreads[i]) RThread(ThreadStart, (void*)args, i);
+			_mThreads[i] = new RThread(ThreadStart, (void*)args, i);
 		}
 
 		// Signal the worker threads that we're fully initialized
@@ -94,7 +95,7 @@ namespace Raven
 
 		// We switched back to the main fiber, which means we should shut down.
 		for (std::size_t i = 1; i < _mNumThreads; ++i) {
-			_mThreads[i].Join();
+			_mThreads[i]->Join();
 		}
 
 		// free memory allocated for fibers.
@@ -108,10 +109,9 @@ namespace Raven
 
 		for (std::size_t i = 0; i < _mNumThreads; ++i)
 		{
-			_mThreads[i].~RThread();
+			delete _mThreads[i];
 		}
 
-		free(_mThreads);
 		delete[] _mTLS;
 
 		_mFinishedCleanup.store(true, std::memory_order_release);
@@ -190,9 +190,33 @@ namespace Raven
 		tls.CurrentFiberIndex = freeFiberIndex;
 		tls.OldFiberDestination = FiberDestination::ToWaiting;
 		tls.pOldFiberStoredFlag = fiberStoredFlag;
+		
+
+#ifdef ENABLE_PROFILING
+		bool gotProfilerContext = false;
+		FProfilerScopeData data;
+
+		if (GProfiler != nullptr)
+		{
+			FThreadProfiler* prof = GProfiler->GetThreadProfiler();
+			if (prof != nullptr && prof->inScope)
+			{
+				data = prof->currentScope;
+				gotProfilerContext = true;
+			}
+		}
+#endif
+		PROFILER_END_SCOPE
 
 		// Switch to a new fiber.
 		_mFibers[currentFiberIndex].SwitchToFiber(&_mFibers[freeFiberIndex]);
+
+#ifdef ENABLE_PROFILING
+		if (gotProfilerContext)
+		{
+			PROFILER_START_SCOPE(data._name);
+		}
+#endif
 
 		// We switched back to this context, therefore we need to clean up the old fiber.
 		CleanUpFiber();

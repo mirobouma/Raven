@@ -42,6 +42,7 @@ namespace Raven
 		io.KeyMap[ImGuiKey_Backspace] = VK_BACK;
 		io.KeyMap[ImGuiKey_Enter] = VK_RETURN;
 		io.KeyMap[ImGuiKey_Escape] = VK_ESCAPE;
+		io.KeyMap[ImGuiKey_Space] = VK_SPACE;
 		io.KeyMap[ImGuiKey_A] = 'A';
 		io.KeyMap[ImGuiKey_C] = 'C';
 		io.KeyMap[ImGuiKey_V] = 'V';
@@ -189,7 +190,7 @@ namespace Raven
 
 		FTextureCreateDesc fontDesc = {};
 		fontDesc.type = TEXTURE_TYPE_2D;
-		fontDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		fontDesc.memoryType = MEMORY_TYPE_GPU;
 		fontDesc.arrayLayers = 1;
 		fontDesc.baseArrayLayer = 0;
 		fontDesc.baseMipLevel = 0;
@@ -269,7 +270,7 @@ namespace Raven
 			FBufferCreateDesc vertexDesc;
 			vertexDesc.data = nullptr;
 			vertexDesc.size = vertex_size;
-			vertexDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+			vertexDesc.memoryType = MEMORY_TYPE_CPU;
 			vertexDesc.usage = BUFFER_USAGE_VERTEX_BUFFER | BUFFER_USAGE_TRANSFER_DST;
 
 			mRenderer->createBuffer(&mVertexBuffers[mCurrentFrameId], &vertexDesc);
@@ -288,7 +289,7 @@ namespace Raven
 			FBufferCreateDesc indexDesc;
 			indexDesc.data = nullptr;
 			indexDesc.size = index_size;
-			indexDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+			indexDesc.memoryType = MEMORY_TYPE_CPU;
 			indexDesc.usage = BUFFER_USAGE_INDEX_BUFFER | BUFFER_USAGE_TRANSFER_DST;
 
 			mRenderer->createBuffer(&mIndexBuffers[mCurrentFrameId], &indexDesc);
@@ -320,7 +321,7 @@ namespace Raven
 
 		// Bind graphics pipeline.
 		mRenderer->cmdBindPipeline(list, mPipeline);
-		mRenderer->cmdSetViewport(list, Math::FRect({ pRenderTarget->GetDesc()->width,  pRenderTarget->GetDesc()->height }, { 0, 0 }));
+		mRenderer->cmdSetViewport(list, FRect({ pRenderTarget->GetDesc()->width,  pRenderTarget->GetDesc()->height }, { 0, 0 }));
 
 		mRenderer->cmdBindIndexBuffer(list, mIndexBuffers[mCurrentFrameId], INDEX_TYPE_UINT16);
 		mRenderer->cmdBindVertexBuffer(list, 1, &mVertexBuffers[mCurrentFrameId]);
@@ -367,7 +368,7 @@ namespace Raven
 						imageToDraw = (ITexture*)pcmd->TextureId;
 					}
 
-					Math::FRect scissor;
+					FRect scissor;
 					scissor.Position.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0;
 					scissor.Position.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
 					scissor.Size.x = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);

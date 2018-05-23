@@ -3,11 +3,8 @@
 #include "Engine/Engine.h"
 #include "Core/Debug/LogManager.h"
 #include "Core/Debug/Profiler.h"
-
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "Rendering/RenderGraph.h"
+#include "Rendering/Modules/RGSwapChainModule.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -22,10 +19,31 @@
 
 namespace Raven
 {
+
+	struct FMesh {
+		uint32_t vertexOffset;
+		uint32_t indexOffset;
+		uint32_t vertexCount;
+		uint32_t indexCount;
+		uint32_t matIndex;
+	};
+
+	struct FMeshMaterial {
+		aiColor3D diffuse;
+		aiColor3D specular;
+	};
+
 	struct UniformBufferObject {
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 proj;
+		glm::vec4 camPos;
+	};
+
+
+	struct UniformMaterialBufferObject {
+		glm::vec4 diffuse;
+		glm::vec4 specular;
 	};
 
 	IQueue* gGraphicsQueue = nullptr;
@@ -41,6 +59,8 @@ namespace Raven
 	IShader* gShader = nullptr;
 	IBuffer* gUniformBuffers[3];
 	UniformBufferObject gUniformBuffer;
+	IBuffer* gMaterialBuffers[39];
+	UniformMaterialBufferObject gUniformMaterialBuffer;
 	IBuffer* gIndexBuffer = nullptr;
 	IBuffer* gVertexBuffer = nullptr;
 	IRenderTarget* gDepthStencil = nullptr;
@@ -49,11 +69,15 @@ namespace Raven
 	IRenderTarget* gBackbuffer = nullptr;
 	std::vector<glm::vec3> gVertices;
 	std::vector<uint32_t> gIndices;
+	std::vector<FMesh> gMeshes;
+	std::vector<FMeshMaterial> gMaterials;
+
 	RUIRenderer	gUIRenderer;
 
 	ImVec2 gameWindowSize = {1, 1};
 	ImVec2 gameWindowPos = {0, 0};
 	float gProfilerBlockHeight = 40;
+	float gProfilerZoom = 1.0f;
 
 	bool d_demoWindowOpen = false;
 	bool d_gameWindowOpen = true;
@@ -61,7 +85,7 @@ namespace Raven
 	bool d_propertyWindowOpen = true;
 	bool d_profilerWindowOpen = true;
 
-    RGameWindow::RGameWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
+    RGameWindow::RGameWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
             : RRenderableWindow(title, size, position, flags, handler)
     {
 
@@ -159,7 +183,7 @@ namespace Raven
 		iaLayout.pInputAttributeDescriptions = &iaAttributes[0];
 
 		// Create descriptor bindings.
-		FDescriptorLayoutBinding bindings[3];
+		FDescriptorLayoutBinding bindings[4];
         bindings[0].set = 0;
 		bindings[0].binding = 0;
 		bindings[0].descriptorCount = 1;
@@ -179,12 +203,19 @@ namespace Raven
 		bindings[2].ppImmutableSamplers = &gSampler;
 		bindings[2].stageFlags = SHADER_STAGE_FLAG_FRAGMENT;
 
+		bindings[3].set = 2;
+		bindings[3].binding = 0;
+		bindings[3].descriptorCount = 1;
+		bindings[3].descriptorType = EDescriptorType::DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[3].ppImmutableSamplers = &gSampler;
+		bindings[3].stageFlags = SHADER_STAGE_FLAG_FRAGMENT;
+
 
 		// Create root signature.
 		FRootSignatureCreateDesc rsDesc;
 		rsDesc.pShaderProgram = gShader;
 		rsDesc.pInputAssemblerLayout = &iaLayout;
-		rsDesc.numDescriptorBindings = 3;
+		rsDesc.numDescriptorBindings = 4;
 		rsDesc.pDescriptorBindings = &bindings[0];
 
 		renderer->createRootSignature(&gRootSignature, &rsDesc);
@@ -217,9 +248,9 @@ namespace Raven
 
 		for (uint32_t i = 0; i < 3; ++i)
 		{
-			// Create index buffer.
+			// Create uniform buffer.
 			FBufferCreateDesc uBufferDesc = {};
-			uBufferDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+			uBufferDesc.memoryType = MEMORY_TYPE_CPU;
 			uBufferDesc.size = sizeof(UniformBufferObject);
 			uBufferDesc.usage = BUFFER_USAGE_TRANSFER_DST | BUFFER_USAGE_UNIFORM_BUFFER;
 			uBufferDesc.data = &gUniformBuffer;
@@ -227,13 +258,27 @@ namespace Raven
 			renderer->createBuffer(&gUniformBuffers[i], &uBufferDesc);
 		}
 
-
 		// Load teapot model
 		LoadTeapot();
 
+		for (uint32_t i = 0; i < 39; ++i)
+		{
+			gUniformMaterialBuffer.diffuse = glm::vec4(gMaterials[i].diffuse.r, gMaterials[i].diffuse.g, gMaterials[i].diffuse.b, 1);
+			gUniformMaterialBuffer.specular = glm::vec4(gMaterials[i].specular.r, gMaterials[i].specular.g, gMaterials[i].specular.b, 1);
+
+			// Create index buffer.
+			FBufferCreateDesc uBufferDesc = {};
+			uBufferDesc.memoryType = MEMORY_TYPE_GPU;
+			uBufferDesc.size = sizeof(UniformBufferObject);
+			uBufferDesc.usage = BUFFER_USAGE_TRANSFER_DST | BUFFER_USAGE_UNIFORM_BUFFER;
+			uBufferDesc.data = &gUniformMaterialBuffer;
+
+			renderer->createBuffer(&gMaterialBuffers[i], &uBufferDesc);
+		}
+
 		// Create index buffer.
 		FBufferCreateDesc iBufferDesc = {};
-		iBufferDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		iBufferDesc.memoryType = MEMORY_TYPE_CPU;
 		iBufferDesc.size = gIndices.size() * sizeof(uint32_t);
 		iBufferDesc.usage = BUFFER_USAGE_TRANSFER_DST | BUFFER_USAGE_INDEX_BUFFER;
 		iBufferDesc.data = gIndices.data();
@@ -242,7 +287,7 @@ namespace Raven
 
 		// Create vertex buffer.
 		FBufferCreateDesc vBufferDesc = {};
-		vBufferDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		vBufferDesc.memoryType = MEMORY_TYPE_GPU;
 		vBufferDesc.size = gVertices.size() * sizeof(glm::vec3);
 		vBufferDesc.usage = BUFFER_USAGE_TRANSFER_DST | BUFFER_USAGE_VERTEX_BUFFER;
 		vBufferDesc.data = gVertices.data();
@@ -262,7 +307,7 @@ namespace Raven
 
 		FTextureCreateDesc texDesc = {};
 		texDesc.type = TEXTURE_TYPE_2D;
-		texDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		texDesc.memoryType = MEMORY_TYPE_GPU;
 		texDesc.arrayLayers = 1;
 		texDesc.baseArrayLayer = 0;
 		texDesc.baseMipLevel = 0;
@@ -286,7 +331,7 @@ namespace Raven
 	{
 		Assimp::Importer importer;
 
-		const aiScene* scene = importer.ReadFile(std::string("models/model.obj"),
+		const aiScene* scene = importer.ReadFile(std::string("models/sportsCar.obj"),
 			aiProcess_CalcTangentSpace |
 			aiProcess_Triangulate |
 			aiProcess_GenSmoothNormals |
@@ -301,16 +346,24 @@ namespace Raven
 			int vertexAmount = 0;
 			int indexAmount = 0;
 
+			// Load materials
+			for (uint32_t i = 0; i < scene->mNumMaterials; i++)
+			{
+				FMeshMaterial mat;
+				scene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, mat.diffuse);
+				scene->mMaterials[i]->Get(AI_MATKEY_COLOR_SPECULAR, mat.specular);
+
+				gMaterials.push_back(mat);
+			}
+
 			// Load vertices, indices, normals and UV co-ordinates.
 			for (uint32_t i = 0; i < scene->mNumMeshes; i++)
 			{
-				int subMeshVertexAmount = 0;
-				int subMeshIndexAmount = 0;
+				int subMeshVertexAmount = scene->mMeshes[i]->mNumVertices;
+				int subMeshIndexAmount = scene->mMeshes[i]->mNumFaces * 3;
 
 				for (uint32_t j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
 				{
-					vertexAmount++;
-					subMeshVertexAmount++;
 					aiVector3D vert = scene->mMeshes[i]->mVertices[j];
 					aiVector3D normal = scene->mMeshes[i]->mNormals[j];
 
@@ -330,12 +383,21 @@ namespace Raven
 					aiFace face = scene->mMeshes[i]->mFaces[j];
 					for (uint32_t k = 0; k < face.mNumIndices; k++)
 					{
-						indexAmount++;
-						subMeshIndexAmount++;
-
 						gIndices.push_back(face.mIndices[k]);
 					}
 				}
+
+				FMesh mesh;
+				mesh.vertexCount = subMeshVertexAmount;
+				mesh.indexCount = subMeshIndexAmount;
+				mesh.vertexOffset = vertexAmount;
+				mesh.indexOffset = indexAmount;
+				mesh.matIndex = scene->mMeshes[i]->mMaterialIndex;
+
+				vertexAmount += subMeshVertexAmount;
+				indexAmount += subMeshIndexAmount;
+
+				gMeshes.push_back(mesh);
 			}
 		}
 	}
@@ -344,18 +406,6 @@ namespace Raven
     {
         // Call super.
 		RRenderableWindow::OnResize(width, height);
-
-		if (GEngine->GetRenderer()->isInitialized())
-		{
-			for (uint32_t i = 0; i < 3; ++i)
-			{
-				renderer->waitForFence(gRenderCompleteFences[i]);
-			}
-
-			GEngine->GetRenderer()->destroySwapChain(_SwapChain);
-			GEngine->GetRenderer()->createSwapChain(this, &_SwapChain);
-
-		}
     }
 
     void RGameWindow::OnMove(int x, int y)
@@ -402,7 +452,7 @@ namespace Raven
 
 
 		FRenderTargetCreateDesc texDesc = {};
-		texDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		texDesc.memoryType = MEMORY_TYPE_GPU;
 		texDesc.format = TEXTURE_FORMAT_RGBA8;
 		texDesc.width = (uint32_t)gameWindowSize.x;
 		texDesc.height = (uint32_t)gameWindowSize.y;
@@ -415,7 +465,7 @@ namespace Raven
 
 
 		FRenderTargetCreateDesc dsDesc = {};
-		dsDesc.memoryProperties = MEMORY_PROPERTY_DEVICE_LOCAL;
+		dsDesc.memoryType = MEMORY_TYPE_GPU;
 		dsDesc.format = TEXTURE_FORMAT_D32_FLOAT;
 		dsDesc.width = gameWindowSize.x;
 		dsDesc.height = gameWindowSize.y;
@@ -460,6 +510,11 @@ namespace Raven
 			renderer->destroySemaphore(gRenderCompleteSemaphores[i]);
 		}
 
+		for (uint32_t i = 0; i < 39; ++i)
+		{
+			renderer->destroyBuffer(gMaterialBuffers[i]);
+		}
+
 		renderer->destroySemaphore(gImageAquiredSemaphore);
 
 		gUIRenderer.destroy();
@@ -501,7 +556,6 @@ namespace Raven
 			if (ImGui::BeginDock("Game", &d_gameWindowOpen)) {
 				gameWindowPos = ImGui::GetCursorPos();
 
-
 				if ((gameWindowSize.x != ImGui::GetContentRegionAvail().x || gameWindowSize.y != ImGui::GetContentRegionAvail().y) &&
 					ImGui::GetContentRegionAvail().x > 1 && ImGui::GetContentRegionAvail().y > 1)
 				{
@@ -510,6 +564,7 @@ namespace Raven
 				}
 
 				ImGui::Image(gBackbuffer->GetTexture(), ImGui::GetContentRegionAvail());
+
 			}
 			ImGui::EndDock();
 
@@ -594,45 +649,76 @@ namespace Raven
 				{
 					if (ImGui::Button("Capture"))
 					{
-
+						GProfiler->ProfileNextFrame();
 					}
+					ImGui::SameLine();
+					ImGui::SliderFloat("Zoom", &gProfilerZoom, 1.0f, 50.0f);
 					ImGui::Separator();
-					ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-					
-					for (uint32_t i = 0; i < GTaskScheduler->GetNumThreads(); ++i)
-					{
-						ImGui::BeginGroup();
-						ImGui::Text("Thread %i", i);
-						ImGui::Separator();
-						ImVec4 buttonColor = ImGui::GetStyleColorVec4(ImGuiCol_Button);
-						
-						ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
-						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColor);
-						ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColor);
-						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2);
-						ImGui::SameLine();
-						ImGui::Button("Test", ImVec2(100, gProfilerBlockHeight));
-						if (ImGui::IsItemHovered())
-						{
-							ImGui::SetTooltip("Test job\nStart %5.3f ms\nEnd %5.3f ms\nDuration %5.3f ms");
-						}
-						ImGui::SameLine();
-						ImGui::InvisibleButton("", ImVec2(50, gProfilerBlockHeight));
-						ImGui::SameLine();
-						ImGui::Button("Test", ImVec2(150, gProfilerBlockHeight));
-						ImGui::SameLine();
-						ImGui::Button("Test", ImVec2(100, gProfilerBlockHeight));
-						ImGui::SameLine();
-						ImGui::InvisibleButton("", ImVec2(100, gProfilerBlockHeight));
-						ImGui::SameLine();
-						ImGui::PopStyleColor(3);
-						ImGui::PopStyleVar(1);
-						ImGui::Separator();
-						ImGui::EndGroup();
-						
-					}
 
-					ImGui::EndChild();
+					if (GProfiler->mSavedThreadProfilers.size() != 0)
+					{
+						std::chrono::steady_clock::time_point beginTime;
+						std::chrono::steady_clock::time_point endTime;
+
+						for (uint32_t i = 0; i <  GProfiler->mSavedThreadProfilers.size(); ++i)
+						{
+							FThreadProfiler& prof = GProfiler->mSavedThreadProfilers[i];
+							if (prof._startTime > beginTime)
+								beginTime = prof._startTime;
+
+							if (prof._endTime > endTime)
+								endTime = prof._endTime;
+						}
+
+						float windowSize = ImGui::GetWindowSize().x;
+
+						float scale = windowSize / std::chrono::duration<float, std::chrono::seconds::period>(endTime - beginTime).count();
+
+						ImGui::Text("Frame time %5.3f ms",  std::chrono::duration<float, std::chrono::seconds::period>(endTime - beginTime).count() * 1000.0f);
+
+						ImGui::Separator();
+						ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+						for (uint32_t i = 0; i < GProfiler->mSavedThreadProfilers.size(); ++i)
+						{
+							ImGui::BeginGroup();
+							ImGui::Text("Thread %i", GProfiler->mSavedThreadProfilers[i].threadId);
+							ImGui::Separator();
+							ImVec4 buttonColor = ImGui::GetStyleColorVec4(ImGuiCol_Button);
+
+							ImGui::PushStyleColor(ImGuiCol_Button, buttonColor);
+							ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonColor);
+							ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonColor);
+							ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+							ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+							ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2);
+							ImGui::SameLine();
+
+							FThreadProfiler& prof = GProfiler->mSavedThreadProfilers[i];
+							ImGui::InvisibleButton("", ImVec2(gProfilerZoom * scale * std::chrono::duration<float, std::chrono::seconds::period>(beginTime - prof._startTime).count(), gProfilerBlockHeight));
+							ImGui::SameLine();
+
+							std::chrono::steady_clock::time_point prevEnd = prof._startTime;
+							for (uint32_t j = 0; j < prof.data.size(); ++j)
+							{
+								ImGui::InvisibleButton("", ImVec2(gProfilerZoom* scale * std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].begin - prevEnd).count(), gProfilerBlockHeight));
+								prevEnd = prof.data[j].end;
+								ImGui::SameLine();
+								ImGui::Button(prof.data[j].name.c_str(), ImVec2(gProfilerZoom* scale * std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].end - prof.data[j].begin).count(), gProfilerBlockHeight));
+								if (ImGui::IsItemHovered())
+								{
+									ImGui::SetTooltip("%s\nDuration %5.3f ms", prof.data[j].name.c_str(), std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].end - prof.data[j].begin).count() * 1000);
+								}
+								ImGui::SameLine();
+							}
+							ImGui::PopStyleColor(3);
+							ImGui::PopStyleVar(3);
+							ImGui::Separator();
+							ImGui::EndGroup();
+
+						}
+						ImGui::EndChild();
+					}	
 				}
 			}
 			ImGui::EndDock();
@@ -655,8 +741,21 @@ namespace Raven
 		auto currentTime = std::chrono::high_resolution_clock::now();
 		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() / 10.0f;
 
+		// "get builder"
+		RRenderGraphBuilder builder;
+
+		// Acquire swapchain target.
+		RGSwapChainModule::RGSwapChainModuleData scData = RGSwapChainModule::rendergraph_add_acquire_target(builder, renderer, _SwapChain, gImageAquiredSemaphore, nullptr);
+
+		// Build graph.
+		RRenderGraph graph;
+		builder.validate_and_build(&graph);
+
+		// Execute render graph.
+		graph.execute_graph();
+
 		// Aquire next swapchain image.
-		renderer->swapChainAcquireNextImage(_SwapChain, gImageAquiredSemaphore, NULL);
+		//renderer->swapChainAcquireNextImage(_SwapChain, gImageAquiredSemaphore, NULL);
 
 		// Retrieve current swapchain image index.
 		gCurrentImage = _SwapChain->getCurrentImageIndex();
@@ -676,9 +775,10 @@ namespace Raven
 
 		// Update uniform.
 		gUniformBuffer.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		gUniformBuffer.view = glm::lookAt(glm::vec3(5.0f, 7.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		gUniformBuffer.view = glm::lookAt(glm::vec3(3.0f, 3.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		gUniformBuffer.proj = glm::perspective(glm::radians(45.0f), gameWindowSize.x / gameWindowSize.y, 0.1f, 20.0f);
 		gUniformBuffer.proj[1][1] *= -1;
+		gUniformBuffer.camPos = glm::vec4(3.0f, 3.0f, 3.0f, 1);
 
 		renderer->cmdUpdateBuffer(cmd, gUniformBuffers[gCurrentImage], &gUniformBuffer, 0, sizeof(UniformBufferObject));
 
@@ -719,8 +819,8 @@ namespace Raven
 			
 			// Bind graphics pipeline.
 			renderer->cmdBindPipeline(cmd, gRenderPipeline);
-			renderer->cmdSetViewport(cmd, Math::FRect({ gBackbuffer->GetDesc()->width,  gBackbuffer->GetDesc()->height }, { 0, 0 }));
-			renderer->cmdSetScissorRects(cmd, Math::FRect({ gBackbuffer->GetDesc()->width,  gBackbuffer->GetDesc()->height }, { 0, 0 }));
+			renderer->cmdSetViewport(cmd, FRect({ gBackbuffer->GetDesc()->width,  gBackbuffer->GetDesc()->height }, { 0, 0 }));
+			renderer->cmdSetScissorRects(cmd, FRect({ gBackbuffer->GetDesc()->width,  gBackbuffer->GetDesc()->height }, { 0, 0 }));
 			renderer->cmdBindIndexBuffer(cmd, gIndexBuffer);
 			renderer->cmdBindVertexBuffer(cmd, 1, &gVertexBuffer);
 			
@@ -739,7 +839,21 @@ namespace Raven
 			
 			// Bind uniform buffer.
 			renderer->cmdBindDescriptors(cmd, 2, &bindings[0]);
-			renderer->cmdDrawIndexed(cmd, (uint32_t)gIndices.size(), 0, 0);
+
+			for (uint32_t i = 0; i < gMeshes.size() - 10; ++i)
+			{
+				FDescriptorBinding binding;
+				binding.set = 2;
+				binding.binding = 0;
+				binding.numDescriptors = 1;
+				binding.type = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				binding.ppBuffers = &gMaterialBuffers[gMeshes[i].matIndex];
+
+				// Bind material buffer.
+				renderer->cmdBindDescriptors(cmd, 1, &binding);
+
+				renderer->cmdDrawIndexed(cmd, gMeshes[i].indexCount, gMeshes[i].indexOffset, gMeshes[i].vertexOffset);
+			}
 			
 			// Finish rendering pass.
 			renderer->cmdEndRenderPass(cmd);

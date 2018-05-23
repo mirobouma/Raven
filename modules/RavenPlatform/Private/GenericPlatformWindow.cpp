@@ -8,7 +8,7 @@ namespace Raven {
 		// Set default properties.
 		InternalInitialize(
 			"New Window",
-			Math::FRect(Math::FVector2(800, 600), Math::FVector2(0, 0)), 
+			FRect(FVector2(800, 600), FVector2(0, 0)), 
 			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
 		);
 	}
@@ -18,10 +18,10 @@ namespace Raven {
 		_handler->HandleWindowClose(this);
 	}
 
-	RGenericPlatformWindow::RGenericPlatformWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler) : _handler(handler)
+	RGenericPlatformWindow::RGenericPlatformWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler) : _handler(handler)
 	{
 		// Set default properties.
-		InternalInitialize(title, Math::FRect(size, position), flags);
+		InternalInitialize(title, FRect(size, position), flags);
 	}
 
 	void RGenericPlatformWindow::Create()
@@ -29,7 +29,7 @@ namespace Raven {
 		_handler->HandleWindowCreate(this);
 	}
 
-	void RGenericPlatformWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) {
+	void RGenericPlatformWindow::InternalInitialize(const char* title, FRect geometry, EPlatformWindowFlags flags) {
 		_geometry = geometry;
 		_flags = flags;
 		_title = title;

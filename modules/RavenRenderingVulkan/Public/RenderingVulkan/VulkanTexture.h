@@ -18,7 +18,7 @@ namespace Raven
 
 		VkImage					mImage;
 		VkImageView				mImageView;
-		VkDeviceMemory			mMemory;
+		VmaAllocation			mAllocation;
 		FTextureCreateDesc		mDesc;
 		VkImageCreateInfo		mVkImageDesc;
 		VkImageViewCreateInfo	mVkImageViewDesc;

@@ -66,7 +66,7 @@ namespace Raven
 		ETextureFormat			format;
 		FTextureUsageFlags		usage;
 		EImageTiling			tiling;
-		FMemoryPropertyFlags	memoryProperties;
+		EMemoryType				memoryType;
 		void*					pData;
 		void*					nativeSwapchainImage;
 	};

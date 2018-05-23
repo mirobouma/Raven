@@ -16,11 +16,11 @@ namespace Raven {
 		delete p;
 	}
 
-	RPlatformWindowsWindow::RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
+	RPlatformWindowsWindow::RPlatformWindowsWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
 		: _winHandle(new WindowsWinHandle()), _handler(handler)
 	{
 		// Set default properties.
-		InternalInitialize(title, Math::FRect(size, position), flags);
+		InternalInitialize(title, FRect(size, position), flags);
 	}
 
 	RPlatformWindowsWindow::RPlatformWindowsWindow(IWindowMessageHandler* handler) : _winHandle(new WindowsWinHandle()), _handler(handler)
@@ -28,12 +28,12 @@ namespace Raven {
 		// Set default properties.
 		InternalInitialize(
 			"New Window <Linux>",
-			Math::FRect(Math::FVector2(800, 600), Math::FVector2(0, 0)),
+			FRect(FVector2(800, 600), FVector2(0, 0)),
 			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
 		);
 	} 
 
-	void RPlatformWindowsWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) 
+	void RPlatformWindowsWindow::InternalInitialize(const char* title, FRect geometry, EPlatformWindowFlags flags) 
 	{
 		_geometry = geometry;
 		_flags = flags;
@@ -57,7 +57,7 @@ namespace Raven {
 
 	void RPlatformWindowsWindow::Create()
 	{
-		Math::FVector2 position = _geometry.Position;
+		FVector2 position = _geometry.Position;
 		long flags;
 
 		// Set up proper variables based on flags.

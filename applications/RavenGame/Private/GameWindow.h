@@ -12,7 +12,7 @@ namespace Raven
     */
     class RGameWindow : public RRenderableWindow {
     public:
-        RGameWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
+        RGameWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
         RGameWindow(const RGameWindow&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a window. */
         RGameWindow& operator= (const RGameWindow&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a window. */
 

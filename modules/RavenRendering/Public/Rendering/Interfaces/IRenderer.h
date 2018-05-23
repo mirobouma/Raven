@@ -365,13 +365,13 @@ namespace Raven
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdSetViewport(ICommandList* pCommandList, Math::FRect rect, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
+		virtual ERenderResult cmdSetViewport(ICommandList* pCommandList, FRect rect, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
 
 		/*! Set scissor rects for this render pass.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.
 		*/
-		virtual ERenderResult cmdSetScissorRects(ICommandList* pCommandList, Math::FRect rect) = 0;
+		virtual ERenderResult cmdSetScissorRects(ICommandList* pCommandList, FRect rect) = 0;
 
 		/*! bind a pipeline.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.

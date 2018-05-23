@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 #include "Core/Debug/LogManager.h"
+#include "vma/vk_mem_alloc.h"
 
 /*! Helper macro to dynamically find the address of a specific vulkan (extension) function. */
 #define GET_VK_FUNC(I, T) (PFN_ ## T)vkGetInstanceProcAddr(I, #T)

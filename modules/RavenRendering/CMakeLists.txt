@@ -17,12 +17,21 @@ set (SourceGroup_PublicIncludes
 	"Public/Rendering/Interfaces/IFence.h"
 	"Public/Rendering/Interfaces/ISemaphore.h"
 	"Public/Rendering/Interfaces/SharedDefines.h"
+	"Public/Rendering/Game/RenderTarget.h"
+	"Public/Rendering/Game/Texture.h"
+	"Public/Rendering/Game/Buffer.h"
+	"Public/Rendering/Game/Mesh.h"
+	"Public/Rendering/Game/Material.h"
+	"Public/Rendering/Modules/RGSwapChainModule.h"
+	"Public/Rendering/RenderGraph.h"
 )
 
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
 	"Private/Interfaces/IRenderer.cpp"
+	"Private/Game/Mesh.cpp"
+	"Private/RenderGraph.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 
@@ -32,6 +41,6 @@ set (SOURCE
 )
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC RavenCore RavenPlatform)
+target_link_libraries(${MODULE_NAME} PUBLIC RavenCore RavenPlatform assimp stb_image)
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
 

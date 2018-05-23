@@ -129,6 +129,14 @@ namespace Raven
 	} FMemoryPropertyFlags;
 	DECL_ENUM_AS_FLAGS(FMemoryPropertyFlags)
 
+	typedef enum EMemoryType {
+		MEMORY_TYPE_GPU = 1 << 0,
+		MEMORY_TYPE_CPU = 1 << 1,
+		MEMORY_TYPE_CPU_TO_GPU  = 1 << 2,
+		MEMORY_TYPE_GPU_TO_CPU = 1 << 3,
+		MEMORY_TYPE_MAX
+	} EMemoryType;
+
 	typedef enum FResourceState
 	{
 		//VK_ACCESS_INDIRECT_COMMAND_READ_BIT = 0x00000001,

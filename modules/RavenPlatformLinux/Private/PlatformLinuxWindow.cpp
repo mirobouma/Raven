@@ -4,10 +4,10 @@
 namespace Raven 
 {
 
-	RPlatformLinuxWindow::RPlatformLinuxWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler) : _handler(handler)
+	RPlatformLinuxWindow::RPlatformLinuxWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler) : _handler(handler)
 	{
 		// Set default properties.
-		InternalInitialize(title, Math::FRect(size, position), flags);
+		InternalInitialize(title, FRect(size, position), flags);
 	}
 
 	RPlatformLinuxWindow::RPlatformLinuxWindow(IWindowMessageHandler* handler) : _handler(handler)
@@ -15,12 +15,12 @@ namespace Raven
 		// Set default properties.
 		InternalInitialize(
 			"New Window <Linux>",
-			Math::FRect(Math::FVector2(800, 600), Math::FVector2(0, 0)),
+			FRect(FVector2(800, 600), FVector2(0, 0)),
 			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
 		);
 	}
 
-	void RPlatformLinuxWindow::InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags) {
+	void RPlatformLinuxWindow::InternalInitialize(const char* title, FRect geometry, EPlatformWindowFlags flags) {
 		_geometry = geometry;
 		_flags = flags;
 		_title = title;
@@ -43,7 +43,7 @@ namespace Raven
 
 	void RPlatformLinuxWindow::Create()
 	{
-		Math::FVector2 position = _geometry.Position;
+		FVector2 position = _geometry.Position;
 		uint32_t flags = SDL_WINDOW_RESIZABLE;
 
 		// Set up proper variables based on flags.

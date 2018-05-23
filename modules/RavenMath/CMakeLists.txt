@@ -3,6 +3,9 @@ set(MODULE_NAME "RavenMath")
 
 set (SourceGroup_PublicIncludes
 	"Public/Math/Math.h"
+	"Public/Math/Rect.h"
+	"Public/Math/Transform.h"
+	"Public/Math/Camera.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 

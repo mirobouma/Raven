@@ -26,7 +26,7 @@ namespace Raven {
 		\param flags Flags for window creation.
 		\sa EPlatformWindowFlags
 		*/
-		RPlatformWindowsWindow(const char* title, Math::FVector2 size, Math::FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
+		RPlatformWindowsWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler);
 		RPlatformWindowsWindow(IWindowMessageHandler* handler); /*!< Initialize window with default location and size. */
 		~RPlatformWindowsWindow() {}
 
@@ -44,10 +44,10 @@ namespace Raven {
 		virtual void SetTitle(const char* title) override final;
 
 		/*! Get size of the window. */
-		virtual const Math::FVector2& GetSize() const final { return _geometry.Size; }
+		virtual const FVector2& GetSize() const final { return _geometry.Size; }
 
 		/*! Get position of the window. */
-		virtual const Math::FVector2& GetPosition() const final { return _geometry.Position; }
+		virtual const FVector2& GetPosition() const final { return _geometry.Position; }
 
 		/*! Get title of the window. */
 		virtual const char* GetTitle() const final { return _title.c_str(); }
@@ -63,7 +63,7 @@ namespace Raven {
 		friend class RWindowSystem;
 
 		/*! Internal initialize function, should never be called directly. */
-		void InternalInitialize(const char* title, Math::FRect geometry, EPlatformWindowFlags flags);
+		void InternalInitialize(const char* title, FRect geometry, EPlatformWindowFlags flags);
 
 		/*! Handle window messages from the platform. */
 		static void HandleWindowMessages();
@@ -93,7 +93,7 @@ namespace Raven {
 		std::unique_ptr<WindowsWinHandle, WindowsWinHandleDeleter> _winHandle;
 
 		std::string _title; /*!< Title of the window. */
-		Math::FRect _geometry; /*!< Internal representation of the window geometry. */
+		FRect _geometry; /*!< Internal representation of the window geometry. */
 		EPlatformWindowFlags _flags; /*!< Internal cache of flags enabled on this window. */
 		IWindowMessageHandler* _handler; /*!< Internal reference to the window message handler associated with this window. */
 	};

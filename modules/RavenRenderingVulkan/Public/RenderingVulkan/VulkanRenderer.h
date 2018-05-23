@@ -80,8 +80,8 @@ namespace Raven
         virtual ERenderResult cmdEndRenderPass(ICommandList *pCommandList) override;
         virtual ERenderResult cmdBindVertexBuffer(ICommandList *pCommandList, uint32_t numBuffers, IBuffer **ppBuffers, uint32_t startSlot) override;
         virtual ERenderResult cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer, EIndexType type) override;
-        virtual ERenderResult cmdSetViewport(ICommandList *pCommandList, Math::FRect rect, float minDepth, float maxDepth) override;
-        virtual ERenderResult cmdSetScissorRects(ICommandList *pCommandList, Math::FRect rect) override;
+        virtual ERenderResult cmdSetViewport(ICommandList *pCommandList, FRect rect, float minDepth, float maxDepth) override;
+        virtual ERenderResult cmdSetScissorRects(ICommandList *pCommandList, FRect rect) override;
         virtual ERenderResult cmdBindPipeline(ICommandList *pCommandList, IPipeline *pPipeline) override;
         virtual ERenderResult cmdResourceBarriers(ICommandList *pCommandList, uint32_t numBufferBarriers, FBufferBarrier *pBufferBarriers, uint32_t numTextureBarries, FTextureBarrier *pTextureBarriers, bool flush) override;
         virtual ERenderResult cmdFlushBarriers(ICommandList *pCommandList) override;
@@ -302,6 +302,7 @@ namespace Raven
 		VkDebugReportCallbackEXT				            mDebuggingCallback; // callback extension for validation layers.
 		std::vector<FVulkanPhysicalDevice>		            mGPUs; /*!< Logical device associated with this renderer. */
 		FVulkanDevice*							            mDevice; /*!< Logical device associated with this renderer. */
+		VmaAllocator										mAllocator; /*!< Vulkan memory allocator. */
 		FVulkanQueue*							            mTransferQueue; /*!< Transfer queue for data transfer. */
 		FVulkanCommandPool*						            mTransferCommandPool; /*!< Transfer command pool for data transfer. */
 		FRendererInitializationDesc				            mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */

@@ -32,10 +32,10 @@ namespace Raven
 		virtual void SetTitle(const char* title) = 0;
 
 		/*! Get size of the window. */
-		virtual const Math::FVector2& GetSize() const = 0;
+		virtual const FVector2& GetSize() const = 0;
 
 		/*! Get position of the window. */
-		virtual const Math::FVector2& GetPosition() const = 0;
+		virtual const FVector2& GetPosition() const = 0;
 
 		/*! Get native window handle. */
 		virtual RWindowHandle GetNativeHandle() = 0;

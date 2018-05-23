@@ -5,6 +5,9 @@
 #include <iostream>
 #include <set>
 
+#define VMA_IMPLEMENTATION
+#include "vma/vk_mem_alloc.h"
+
 #undef max
 #undef min
 #include <algorithm>
@@ -539,6 +542,14 @@ namespace Raven
 		VK_POLYGON_MODE_POINT
 	};
 
+	constexpr VmaMemoryUsage gMemoryTypeTranslator[EMemoryType::MEMORY_TYPE_MAX] =
+	{
+		VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_ONLY,
+		VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY,
+		VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU,
+		VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU,
+	};
+
 	constexpr VkCullModeFlags gCullModeTranslator[ECullMode::MAX_CULL_MODE] =
 	{
 		VK_CULL_MODE_NONE,
@@ -746,6 +757,13 @@ namespace Raven
 		{
 			return result;
 		}
+
+		// Create allocator
+		VmaAllocatorCreateInfo allocatorInfo = {};
+		allocatorInfo.physicalDevice = mDevice->mPhysicalDevice->mPhysicalDevice;
+		allocatorInfo.device = mDevice->mDevice;
+
+		vmaCreateAllocator(&allocatorInfo, &mAllocator);
 
 		FVulkanDescriptorPoolCreateDesc poolDesc;
 		poolDesc.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow us to reset individual descriptors.
@@ -2362,28 +2380,11 @@ namespace Raven
 
 		if (pDesc->nativeSwapchainImage == nullptr)
 		{
-			// Get memory requirements for this image.
-			VkMemoryRequirements memRequirements;
-			vkGetImageMemoryRequirements(mDevice->mDevice, texture->mImage, &memRequirements);
-			uint32_t memoryTypeIndex = findSuitableMemoryType(memRequirements.memoryTypeBits, translateMemoryPropertyFlagsToVk(pDesc->memoryProperties));
+			VmaAllocationCreateInfo allocInfo = {};
+			allocInfo.usage = gMemoryTypeTranslator[pDesc->memoryType];
 
-			RASSERT(memoryTypeIndex != UINT32_MAX);
-
-			// Allocate memory for this image.
-			VkMemoryAllocateInfo allocInfo = {};
-			allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-			allocInfo.allocationSize = memRequirements.size;
-			allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-			if (vkAllocateMemory(mDevice->mDevice, &allocInfo, nullptr, &texture->mMemory) != VK_SUCCESS)
-			{
-				RLOG_ERROR("failed to allocate image memory!");
-				delete texture;
-				return RR_OUT_OF_DEVICE_MEMORY;
-			}
-
-			// Bind allocated memory to the image object.
-			vkBindImageMemory(mDevice->mDevice, texture->mImage, texture->mMemory, 0);
+			vmaAllocateMemoryForImage(mAllocator, texture->mImage, &allocInfo, &texture->mAllocation, nullptr);
+			vmaBindImageMemory(mAllocator, texture->mAllocation, texture->mImage);
 		}
 
 		VkImageViewType viewType;
@@ -2428,21 +2429,14 @@ namespace Raven
 		// Copy initial data inside the buffer.
 		if (texture->mDesc.pData != nullptr)
 		{
-			// Get memory requirements for this image.
-			VkMemoryRequirements memRequirements;
-			vkGetImageMemoryRequirements(mDevice->mDevice, texture->mImage, &memRequirements);
-			uint32_t memoryTypeIndex = findSuitableMemoryType(memRequirements.memoryTypeBits, translateMemoryPropertyFlagsToVk(pDesc->memoryProperties));
-
-			RASSERT(memoryTypeIndex != UINT32_MAX);
-
 			//create a staging buffer.
 			FVulkanBuffer* stagingBuffer = nullptr;
 
 			FBufferCreateDesc stagingCreateDesc = {};
-			stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+			stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 			stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
 			stagingCreateDesc.data = nullptr;
-			stagingCreateDesc.size = (uint32_t)memRequirements.size;
+			stagingCreateDesc.size = (uint32_t)texture->mAllocation->GetSize();
 
 			if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
 			{
@@ -2451,9 +2445,9 @@ namespace Raven
 
 			// Copy data into staging buffer.
 			void* data;
-			vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
-			memcpy(data, pDesc->pData, memRequirements.size);
-			vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+			vmaMapMemory(mAllocator, stagingBuffer->mAllocation, &data);
+			memcpy(data, pDesc->pData, texture->mAllocation->GetSize());
+			vmaUnmapMemory(mAllocator, stagingBuffer->mAllocation);
 
 			FVulkanFence* pTransferCompleteFence = nullptr;
 			FVulkanCommandList* pTransferCmd = nullptr;
@@ -2488,7 +2482,7 @@ namespace Raven
 
 		vkDestroyImageView(mDevice->mDevice, texture->mImageView, nullptr);
 		vkDestroyImage(mDevice->mDevice, texture->mImage, nullptr);
-		vkFreeMemory(mDevice->mDevice, texture->mMemory, nullptr);
+		vmaFreeMemory(mAllocator, texture->mAllocation);
 
 		delete pTexture;
 
@@ -2508,8 +2502,11 @@ namespace Raven
 		bufferInfo.usage = bufferUsageFlagsToVkBufferFlags(pDesc->usage);
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = gMemoryTypeTranslator[pDesc->memoryType];
+
 		// Create image object.
-		if (vkCreateBuffer(mDevice->mDevice, &bufferInfo, nullptr, &buffer->mBuffer) != VK_SUCCESS)
+		if (vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &buffer->mBuffer, &buffer->mAllocation, nullptr) != VK_SUCCESS)
 		{
 			RLOG_ERROR("failed to create buffer!");
 			delete buffer;
@@ -2518,42 +2515,18 @@ namespace Raven
 
 		// Set the image description of the texture to the one of the created image.
 		buffer->mDesc = *pDesc;
-
-		// Get memory requirements for this buffer.
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(mDevice->mDevice, buffer->mBuffer, &memRequirements);
-		uint32_t memoryTypeIndex = findSuitableMemoryType(memRequirements.memoryTypeBits, translateMemoryPropertyFlagsToVk(pDesc->memoryProperties));
-
-		RASSERT(memoryTypeIndex != UINT32_MAX);
-
-		// Allocate memory for this image.
-		VkMemoryAllocateInfo allocInfo = {};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = memoryTypeIndex;
-
-		if (vkAllocateMemory(mDevice->mDevice, &allocInfo, nullptr, &buffer->mMemory) != VK_SUCCESS)
-		{
-			RLOG_ERROR("failed to allocate buffer memory!");
-			delete buffer;
-			return RR_OUT_OF_DEVICE_MEMORY;
-		}
-
-		// Bind allocated memory to the buffer object.
-		vkBindBufferMemory(mDevice->mDevice, buffer->mBuffer, buffer->mMemory, 0);
-
 		buffer->mState = FResourceState::RESOURCE_STATE_COMMON;
 		
 		// Copy initial data inside the buffer.
 		if (buffer->mDesc.data != nullptr)
 		{
 			// If we have coherent memory, copy directly into the memory.
-			if ((buffer->mDesc.memoryProperties & (MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE)) != 0)
+			if (buffer->mDesc.memoryType == EMemoryType::MEMORY_TYPE_CPU)
 			{
 				void* data;
-				vkMapMemory(mDevice->mDevice, buffer->mMemory, 0, pDesc->size, 0, &data);
+				VkResult res = vmaMapMemory(mAllocator, buffer->mAllocation, &data);
 				memcpy(data, pDesc->data, pDesc->size);
-				vkUnmapMemory(mDevice->mDevice, buffer->mMemory);
+				vmaUnmapMemory(mAllocator, buffer->mAllocation);
 			}
 			else
 			{
@@ -2561,7 +2534,7 @@ namespace Raven
 				FVulkanBuffer* stagingBuffer = nullptr;
 
 				FBufferCreateDesc stagingCreateDesc = {};
-				stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+				stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 				stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
 				stagingCreateDesc.data = nullptr;
 				stagingCreateDesc.size = pDesc->size;
@@ -2573,9 +2546,9 @@ namespace Raven
 
 				// Copy data into staging buffer.
 				void* data;
-				vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+				vmaMapMemory(mAllocator, stagingBuffer->mAllocation, &data);
 				memcpy(data, pDesc->data, pDesc->size);
-				vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+				vmaUnmapMemory(mAllocator, stagingBuffer->mAllocation);
 
 				FVulkanFence* pTransferCompleteFence = nullptr;
 				FVulkanCommandList* pTransferCmd = nullptr;
@@ -2608,9 +2581,7 @@ namespace Raven
 		RASSERT(pBuffer != nullptr);
 
 		FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(pBuffer);
-
-		vkDestroyBuffer(mDevice->mDevice, buffer->mBuffer, nullptr);
-		vkFreeMemory(mDevice->mDevice, buffer->mMemory, nullptr);
+		vmaDestroyBuffer(mAllocator, buffer->mBuffer, buffer->mAllocation);
 
 		delete pBuffer;
 
@@ -2714,12 +2685,12 @@ namespace Raven
 		FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(pDstBuffer);
 		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
 
-		if (buffer->mDesc.memoryProperties & (FMemoryPropertyFlags::MEMORY_PROPERTY_HOST_VISIBLE | FMemoryPropertyFlags::MEMORY_PROPERTY_HOST_COHERENT))
+		if (buffer->mDesc.memoryType == MEMORY_TYPE_CPU)
 		{
 			void* data;
-			vkMapMemory(mDevice->mDevice, buffer->mMemory, 0, buffer->mDesc.size, 0, &data);
+			vmaMapMemory(mAllocator, buffer->mAllocation, &data);
 			memcpy(data, pData, size);
-			vkUnmapMemory(mDevice->mDevice, buffer->mMemory);
+			vmaUnmapMemory(mAllocator, buffer->mAllocation);
 
 			return RR_SUCCESS;
 		}
@@ -2729,7 +2700,7 @@ namespace Raven
 			FVulkanBuffer* stagingBuffer = nullptr;
 
 			FBufferCreateDesc stagingCreateDesc = {};
-			stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+			stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 			stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
 			stagingCreateDesc.data = nullptr;
 			stagingCreateDesc.size = size;
@@ -2742,9 +2713,9 @@ namespace Raven
 
 			// Copy data into staging buffer.
 			void* data;
-			vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+			vmaMapMemory(mAllocator, stagingBuffer->mAllocation, &data);
 			memcpy(data, pData, size);
-			vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+			vmaUnmapMemory(mAllocator, stagingBuffer->mAllocation);
 
 			// copy buffer.
 			cmdCopyBuffer(list, stagingBuffer, buffer, 0, dstOffset, size);
@@ -2772,7 +2743,7 @@ namespace Raven
 		vkGetImageMemoryRequirements(mDevice->mDevice, texture->mImage, &memRequirements);
 
 		FBufferCreateDesc stagingCreateDesc = {};
-		stagingCreateDesc.memoryProperties = MEMORY_PROPERTY_HOST_COHERENT | MEMORY_PROPERTY_HOST_VISIBLE;
+		stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 		stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
 		stagingCreateDesc.data = nullptr;
 		stagingCreateDesc.size = memRequirements.size;
@@ -2784,9 +2755,9 @@ namespace Raven
 
 		// Copy data into staging buffer.
 		void* data;
-		vkMapMemory(mDevice->mDevice, stagingBuffer->mMemory, 0, stagingBuffer->mDesc.size, 0, &data);
+		vmaMapMemory(mAllocator, stagingBuffer->mAllocation, &data);
 		memcpy(data, pData, memRequirements.size);
-		vkUnmapMemory(mDevice->mDevice, stagingBuffer->mMemory);
+		vmaUnmapMemory(mAllocator, stagingBuffer->mAllocation);
 
 		// copy buffer.
 		cmdCopyBufferToTexture(list, stagingBuffer, texture, 0, width, height);
@@ -2821,7 +2792,7 @@ namespace Raven
 		createDesc.format = pDesc->format;
 		createDesc.width = pDesc->width;
 		createDesc.height = pDesc->height;
-		createDesc.memoryProperties = pDesc->memoryProperties;
+		createDesc.memoryType = pDesc->memoryType;
 		createDesc.mipLevels = 1;
 		createDesc.sampleCount = pDesc->sampleCount;
 		createDesc.sampleQuality = pDesc->sampleQuality;
@@ -3229,6 +3200,8 @@ namespace Raven
 
 		mFrameBufferMap.clear();
 		mRenderPassMap.clear();
+
+		vmaDestroyAllocator(mAllocator);
 
 		// Destroy our logical device.
 		vkDestroyDevice(mDevice->mDevice, nullptr);
@@ -3845,16 +3818,13 @@ namespace Raven
 		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
 		FVulkanBuffer* buffer = static_cast<FVulkanBuffer*>(pBuffer);
 
-		// TODO, support different index types.
-		// TODO, support memory offsets.
-
 		vkCmdBindIndexBuffer(list->mCmdBuffer, buffer->mBuffer, 0, gIndexTypeTranslator[type]);
 
 		return RR_SUCCESS;
     }
 
     ERenderResult
-    RVulkanRenderer::cmdSetViewport(ICommandList *pCommandList, Math::FRect rect, float minDepth, float maxDepth)
+    RVulkanRenderer::cmdSetViewport(ICommandList *pCommandList, FRect rect, float minDepth, float maxDepth)
 	{
 		RASSERT(pCommandList != nullptr);
 
@@ -3874,7 +3844,7 @@ namespace Raven
 		return RR_SUCCESS;
     }
 
-    ERenderResult RVulkanRenderer::cmdSetScissorRects(ICommandList *pCommandList, Math::FRect rect)
+    ERenderResult RVulkanRenderer::cmdSetScissorRects(ICommandList *pCommandList, FRect rect)
 	{
 		RASSERT(pCommandList != nullptr);
 

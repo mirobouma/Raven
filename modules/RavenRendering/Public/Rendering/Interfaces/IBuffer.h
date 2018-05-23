@@ -24,11 +24,12 @@ namespace Raven
 	\brief Structure describing the parameters for buffer creation. */
 	struct FBufferCreateDesc
 	{
-		FMemoryPropertyFlags	memoryProperties;
+		EMemoryType				memoryType;
 		FBufferUsageFlags		usage;
 		size_t					size;
 		void*					data;
 	};
+
 
 	/*! \struct IBuffer
 	\brief Interface for a buffer. */

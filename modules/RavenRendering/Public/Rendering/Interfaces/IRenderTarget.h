@@ -28,7 +28,7 @@ namespace Raven
 		uint32_t				sampleCount;
 		uint32_t				sampleQuality;
 		EImageTiling			tiling;
-		FMemoryPropertyFlags	memoryProperties;
+		EMemoryType				memoryType;
 		void*					nativeSwapchainImage; //optional.
 	};
 

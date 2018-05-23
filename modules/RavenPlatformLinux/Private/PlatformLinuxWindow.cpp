@@ -1,8 +1,11 @@
 #include "PlatformLinux/PlatformLinuxWindow.h"
 #include "SDL.h"
+#include "imgui/imgui.h"
 
 namespace Raven 
 {
+    uint32_t mouse_x = 0;
+    uint32_t mouse_y = 0;
 
 	RPlatformLinuxWindow::RPlatformLinuxWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler) : _handler(handler)
 	{
@@ -116,11 +119,50 @@ namespace Raven
 
 							}
 							return;
+							case SDL_WINDOWEVENT_RESIZED:
+							{
+								if (event.window.data1 != 0 && event.window.data2 != 0)
+								{
+									window->_handler->HandleWindowResize(window, event.window.data1, event.window.data2);
+								}
+							}break;
 							}
 						}
                     }
                     break;
 				}
+
+			if (ImGui::GetCurrentContext() != nullptr) {
+                ImGuiIO &io = ImGui::GetIO();
+
+                switch (event.type) {
+                    case SDL_MOUSEBUTTONDOWN:
+                        if (event.button.button == SDL_BUTTON_LEFT) {
+                            io.MouseDown[0] = true;
+                        }
+                        if (event.button.button == SDL_BUTTON_RIGHT) {
+                            io.MouseDown[1] = true;
+                        }
+                        break;
+                    case SDL_MOUSEBUTTONUP:
+                        if (event.button.button == SDL_BUTTON_LEFT) {
+                            io.MouseDown[0] = false;
+                        }
+                        if (event.button.button == SDL_BUTTON_RIGHT) {
+                            io.MouseDown[1] = false;
+                        }
+                        break;
+                    case SDL_MOUSEWHEEL: {
+                        //io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
+                    }
+                        break;
+                    case SDL_MOUSEMOTION: {
+                        io.MousePos.x = event.motion.x;
+                        io.MousePos.y = event.motion.y;
+                    }
+                        break;
+                }
+            }
 		}
 	}
 

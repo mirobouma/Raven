@@ -569,7 +569,7 @@ namespace Raven
 			ImGui::EndDock();
 
 			// Console.
-			if (ImGui::BeginDock("Console", &d_consoleWindowOpen)) 
+			if (ImGui::BeginDock("Console", &d_consoleWindowOpen))
 			{
 				static ImGuiTextFilter Filter;
 

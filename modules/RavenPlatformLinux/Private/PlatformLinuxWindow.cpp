@@ -136,31 +136,65 @@ namespace Raven
                 ImGuiIO &io = ImGui::GetIO();
 
                 switch (event.type) {
-                    case SDL_MOUSEBUTTONDOWN:
+                    case SDL_MOUSEBUTTONDOWN: {
                         if (event.button.button == SDL_BUTTON_LEFT) {
                             io.MouseDown[0] = true;
                         }
                         if (event.button.button == SDL_BUTTON_RIGHT) {
                             io.MouseDown[1] = true;
                         }
+                    }
                         break;
-                    case SDL_MOUSEBUTTONUP:
+                    case SDL_MOUSEBUTTONUP: {
                         if (event.button.button == SDL_BUTTON_LEFT) {
                             io.MouseDown[0] = false;
                         }
                         if (event.button.button == SDL_BUTTON_RIGHT) {
                             io.MouseDown[1] = false;
                         }
-                        break;
-                    case SDL_MOUSEWHEEL: {
-                        //io.MouseWheel += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
                     }
-                        break;
+                    break;
+                    case SDL_MOUSEWHEEL: {
+                        if (event.wheel.x > 0) io.MouseWheelH += 1;
+                        if (event.wheel.x < 0) io.MouseWheelH -= 1;
+                        if (event.wheel.y > 0) io.MouseWheel += 1;
+                        if (event.wheel.y < 0) io.MouseWheel -= 1;
+                    }
+                    break;
                     case SDL_MOUSEMOTION: {
                         io.MousePos.x = event.motion.x;
                         io.MousePos.y = event.motion.y;
                     }
-                        break;
+                    break;
+                    case SDL_KEYDOWN:
+                    {
+                        if (event.key.keysym.scancode < 512) {
+                            io.KeysDown[event.key.keysym.scancode] = 1;
+                        }
+
+                        io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+                        io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+                        io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+                        io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+
+                    }break;
+                    case SDL_KEYUP: {
+                        if (event.key.keysym.scancode < 512) {
+                            io.KeysDown[event.key.keysym.scancode] = 0;
+                        }
+
+                        io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+                        io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+                        io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+                        io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+
+                    }break;
+                    case SDL_TEXTINPUT:
+                    {
+                        io.AddInputCharactersUTF8(event.text.text);
+                    }
+                    break;
+
                 }
             }
 		}

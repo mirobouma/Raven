@@ -8,7 +8,7 @@ namespace Raven
 	\class RPlatformLinuxLogger
 	\brief Linux implementation of a logger.
 	*/
-	class RPlatformLinuxLogger : public IPlatformLogger
+	class RPlatformLinuxLogger : public ILogger
 	{
 	public:
 		/*! Initialize the windows platform logger.

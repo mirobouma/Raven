@@ -85,7 +85,7 @@ void ApplicationStart(int argc, char*argv[])
 			//	RTaskCounter counter;
 			//	GTaskScheduler->ExecuteTask(&counter, t2);
 			//	GTaskScheduler->WaitForCounter(&counter);
-			//	
+			//
 			//});
 			//
 			//RTaskCounter c2;

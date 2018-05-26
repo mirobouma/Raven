@@ -32,7 +32,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC RavenPlatform Threads::Threads sdl2 boost_context)
+target_link_libraries(${MODULE_NAME} PUBLIC RavenPlatform Threads::Threads sdl2 boost_context imgui)
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
 
 

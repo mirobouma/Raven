@@ -12,8 +12,8 @@ namespace Raven
 	struct FProfilerData
 	{
 		std::string name;
-		std::chrono::steady_clock::time_point begin;
-		std::chrono::steady_clock::time_point end;
+		std::chrono::time_point<std::chrono::high_resolution_clock> begin;
+		std::chrono::time_point<std::chrono::high_resolution_clock> end;
 	};
 
 	struct FProfilerScopeData
@@ -25,7 +25,7 @@ namespace Raven
 			_name = name;
 		}
 
-		std::chrono::steady_clock::time_point _startTime;
+		std::chrono::time_point<std::chrono::high_resolution_clock> _startTime;
 		std::string _name;
 	};
 
@@ -34,8 +34,8 @@ namespace Raven
 		FThreadProfiler() : threadId(UINT32_MAX), inScope(false) {}
 		FThreadProfiler(uint32_t id) : threadId(id) {}
 
-		std::chrono::steady_clock::time_point _startTime;
-		std::chrono::steady_clock::time_point _endTime;
+		std::chrono::time_point<std::chrono::high_resolution_clock> _startTime;
+		std::chrono::time_point<std::chrono::high_resolution_clock> _endTime;
 
 		uint32_t threadId;
 		std::vector<FProfilerData> data;
@@ -67,7 +67,7 @@ namespace Raven
 		std::mutex							_mProfilerMutex;
 		bool								_mProfiling;
 		bool								_mProfileNext;
-		std::chrono::steady_clock::time_point _startTime;
+		std::chrono::time_point<std::chrono::high_resolution_clock> _startTime;
 
 	public:
 		std::map<uint32_t, FThreadProfiler> mSavedThreadProfilers;

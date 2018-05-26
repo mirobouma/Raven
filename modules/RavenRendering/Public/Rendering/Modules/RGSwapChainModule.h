@@ -5,35 +5,41 @@ namespace Raven
 {
 	namespace RGSwapChainModule
 	{
-		struct RGSwapChainModuleData
+		struct RGSwapChainModuleOutputs
 		{
-			FRenderGraphResource output_backbuffer;
+			FVirtualResourceRef* backbuffer;
 		};
 
-		RGSwapChainModuleData rendergraph_add_acquire_target(RRenderGraphBuilder& builder, IRenderer* renderer, ISwapChain* swapChain, ISemaphore* signalSemaphore, IFence* signalFence)
+		RGSwapChainModuleOutputs rendergraph_add_acquire_target(RRenderGraphBuilder& builder, IRenderer* renderer, ISwapChain* swapChain, ISemaphore* signalSemaphore, IFence* signalFence)
 		{
-			return builder.add_lambda_render_pass<RGSwapChainModuleData>(
-				"get_swapchain_target",
-				[&](RRenderPassBuilder& builder, RGSwapChainModuleData& data)
-				{
-					// Acquire swapchain image.
-					renderer->swapChainAcquireNextImage(swapChain, signalSemaphore, signalFence);
+			RGSwapChainModuleOutputs output;
 
-					// import backbuffer resource.
-					FImportResourceDesc backbufferImport;
-					backbufferImport.mType = RENDER_GRAPH_RESOURCE_TYPE_IMPORTED_RENDER_TARGET;
-					backbufferImport.pRenderTarget = swapChain->getRenderTarget(swapChain->getCurrentImageIndex());
+			// Add the pass and setup its inputs and outputs.
+			auto pass = builder.add_pass("get_swapchain_target", [&](RRenderPassBuilder& builder)
+			{
+				// Acquire swapchain image.
+				renderer->swapChainAcquireNextImage(swapChain, signalSemaphore, signalFence);
 
-					data.output_backbuffer = builder.import_resource("backbuffer", backbufferImport);
+				// import backbuffer resource.
+				FImportResourceDesc backbufferImport;
+				backbufferImport.mType = VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET;
+				backbufferImport.pRenderTarget = swapChain->getRenderTarget(swapChain->getCurrentImageIndex());
 
-					// Make sure we never cull this render pass.
-					builder.mDoNotCull = true;
-				},
-				[=](RRenderGraph& graph, const RGSwapChainModuleData& data)
-				{
-					// Get target.
-					//IRenderTarget* target = graph.getRenderTargetResource(&data.output_backbuffer);
-				});
+				// import backbuffer resource.
+				output.backbuffer = builder.import_resource("backbuffer", backbufferImport);
+
+				// Make sure we never cull this render pass.
+				builder.setDoNotCull(true);
+			});
+
+			pass->setExecuteFunc([=](RRenderGraph& graph, RCompiledPass& pass)
+			{
+				//IRenderTarget* target = pass.getRenderTargetResource("backbuffer");
+			});
+
+			// Return output resource references from the setup function.
+			return output;
+
 		}
 	};
 }

@@ -8,14 +8,11 @@
 
 namespace Raven
 {
-	struct FVirtualResource;
-	typedef struct FRenderGraphResource
-	{
-		FVirtualResource* mVirtualResource;
-		uint32_t version;
-		std::string name;	
-	} FRenderGraphResource;
+	// Forward declarations
+	class RRenderGraph;
+	class RRenderPassBuilder;
 
+	/*! Result from building a render graph. */
 	typedef enum EGraphBuilderResult
 	{
 		GRAPH_BUILDER_RESULT_FAILURE,
@@ -25,16 +22,27 @@ namespace Raven
 		MAX_GRAPH_BUILDER_RESULT
 	}EGraphBuilderResult;
 	
-	typedef enum ERenderGraphResourceType
+	/*! Type of virtual resource. */
+	typedef enum EVirtualResourceType
 	{
-		RENDER_GRAPH_RESOURCE_TYPE_BUFFER,
-		RENDER_GRAPH_RESOURCE_TYPE_TEXTURE,
-		RENDER_GRAPH_RESOURCE_TYPE_IMPORTED_BUFFER,
-		RENDER_GRAPH_RESOURCE_TYPE_IMPORTED_TEXTURE,
-		RENDER_GRAPH_RESOURCE_TYPE_IMPORTED_RENDER_TARGET,
-		MAX_RENDER_GRAPH_RESOURCE_TYPE
-	} ERenderGraphResourceType;
+		VIRTUAL_RESOURCE_TYPE_BUFFER,
+		VIRTUAL_RESOURCE_TYPE_TEXTURE,
+		VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER,
+		VIRTUAL_RESOURCE_TYPE_IMPORTED_TEXTURE,
+		VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET,
+		MAX_VIRTUAL_RESOURCE_TYPE
+	} EVirtualResourceType;
 
+	/*! Type of physical resource. */
+	typedef enum EPhysicalResourceType
+	{
+		PHYSICAL_RESOURCE_TYPE_BUFFER,
+		PHYSICAL_RESOURCE_TYPE_TEXTURE,
+		PHYSICAL_RESOURCE_TYPE_RENDER_TARGET,
+		MAX_PHYSICAL_TYPE
+	} EPhysicalResourceType;
+
+	/*! Access patterns for a specific resource of reference. */
 	typedef enum ERenderGraphResourceAccess 
 	{
 		RENDER_GRAPH_RESOURCE_ACCESS_GPU,
@@ -43,15 +51,16 @@ namespace Raven
 		MAX_RENDER_GRAPH_RESOURCE_ACCESS
 	} ERenderGraphResourceAccess;
 
+	/*! Read access flags when reading from a resource in a pass. */
 	typedef enum FRenderGraphResourceReadFlags
 	{
 		RENDER_GRAPH_RESOURCE_READ_FLAG_SAMPLED = 1 << 0,
 		RENDER_GRAPH_RESOURCE_READ_FLAG_DEPTH_READ = 1 << 1,
-		RENDER_GRAPH_RESOURCE_READ_FLAG_DEPTH_WRITE = 1 << 2,
-		MAX_RENDER_GRAPH_RESOURCE_READ_FLAG = 3
+		MAX_RENDER_GRAPH_RESOURCE_READ_FLAG = 2
 	} FRenderGraphResourceReadFlags;
 	DECL_ENUM_AS_FLAGS(FRenderGraphResourceReadFlags);
 
+	/*! Write access flags when writing to a resource in a pass. */
 	typedef enum FRenderGraphResourceWriteFlags
 	{
 		RENDER_GRAPH_RESOURCE_WRITE_FLAG_UAV = 1 << 0,
@@ -61,14 +70,13 @@ namespace Raven
 	} FRenderGraphResourceWriteFlags;
 	DECL_ENUM_AS_FLAGS(FRenderGraphResourceWriteFlags);
 
-	class RRenderPassBuilder;
 
 	/*! \struct FImportResourceDesc
 	Structure for describing an external dependency on a resource outside the render graph. (Eg. Backbuffer). 
 	External dependencies must make sure they have the correct usage flags. */
 	struct FImportResourceDesc
 	{
-		ERenderGraphResourceType mType;
+		EVirtualResourceType mType;
 
 		/*! Union of resource pointers, uses different resource depending on mType. */
 		union 
@@ -97,10 +105,10 @@ namespace Raven
 	};
 
 
-	/*! Base structure for a virtual render graph resource. */
+	/*! Structure describing a virtual resource, and wether it's an imported target or not. */
 	struct FVirtualResourceDesc
 	{
-		ERenderGraphResourceType mType;
+		EVirtualResourceType mType;
 
 		union
 		{
@@ -112,80 +120,105 @@ namespace Raven
 		};
 	};
 
+	/*! Base structure for a virtual render graph resource. */
 	struct FVirtualResource
 	{
-		FVirtualResourceDesc mDesc;
-		ERenderGraphResourceAccess mMaxResourceAccess;
-		FRenderGraphResourceReadFlags mTotalReadFlags;
-		FRenderGraphResourceWriteFlags mTotalWriteFlags;
-		uint32_t mMaxVersion;
+		FVirtualResourceDesc				mDesc;
+		ERenderGraphResourceAccess			mMaxResourceAccess;
+		FRenderGraphResourceReadFlags		mTotalReadFlags;
+		FRenderGraphResourceWriteFlags		mTotalWriteFlags;
+		uint32_t							mCreatedInPass;
+		std::string                         mName;
+		std::vector<uint32_t>				mReferencedInPasses;
 	};
 
 	struct FVirtualResourceRef
 	{
-		FVirtualResource*				mResource;
-		ERenderGraphResourceAccess		mResourceAccess;
-		FRenderGraphResourceReadFlags	mReadFlags;
-		FRenderGraphResourceWriteFlags	mWriteFlags;
+		std::string							mName; /*!< Name of this virtual resource reference. */
+		FVirtualResourceRef*				mParent; /*!< Parent resource. */
+		FVirtualResource*					mResource; /*!< Pointer to the virtual resource we are referencing in this pass. */
+		ERenderGraphResourceAccess			mResourceAccess; /*!< Do we access the resource on the CPU, GPU, or both? */
+		FRenderGraphResourceReadFlags		mReadFlags; /*!< How do we read from this resource in this pass? */
+		FRenderGraphResourceWriteFlags		mWriteFlags; /*!< How do we write to this resource in this pass? */
+		std::vector<FVirtualResourceRef*>	mChildren; /*!< Which following passes write to this resource? */
+		uint32_t							mPassIndex; /*!< In which pass do we use this resource reference? */
 	};
-	/*! Render pass graph */
-	class FBaseRenderGraphPass
+
+	struct RPhysicalResource
 	{
+		EPhysicalResourceType mType;
+
+		union
+		{
+			IBuffer*			mBuffer;
+			IRenderTarget*		mRenderTarget;
+			ITexture*			mTexture;
+		};
+	};
+
+	class RCompiledPass
+	{
+	public:
+		IBuffer* getBufferResource(std::string resource);
+		ITexture* getTextureResource(std::string resource);
+		IRenderTarget* getRenderTargetResource(std::string resource);
+
+	protected:
+		RRenderGraph * mGraph;
+		std::map<std::string, RPhysicalResource*>	mPhysicalResourceMappings;
+	};
+
+	/*! Virtual Render pass graph */
+	class FVirtualPass
+	{
+	protected:
+		FVirtualPass(std::string name, std::function<void(RRenderPassBuilder&)> setupFunc) : mName(name), mSetupFunc(setupFunc) {}
+
+	public:
 		friend class RRenderPassBuilder;
 		friend class RRenderGraphBuilder;
 
-	protected:
-		bool								mDoNotCull;
-		std::vector<FVirtualResourceRef>	mVirtualResourceReferences;
-	};
-
-	class RRenderGraph;
-
-	/*! Render pass graph */
-	template <typename T>
-	class FRenderGraphPass : public FBaseRenderGraphPass
-	{
-	public:
-		friend class RRenderGraphBuilder;
-
-		virtual void setup_pass(RRenderPassBuilder& builder, T& data) = 0;
-		virtual void execute_pass(RRenderGraph& graph, const T& data) = 0;
-		virtual const std::string& get_name() const = 0;
-	};
-
-	class RRenderPassBuilder;
-
-	template <typename T>
-	class TLambdaRenderGraphPass : public FRenderGraphPass<T>
-	{
-	public:
-		TLambdaRenderGraphPass(std::string name, std::function<void(RRenderPassBuilder&, T&)> setup, std::function<void(RRenderGraph&, const T&)> execute) : FRenderGraphPass<T>()
+		void setExecuteFunc(std::function<void(RRenderGraph&, RCompiledPass&)> execute)
 		{
-			mName = name;
-			mSetupFunc = setup;
 			mExecuteFunc = execute;
 		}
 
-		virtual void setup_pass(RRenderPassBuilder& builder, T& data) override
-		{
-			mSetupFunc(builder, data);
-		}
+	protected:
+		bool mDoNotCull; // Flag describing if this render pass should never be culled.
 
-		virtual void execute_pass(RRenderGraph& graph, const T& data) override
-		{
-			mExecuteFunc(graph, data);
-		}
+		std::vector<FVirtualResourceRef*>					mInputs;
+		std::vector<FVirtualResourceRef*>					mOutputs;
 
-		virtual const std::string& get_name() const
+		std::function<void(RRenderPassBuilder&)>			mSetupFunc;
+		std::function<void(RRenderGraph&, RCompiledPass&)>	mExecuteFunc;
+		std::vector<FVirtualResourceRef>					mVirtualResourceReferences;
+
+		std::string											mName;
+		uint32_t											mIndex;
+	};
+
+	class RRenderGraphBuilder;
+	class RRenderPassBuilder
+	{
+	public:
+		RRenderPassBuilder(RRenderGraphBuilder* graphBuilder, FVirtualPass* pass) : mGraphBuilder(graphBuilder), mPass(pass) {}
+
+		FVirtualResourceRef* import_resource(std::string name, const FImportResourceDesc& desc); /*! Imports a resource in the render graph. */
+		FVirtualResourceRef* create_resource(std::string name, const FVirtualResourceDesc& desc); /*! Create a resource in the render pass. */
+		FVirtualResourceRef* read_resource(std::string name, FVirtualResourceRef* resource, ERenderGraphResourceAccess access, FRenderGraphResourceReadFlags readFlags); /*! Read from a resource. */
+		FVirtualResourceRef* write_resource(std::string name, FVirtualResourceRef* resource, ERenderGraphResourceAccess access, FRenderGraphResourceWriteFlags writeFlags); /*! Write into a resource. */
+
+		void setDoNotCull(bool doNotCull)
 		{
-			return mName;
+			mPass->mDoNotCull = doNotCull;
 		}
 
 	protected:
-		std::function<void(RRenderPassBuilder&, T&)>					mSetupFunc;
-		std::function<void(RRenderGraph&, const T&)>					mExecuteFunc;
-		std::string														mName;
+		RRenderGraphBuilder* mGraphBuilder;
+		FVirtualPass*		 mPass;
 	};
+
+	class RRenderGraphManager;
 
 	/*! \class FRenderGraph
 	\brief Rendering graph abstraction to simplify rendering.
@@ -193,38 +226,17 @@ namespace Raven
 	class RRenderGraph
 	{
 	public:
-		RRenderGraph();
-		~RRenderGraph();
-
-		IBuffer* getBufferResource(const FRenderGraphResource* resource);
-		ITexture* getTextureResource(const FRenderGraphResource* resource);
-		IRenderTarget* getRenderTargetResource(const FRenderGraphResource* resource);
+		RRenderGraph() {}
+		~RRenderGraph() {}
 
 		/*! Execute the compiled render graph. */
-		void execute_graph();
+		void execute();
 
-		std::map<size_t, FBaseRenderGraphPass*> mPasses;
+		std::map<std::string,	RPhysicalResource> mPhysicalResources;
+		std::map<size_t,		RCompiledPass>	   mPasses;
+		RRenderGraphManager*					   mManager;
 	};
 
-	class RRenderGraphBuilder;
-	class RRenderPassBuilder
-	{
-	public:
-		RRenderPassBuilder(RRenderGraphBuilder* graphBuilder, FBaseRenderGraphPass* pass) : mGraphBuilder(graphBuilder), mPass(pass) {}
-
-		FRenderGraphResource import_resource(std::string name, const FImportResourceDesc& desc); /*! Imports a resource in the render graph. */
-		FRenderGraphResource create_resource(std::string name, const FVirtualResourceDesc& desc); /*! Create a resource in the render pass. */
-		FRenderGraphResource read_resource(FRenderGraphResource resource, ERenderGraphResourceAccess access, FRenderGraphResourceReadFlags readFlags); /*! Read from a resource. */
-		FRenderGraphResource write_resource(FRenderGraphResource resource, ERenderGraphResourceAccess access, FRenderGraphResourceWriteFlags writeFlags); /*! Write into a resource. */
-
-		bool mDoNotCull;
-
-	protected:
-		RRenderGraphBuilder*									mGraphBuilder;
-		FBaseRenderGraphPass*									mPass;
-	};
-
-	class RRenderGraphManager;
 
 	/*! Render Graph Builder, used to validate and build a render graph tree and dependency chain. */
 	class RRenderGraphBuilder
@@ -232,52 +244,47 @@ namespace Raven
 	public:
 		friend class RRenderPassBuilder;
 
-		/*! Register a module to the builder. */
-		template <typename T>
-		T add_lambda_render_pass(std::string name, std::function<void(RRenderPassBuilder&, T&)> setup, std::function<void(RRenderGraph&, const T&)> execute)
-		{
-			T output;
+		FVirtualPass* add_pass(std::string name, std::function<void(RRenderPassBuilder&)> setupFunc);
 
-			// Create pass and set up.
-			TLambdaRenderGraphPass<T> pass = TLambdaRenderGraphPass<T>(name, setup, execute);
-			RRenderPassBuilder builder(this, &pass);
-
-			pass.setup_pass(builder, output);
-
-			if (builder.mDoNotCull)
-			{
-				pass.mDoNotCull = true;
-			}
-
-			mRenderPassMap[name] = pass;
-
-			return output;
-		}
 
 		/*! Compiles all registered modules and resolves dependencies into a render graph.*/
-		EGraphBuilderResult validate_and_build(RRenderGraph* graph);
-		
-	protected:
+		EGraphBuilderResult validate_and_build(RRenderGraph** graph);
 
-		RRenderGraphManager*									mManager; /*!< Manager this render graph belongs to. */
-		std::unordered_map<std::string, FVirtualResource>		mVirtualResourceMap; /*!< Map of virtual resources in this render graph. */
-		std::map<std::string, FBaseRenderGraphPass>				mRenderPassMap; /*!< Map of virtual resources in this render graph. */
+	protected:
+		/*! Validation checks if the passes are correct. */
+		EGraphBuilderResult validate_passes();
+
+		/*! Calculate on which passes each pass depends. */
+		void calculate_dependencies(std::map<uint32_t, std::vector<uint32_t>>& dependencyMap);
+
+		/*! Recursive function to retrieve a dependency for a resource. */
+		uint32_t getParentDependency(FVirtualResourceRef* resource);
+
+		RRenderGraphManager*										mManager; /*!< Manager this render graph belongs to. */
+		std::map<std::string, FVirtualResource>						mVirtualResources; /*!< Vector of virtual resources in this render graph. */
+		std::vector<FVirtualPass>									mRenderPasses; /*!< Map of virtual resources in this render graph. */
 
 	};
+	//class RRenderGraphManager;
 
-	/*! Manager object for render graphs. */
+	
+
+	/*!< Manager object for render graphs. */
 	class RRenderGraphManager
 	{
+	public:
 		/*! Initialize the graph manager. */
-		void initialize();
-
+		static void initialize();
+	
 		/*! Destroy the graph manager. */
-		void destroy();
-
+		static void destroy();
+	
 		RRenderGraphBuilder*	get_new_graph_builder(); /*!< Retrieve a new render graph builder. Should only be called once per frame. */
-		void					cleanup_graph_resource(RRenderGraphBuilder* graph); /*! Clean up any allocated resource for the specified render graph. */
-
+		void					cleanup_graph(RRenderGraphBuilder* graph); /*! Clean up any allocated resource for the specified render graph. */
+	
 	protected:
 		std::queue<RRenderGraphBuilder> mBuildersInFlight; /*!< Queue of render graph builders in flight. */
 	};
+
+	extern RRenderGraphManager* GRenderGraphManager;
 }

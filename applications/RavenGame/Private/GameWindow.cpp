@@ -745,14 +745,14 @@ namespace Raven
 		RRenderGraphBuilder builder;
 
 		// Acquire swapchain target.
-		RGSwapChainModule::RGSwapChainModuleData scData = RGSwapChainModule::rendergraph_add_acquire_target(builder, renderer, _SwapChain, gImageAquiredSemaphore, nullptr);
+		RGSwapChainModule::RGSwapChainModuleOutputs scData = RGSwapChainModule::rendergraph_add_acquire_target(builder, renderer, _SwapChain, gImageAquiredSemaphore, nullptr);
 
 		// Build graph.
-		RRenderGraph graph;
+		RRenderGraph* graph;
 		builder.validate_and_build(&graph);
 
 		// Execute render graph.
-		graph.execute_graph();
+		graph->execute();
 
 		// Aquire next swapchain image.
 		//renderer->swapChainAcquireNextImage(_SwapChain, gImageAquiredSemaphore, NULL);

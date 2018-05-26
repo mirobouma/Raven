@@ -23,5 +23,6 @@ namespace Raven
 		VkImageCreateInfo		mVkImageDesc;
 		VkImageViewCreateInfo	mVkImageViewDesc;
 		FResourceState 			mState;
+		size_t					mTextureId;
 	};
 }

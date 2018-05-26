@@ -12,7 +12,7 @@ namespace Raven
 
 		if (!file.is_open()) 
 		{
-			RLOG_ERROR("failed to open file!");
+			RLOG_ERROR("failed to open file: %s", filename.c_str());
 		}
 
 		// Get file size because we start at the end of the file.

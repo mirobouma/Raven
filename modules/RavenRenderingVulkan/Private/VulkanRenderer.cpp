@@ -20,6 +20,9 @@
 
 namespace Raven 
 {
+
+	size_t gMaxTextureId = 0;
+
 	constexpr VkImageType gImageTypeTranslator[ETextureType::MAX_TEXTURE_TYPE] =
 	{
 		VK_IMAGE_TYPE_1D,
@@ -2373,6 +2376,10 @@ namespace Raven
 			texture->mImage = (VkImage)pDesc->nativeSwapchainImage;
 		}
 
+
+		// Not thread-safe.
+		texture->mTextureId = ++gMaxTextureId;
+
 		// Set the image description of the texture to the one of the created image.
 		texture->mDesc = *pDesc;
 		texture->mVkImageDesc = imageInfo;
@@ -3382,7 +3389,10 @@ namespace Raven
 		presentInfo.pResults = results.data();
 
 		// Present our SwapChain images.
-		vkQueuePresentKHR(queue->mQueue, &presentInfo);
+		if (vkQueuePresentKHR(queue->mQueue, &presentInfo) != VK_SUCCESS)
+		{
+			RLOG_ERROR("Failed to present a swapchain.");
+		}
 
 		bool err = false;
 
@@ -3569,7 +3579,11 @@ namespace Raven
 		}
 
 		// Stop recording commands in this command list.
-		vkEndCommandBuffer(list->mCmdBuffer);
+		VkResult result = vkEndCommandBuffer(list->mCmdBuffer);
+		if (result != VK_SUCCESS)
+		{
+			RLOG_ERROR("Failed to record commands in command list.");
+		}
 
         list->mCurrentRenderPass = nullptr;
         list->mBoundPipeline = nullptr;
@@ -3673,17 +3687,13 @@ namespace Raven
 		for(uint32_t i = 0; i < numColorAttachments; ++i)
 		{
 			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(ppColorAttachments[i]);
-			hash2 = hash_bytes(&target->mTexture->mImage, sizeof(VkImage), hash2);
-			hash2 = hash_bytes(&target->mDesc.width, sizeof(uint32_t), hash2);
-			hash2 = hash_bytes(&target->mDesc.height, sizeof(uint32_t), hash2);
+			hash2 = hash_bytes(&target->mTexture->mTextureId, sizeof(size_t), hash2);
 		}
 
 		if(pDepthStencilAttachment != nullptr)
 		{
 			FVulkanRenderTarget* target = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
-			hash2 = hash_bytes(&target->mTexture->mImage, sizeof(VkImage), hash2);
-			hash2 = hash_bytes(&target->mDesc.width, sizeof(uint32_t), hash2);
-			hash2 = hash_bytes(&target->mDesc.height, sizeof(uint32_t), hash2);
+			hash2 = hash_bytes(&target->mTexture->mTextureId, sizeof(size_t), hash2);
 		}
 
 		auto frameBufferIt = mFrameBufferMap.find(hash2);
@@ -3767,6 +3777,7 @@ namespace Raven
 		vkCmdBeginRenderPass(list->mCmdBuffer, &beginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		list->mCurrentRenderPass = renderPass;
+		//
 		return RR_SUCCESS;
     }
 

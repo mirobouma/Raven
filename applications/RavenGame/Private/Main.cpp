@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 	}, 0);
 	
 	GTaskScheduler = new RTaskScheduler();
-	GTaskScheduler->Run(4, 60, &task);
+	GTaskScheduler->Run(0, 60, &task);
 	
 	taskAllocator.Reset(true);
 	delete GTaskScheduler;

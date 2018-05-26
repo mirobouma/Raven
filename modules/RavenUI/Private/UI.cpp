@@ -2,7 +2,11 @@
 #include "Core/Debug/LogManager.h"
 #include "imgui/imgui_dock.h"
 #include <chrono>
-#include <SDL_keycode.h>
+
+#ifdef PLATFORM_LINUX
+#include "SDL_keycode.h"
+#endif
+
 #include "HAL/Platform.h"
 #include "HAL/PlatformWindow.h"
 

@@ -433,6 +433,8 @@ namespace Raven
 			renderer->waitForFence(gRenderCompleteFences[i]);
 		}
 
+		renderer->waitForDevice();
+
 		if (gameWindowSize.x == 0 || gameWindowSize.y == 0)
 		{
 			return;
@@ -475,6 +477,8 @@ namespace Raven
 		dsDesc.usage = RENDER_TARGET_USAGE_DEPTH_STENCIL_ATTACHMENT;
 
 		renderer->createRenderTarget(&gDepthStencil, &dsDesc);
+
+		renderer->waitForDevice();
 	}
 
     void RGameWindow::OnClose()

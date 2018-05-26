@@ -341,6 +341,10 @@ namespace Raven
 						nextTask->GetCounter()->FetchSub(1);
 					}
 				}
+				else
+				{
+					std::this_thread::yield();
+				}
 			}
 		}
 

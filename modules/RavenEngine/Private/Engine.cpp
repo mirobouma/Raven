@@ -48,7 +48,11 @@ namespace Raven {
 
 		FRendererInitializationDesc initDesc;
 		initDesc.applicationName = "Application";
+#ifndef NDEBUG
 		initDesc.enableDebugging = true;
+#else
+		initDesc.enableDebugging = false;
+#endif
 		initDesc.versionMajor = 1;
 		initDesc.versionMinor = 0;
 		initDesc.versionPatch = 0;

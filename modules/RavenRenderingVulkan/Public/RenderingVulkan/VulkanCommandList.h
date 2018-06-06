@@ -3,6 +3,7 @@
 #include "Rendering/Interfaces/SharedDefines.h"
 #include "RenderingVulkan/Vulkan.h"
 #include "RenderingVulkan/VulkanDescriptorSetCache.h"
+#include "RenderingVulkan/VulkanDynamicUniformAllocator.h"
 #include <map>
 #include <tuple>
 
@@ -23,5 +24,6 @@ namespace Raven
 		std::map<FVulkanTexture*, std::tuple<FResourceState, FResourceState>>	mPendingImageBarriers;
 		std::map<FVulkanBuffer*, std::tuple<FResourceState, FResourceState>>	mPendingBufferBarriers;
 		FVulkanDynamicDescriptorSetCache*										mDescriptorSetCache;
+		FVulkanDynamicUniformAllocator*											mDynamicUniformAllocator;
 	};
 }

@@ -44,6 +44,13 @@ namespace Raven
 		TEXTURE_FORMAT_RGB10A2_UINT,
 		TEXTURE_FORMAT_RG11B10_FLOAT,
 
+		TEXTURE_FORMAT_RGB8,
+		TEXTURE_FORMAT_RGB8_UNORM,
+		TEXTURE_FORMAT_RGB8_UNORM_SRGB,
+		TEXTURE_FORMAT_RGB8_UINT,
+		TEXTURE_FORMAT_RGB8_SNORM,
+		TEXTURE_FORMAT_RGB8_SINT,
+
 		TEXTURE_FORMAT_RGBA8,
 		TEXTURE_FORMAT_RGBA8_UNORM,
 		TEXTURE_FORMAT_RGBA8_UNORM_SRGB,
@@ -130,10 +137,10 @@ namespace Raven
 	DECL_ENUM_AS_FLAGS(FMemoryPropertyFlags)
 
 	typedef enum EMemoryType {
-		MEMORY_TYPE_GPU = 1 << 0,
-		MEMORY_TYPE_CPU = 1 << 1,
-		MEMORY_TYPE_CPU_TO_GPU  = 1 << 2,
-		MEMORY_TYPE_GPU_TO_CPU = 1 << 3,
+		MEMORY_TYPE_GPU,
+		MEMORY_TYPE_CPU,
+		MEMORY_TYPE_CPU_TO_GPU,
+		MEMORY_TYPE_GPU_TO_CPU,
 		MEMORY_TYPE_MAX
 	} EMemoryType;
 
@@ -276,6 +283,8 @@ namespace Raven
 		uint32_t		set;
 		uint32_t		binding;
 		uint32_t		numDescriptors;
+		uint32_t		offset;
+		uint32_t		range;
 
 		union
 		{

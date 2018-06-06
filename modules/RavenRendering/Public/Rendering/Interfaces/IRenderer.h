@@ -18,6 +18,8 @@
 #include "Rendering/Interfaces/ISwapChain.h"
 #include "Rendering/Interfaces/ITexture.h"
 
+#define MAX_FRAMES_AT_ONCE 3
+
 namespace Raven
 {
 	/*! Enumeration of rendering results. */
@@ -360,6 +362,11 @@ namespace Raven
 		*/
 		virtual ERenderResult cmdPushConstant(ICommandList* pCommandList, FShaderStageFlags stages, uint32_t size, uint32_t offset, void* values) = 0;
 
+		/*! Returns a linear allocation for a dynamic uniform buffer.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdAllocateDynamicUniformBuffer(ICommandList* pCommandList, FDynamicUniformAllocation* pAllocation, uint32_t size, void* data) = 0;
 
 		/*! Set viewport for this render pass.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.

@@ -68,6 +68,7 @@ namespace Raven
 		EImageTiling			tiling;
 		EMemoryType				memoryType;
 		void*					pData;
+		size_t					dataSize;
 		void*					nativeSwapchainImage;
 	};
 

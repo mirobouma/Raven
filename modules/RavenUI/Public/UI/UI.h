@@ -4,7 +4,7 @@
 #include "Rendering/Interfaces/IRenderer.h"
 #include "Rendering/Interfaces/ISwapChain.h"
 #include "Platform/Interfaces/IPlatformWindow.h"
-
+#include "Rendering/RenderGraph/RenderGraph.h"
 #define MAX_UI_FRAMES 3
 
 namespace Raven 
@@ -21,7 +21,7 @@ namespace Raven
 		void newFrame(ISwapChain* pSwapChain);
 
 		/*! Renders the recorded ui. */
-		void render(ICommandList* list, IRenderTarget* pRenderTarget);
+		FVirtualResourceRef* render(RRenderGraphBuilder* builder, FVirtualResourceRef* target);
 
 		/*! Draw imgui profiler. */
 		void drawProfiler();

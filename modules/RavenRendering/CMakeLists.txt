@@ -22,8 +22,10 @@ set (SourceGroup_PublicIncludes
 	"Public/Rendering/Game/Buffer.h"
 	"Public/Rendering/Game/Mesh.h"
 	"Public/Rendering/Game/Material.h"
-	"Public/Rendering/Modules/RGSwapChainModule.h"
-	"Public/Rendering/RenderGraph.h"
+	"Public/Rendering/RenderGraph/RenderGraph.h"
+	"Public/Rendering/RenderGraph/IRenderGraphModule.h"
+	"Public/Rendering/RenderGraph/Modules/RGMMesh.h"
+	"Public/Rendering/RenderGraph/Modules/RGMCommon.h"
 )
 
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
@@ -31,7 +33,9 @@ source_group("Include" FILES ${SourceGroup_PublicIncludes})
 set (SourceGroup_Source
 	"Private/Interfaces/IRenderer.cpp"
 	"Private/Game/Mesh.cpp"
-	"Private/RenderGraph.cpp"
+	"Private/RenderGraph/RenderGraph.cpp"
+	"Private/RenderGraph/Modules/RGMCommon.cpp"
+	"Private/RenderGraph/Modules/RGMMesh.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 

@@ -259,160 +259,175 @@ namespace Raven
 		ImGui::NewFrame();
 	}
 
-	void RUIRenderer::render(ICommandList* list, IRenderTarget* pRenderTarget)
+	FVirtualResourceRef* RUIRenderer::render(RRenderGraphBuilder* pBuilder, FVirtualResourceRef* pTarget)
 	{
 		ImGui::Render();
-		ImDrawData* draw_data = ImGui::GetDrawData();
 
-		ImGuiIO& io = ImGui::GetIO();
-		if (draw_data->TotalVtxCount == 0)
-			return;
+		FVirtualResourceRef* output = pTarget;
 
-		std::vector<ImDrawVert> vertices(draw_data->TotalVtxCount);
-		std::vector<ImDrawIdx> indices(draw_data->TotalIdxCount);
-
-		uint32_t vertexCount = 0;
-		uint32_t indexCount = 0;
-
-		for (int i = 0; i < draw_data->CmdListsCount; ++i)
+		// Add the pass and setup its inputs and outputs.
+		auto pass = pBuilder->add_pass("draw_meshes_forward", [&](RRenderPassBuilder& builder)
 		{
-			memcpy(&vertices[vertexCount], draw_data->CmdLists[i]->VtxBuffer.Data, draw_data->CmdLists[i]->VtxBuffer.Size * sizeof(ImDrawVert));
-			memcpy(&indices[indexCount], draw_data->CmdLists[i]->IdxBuffer.Data, draw_data->CmdLists[i]->IdxBuffer.Size * sizeof(ImDrawIdx));
-
-			vertexCount += draw_data->CmdLists[i]->VtxBuffer.Size;
-			indexCount += draw_data->CmdLists[i]->IdxBuffer.Size;
-		}
-
-		// Update or create the vertex buffer.
-		size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
-		if (!mVertexBuffers[mCurrentFrameId] || mVertexBuffers[mCurrentFrameId]->getSize() < vertex_size)
-		{
-			if (mVertexBuffers[mCurrentFrameId])
+			if (pTarget != nullptr)
 			{
-				mRenderer->destroyBuffer(mVertexBuffers[mCurrentFrameId]);
-				mVertexBuffers[mCurrentFrameId] = nullptr;
+				output = builder.write_resource("backbuffer", pTarget, RENDER_GRAPH_RESOURCE_ACCESS_GPU, RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT);
 			}
-			
-			FBufferCreateDesc vertexDesc;
-			vertexDesc.data = nullptr;
-			vertexDesc.size = vertex_size;
-			vertexDesc.memoryType = MEMORY_TYPE_CPU;
-			vertexDesc.usage = BUFFER_USAGE_VERTEX_BUFFER | BUFFER_USAGE_TRANSFER_DST;
+		});
 
-			mRenderer->createBuffer(&mVertexBuffers[mCurrentFrameId], &vertexDesc);
-		}
-
-		// Update or create the index buffer.
-		size_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
-		if (!mIndexBuffers[mCurrentFrameId] || mIndexBuffers[mCurrentFrameId]->getSize() < index_size)
+		// Set execute function.
+		pass->setExecuteFunc([=](IRenderer* renderer, RRenderGraph& graph, RCompiledPass& pass, ICommandList* cmd)
 		{
-			if (mIndexBuffers[mCurrentFrameId])
+			ImDrawData* draw_data = ImGui::GetDrawData();
+
+			ImGuiIO& io = ImGui::GetIO();
+			if (draw_data->TotalVtxCount == 0)
+				return;
+
+			std::vector<ImDrawVert> vertices(draw_data->TotalVtxCount);
+			std::vector<ImDrawIdx> indices(draw_data->TotalIdxCount);
+
+			uint32_t vertexCount = 0;
+			uint32_t indexCount = 0;
+
+			for (int i = 0; i < draw_data->CmdListsCount; ++i)
 			{
-				mRenderer->destroyBuffer(mIndexBuffers[mCurrentFrameId]);
-				mIndexBuffers[mCurrentFrameId] = nullptr;
+				memcpy(&vertices[vertexCount], draw_data->CmdLists[i]->VtxBuffer.Data, draw_data->CmdLists[i]->VtxBuffer.Size * sizeof(ImDrawVert));
+				memcpy(&indices[indexCount], draw_data->CmdLists[i]->IdxBuffer.Data, draw_data->CmdLists[i]->IdxBuffer.Size * sizeof(ImDrawIdx));
+
+				vertexCount += draw_data->CmdLists[i]->VtxBuffer.Size;
+				indexCount += draw_data->CmdLists[i]->IdxBuffer.Size;
 			}
 
-			FBufferCreateDesc indexDesc;
-			indexDesc.data = nullptr;
-			indexDesc.size = index_size;
-			indexDesc.memoryType = MEMORY_TYPE_CPU;
-			indexDesc.usage = BUFFER_USAGE_INDEX_BUFFER | BUFFER_USAGE_TRANSFER_DST;
-
-			mRenderer->createBuffer(&mIndexBuffers[mCurrentFrameId], &indexDesc);
-		}
-		
-		mRenderer->cmdUpdateBuffer(list, mVertexBuffers[mCurrentFrameId], vertices.data(), 0, (uint32_t)vertex_size);
-		mRenderer->cmdUpdateBuffer(list, mIndexBuffers[mCurrentFrameId], indices.data(), 0, (uint32_t)index_size);
-
-
-		FTextureBarrier tBarrier;
-		tBarrier.requiredState = RESOURCE_STATE_RENDER_TARGET;
-		tBarrier.texture = pRenderTarget->GetTexture();
-
-		FBufferBarrier bBarriers[2];
-		bBarriers[0].requiredState = RESOURCE_STATE_INDEX_BUFFER;
-		bBarriers[0].buffer = mIndexBuffers[mCurrentFrameId];
-
-		bBarriers[1].requiredState = RESOURCE_STATE_VERTEX_BUFFER;
-		bBarriers[1].buffer = mVertexBuffers[mCurrentFrameId];
-
-		mRenderer->cmdResourceBarriers(list, 2, &bBarriers[0], 1, &tBarrier, true);
-
-		FLoadStoreOps loadStoreOps = {};
-		loadStoreOps.colorLoadOps[0] = LOAD_OP_CLEAR;
-		loadStoreOps.colorStoreOps[0] = STORE_OP_STORE;
-
-		// Begin rendering pass.
-		mRenderer->cmdBeginRenderPass(list, 1, &pRenderTarget, nullptr, &loadStoreOps);
-
-		// Bind graphics pipeline.
-		mRenderer->cmdBindPipeline(list, mPipeline);
-		mRenderer->cmdSetViewport(list, FRect({ pRenderTarget->GetDesc()->width,  pRenderTarget->GetDesc()->height }, { 0, 0 }));
-
-		mRenderer->cmdBindIndexBuffer(list, mIndexBuffers[mCurrentFrameId], INDEX_TYPE_UINT16);
-		mRenderer->cmdBindVertexBuffer(list, 1, &mVertexBuffers[mCurrentFrameId]);
-
-		float scale[2];
-		scale[0] = 2.0f / io.DisplaySize.x;
-		scale[1] = 2.0f / io.DisplaySize.y;
-		float translate[2];
-		translate[0] = -1.0f;
-		translate[1] = -1.0f;
-
-		mRenderer->cmdPushConstant(list, SHADER_STAGE_FLAG_VERTEX, sizeof(float) * 2, sizeof(float) * 0, scale);
-		mRenderer->cmdPushConstant(list, SHADER_STAGE_FLAG_VERTEX, sizeof(float) * 2, sizeof(float) * 2, translate);
-
-		ITexture* imageToDraw = nullptr;
-	
-		//Render the command lists:
-		int vtx_offset = 0;
-		int idx_offset = 0;
-		for (int n = 0; n < draw_data->CmdListsCount; n++)
-		{
-			const ImDrawList* cmd_list = draw_data->CmdLists[n];
-			for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+			// Update or create the vertex buffer.
+			size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
+			if (!mVertexBuffers[mCurrentFrameId] || mVertexBuffers[mCurrentFrameId]->getSize() < vertex_size)
 			{
-				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-				if (pcmd->UserCallback)
+				if (mVertexBuffers[mCurrentFrameId])
 				{
-					pcmd->UserCallback(cmd_list, pcmd);
+					mRenderer->destroyBuffer(mVertexBuffers[mCurrentFrameId]);
+					mVertexBuffers[mCurrentFrameId] = nullptr;
 				}
-				else
+
+				FBufferCreateDesc vertexDesc = {};
+				vertexDesc.pData = nullptr;
+				vertexDesc.size = vertex_size;
+				vertexDesc.memoryType = MEMORY_TYPE_CPU;
+				vertexDesc.usage = BUFFER_USAGE_VERTEX_BUFFER | BUFFER_USAGE_TRANSFER_DST;
+
+				mRenderer->createBuffer(&mVertexBuffers[mCurrentFrameId], &vertexDesc);
+			}
+
+			// Update or create the index buffer.
+			size_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+			if (!mIndexBuffers[mCurrentFrameId] || mIndexBuffers[mCurrentFrameId]->getSize() < index_size)
+			{
+				if (mIndexBuffers[mCurrentFrameId])
 				{
-					if (pcmd->TextureId != nullptr && pcmd->TextureId != imageToDraw)
+					mRenderer->destroyBuffer(mIndexBuffers[mCurrentFrameId]);
+					mIndexBuffers[mCurrentFrameId] = nullptr;
+				}
+
+				FBufferCreateDesc indexDesc = {};
+				indexDesc.pData = nullptr;
+				indexDesc.size = index_size;
+				indexDesc.memoryType = MEMORY_TYPE_CPU;
+				indexDesc.usage = BUFFER_USAGE_INDEX_BUFFER | BUFFER_USAGE_TRANSFER_DST;
+
+				mRenderer->createBuffer(&mIndexBuffers[mCurrentFrameId], &indexDesc);
+			}
+
+			mRenderer->cmdUpdateBuffer(cmd, mVertexBuffers[mCurrentFrameId], vertices.data(), 0, (uint32_t)vertex_size);
+			mRenderer->cmdUpdateBuffer(cmd, mIndexBuffers[mCurrentFrameId], indices.data(), 0, (uint32_t)index_size);
+
+			FBufferBarrier bBarriers[2];
+			bBarriers[0].requiredState = RESOURCE_STATE_INDEX_BUFFER;
+			bBarriers[0].buffer = mIndexBuffers[mCurrentFrameId];
+
+			bBarriers[1].requiredState = RESOURCE_STATE_VERTEX_BUFFER;
+			bBarriers[1].buffer = mVertexBuffers[mCurrentFrameId];
+
+			mRenderer->cmdResourceBarriers(cmd, 2, &bBarriers[0], 0, nullptr, true);
+
+			FLoadStoreOps loadStoreOps = {};
+			loadStoreOps.colorLoadOps[0] = LOAD_OP_CLEAR;
+			loadStoreOps.colorStoreOps[0] = STORE_OP_STORE;
+
+			IRenderTarget* color = pass.getRenderTargetResource("backbuffer");
+
+			// Begin rendering pass.
+			mRenderer->cmdBeginRenderPass(cmd, 1, &color, nullptr, &loadStoreOps);
+
+			// Bind graphics pipeline.
+			mRenderer->cmdBindPipeline(cmd, mPipeline);
+			mRenderer->cmdSetViewport(cmd, FRect({ color->GetDesc()->width,  color->GetDesc()->height }, { 0, 0 }));
+
+			mRenderer->cmdBindIndexBuffer(cmd, mIndexBuffers[mCurrentFrameId], INDEX_TYPE_UINT16);
+			mRenderer->cmdBindVertexBuffer(cmd, 1, &mVertexBuffers[mCurrentFrameId]);
+
+			float scale[2];
+			scale[0] = 2.0f / io.DisplaySize.x;
+			scale[1] = 2.0f / io.DisplaySize.y;
+			float translate[2];
+			translate[0] = -1.0f;
+			translate[1] = -1.0f;
+
+			mRenderer->cmdPushConstant(cmd, SHADER_STAGE_FLAG_VERTEX, sizeof(float) * 2, sizeof(float) * 0, scale);
+			mRenderer->cmdPushConstant(cmd, SHADER_STAGE_FLAG_VERTEX, sizeof(float) * 2, sizeof(float) * 2, translate);
+
+			ITexture* imageToDraw = nullptr;
+
+			//Render the command lists:
+			int vtx_offset = 0;
+			int idx_offset = 0;
+			for (int n = 0; n < draw_data->CmdListsCount; n++)
+			{
+				const ImDrawList* cmd_list = draw_data->CmdLists[n];
+				for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
+				{
+					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+					if (pcmd->UserCallback)
 					{
-						FDescriptorBinding binding;
-						binding.set = 0;
-						binding.binding = 0;
-						binding.numDescriptors = 1;
-						binding.type = DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-						binding.ppTextures = (ITexture**)&pcmd->TextureId;
-
-						// Bind font texture.
-						mRenderer->cmdBindDescriptors(list, 1, &binding);
-
-						imageToDraw = (ITexture*)pcmd->TextureId;
+						pcmd->UserCallback(cmd_list, pcmd);
 					}
+					else
+					{
+						if (pcmd->TextureId != nullptr && pcmd->TextureId != imageToDraw)
+						{
+							FDescriptorBinding binding;
+							binding.set = 0;
+							binding.binding = 0;
+							binding.numDescriptors = 1;
+							binding.type = DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+							binding.ppTextures = (ITexture**)&pcmd->TextureId;
 
-					FRect scissor;
-					scissor.Position.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0;
-					scissor.Position.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
-					scissor.Size.x = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-					scissor.Size.y = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y); // FIXME: Why +1 here?
-		
-					mRenderer->cmdSetScissorRects(list, scissor);
-					mRenderer->cmdDrawIndexed(list, pcmd->ElemCount, idx_offset, vtx_offset);
+							// Bind font texture.
+							mRenderer->cmdBindDescriptors(cmd, 1, &binding);
+
+							imageToDraw = (ITexture*)pcmd->TextureId;
+						}
+
+						FRect scissor;
+						scissor.Position.x = (int32_t)(pcmd->ClipRect.x) > 0 ? (int32_t)(pcmd->ClipRect.x) : 0;
+						scissor.Position.y = (int32_t)(pcmd->ClipRect.y) > 0 ? (int32_t)(pcmd->ClipRect.y) : 0;
+						scissor.Size.x = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
+						scissor.Size.y = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
+
+						mRenderer->cmdSetScissorRects(cmd, scissor);
+						mRenderer->cmdDrawIndexed(cmd, pcmd->ElemCount, idx_offset, vtx_offset);
+					}
+					idx_offset += pcmd->ElemCount;
 				}
-				idx_offset += pcmd->ElemCount;
+				vtx_offset += cmd_list->VtxBuffer.Size;
 			}
-			vtx_offset += cmd_list->VtxBuffer.Size;
-		}
 
-		
-		// Finish rendering pass.
-		mRenderer->cmdEndRenderPass(list);
+			// Finish rendering pass.
+			mRenderer->cmdEndRenderPass(cmd);
+
+		});
 
 		mCurrentFrameId = (mCurrentFrameId + 1) % MAX_UI_FRAMES;
+
+		return output;
 	}
 
 	void RUIRenderer::destroy()

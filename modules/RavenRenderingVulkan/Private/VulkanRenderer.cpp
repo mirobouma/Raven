@@ -203,6 +203,13 @@ namespace Raven
 		VK_FORMAT_A2R10G10B10_UINT_PACK32,
 		VK_FORMAT_UNDEFINED,
 
+		VK_FORMAT_R8G8B8_UNORM,
+		VK_FORMAT_R8G8B8_UNORM,
+		VK_FORMAT_R8G8B8_SRGB,
+		VK_FORMAT_R8G8B8_UINT,
+		VK_FORMAT_R8G8B8_SNORM,
+		VK_FORMAT_R8G8B8_SINT,
+
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_FORMAT_R8G8B8A8_UNORM,
 		VK_FORMAT_R8G8B8A8_SRGB,
@@ -547,8 +554,8 @@ namespace Raven
 
 	constexpr VmaMemoryUsage gMemoryTypeTranslator[EMemoryType::MEMORY_TYPE_MAX] =
 	{
-		VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_ONLY,
 		VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_ONLY,
+		VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_ONLY,
 		VmaMemoryUsage::VMA_MEMORY_USAGE_CPU_TO_GPU,
 		VmaMemoryUsage::VMA_MEMORY_USAGE_GPU_TO_CPU,
 	};
@@ -795,6 +802,22 @@ namespace Raven
 		}
 
 		result = createCommandPool((ICommandPool**)&mTransferCommandPool, mTransferQueue, nullptr);
+		if (result != RR_SUCCESS)
+		{
+			mInitialized = false;
+			return result;
+		}
+
+		queueDesc.type = ECommandType::COMMAND_TYPE_DIRECT;
+
+		result = createQueue((IQueue**)&mGraphicsQueue, &queueDesc);
+		if (result != RR_SUCCESS)
+		{
+			mInitialized = false;
+			return result;
+		}
+
+		result = createCommandPool((ICommandPool**)&mGraphicsCommandPool, mGraphicsQueue, nullptr);
 		if (result != RR_SUCCESS)
 		{
 			mInitialized = false;
@@ -1270,6 +1293,8 @@ namespace Raven
 			createRenderTarget((IRenderTarget**)(&swapChain->mRenderTargets[i]), &rtDesc);
 		}
 
+		createSemaphore((ISemaphore**)&swapChain->mImageAcquiredSemaphore);
+
 		// Update the pointer argument to point to the newly created swapchain.
 		*ppSwapChain = (ISwapChain*)swapChain;
 
@@ -1291,6 +1316,8 @@ namespace Raven
 		free(swapChain->mRenderTargets);
 		vkDestroySwapchainKHR(mDevice->mDevice, swapChain->mSwapChain, nullptr);
 		vkDestroySurfaceKHR(mInstance, swapChain->mSurface, nullptr);
+
+		destroySemaphore(swapChain->mImageAcquiredSemaphore);
 
 		delete pSwapchain;
 		return RR_SUCCESS;
@@ -1500,6 +1527,11 @@ namespace Raven
 			if (list->mDescriptorSetCache != nullptr)
 			{
 				destroyDescriptorPool(list->mDescriptorSetCache->mDescriptorPool);
+			}
+
+			if (list->mDynamicUniformAllocator != nullptr)
+			{
+				delete list->mDynamicUniformAllocator;
 			}
 
 			buffers[i] = list->mCmdBuffer;
@@ -2352,12 +2384,12 @@ namespace Raven
 		imageInfo.extent.width = pDesc->width;
 		imageInfo.extent.height = pDesc->height;
 		imageInfo.extent.depth = pDesc->depth;
-		imageInfo.mipLevels = pDesc->mipLevels;
+		imageInfo.mipLevels = pDesc->mipLevels == 0 ? (static_cast<uint32_t>(std::floor(std::log2(std::max(pDesc->width, pDesc->height)))) + 1) : pDesc->mipLevels;
 		imageInfo.arrayLayers = pDesc->type == TEXTURE_TYPE_CUBE ? pDesc->arrayLayers * 6 : pDesc->arrayLayers;
 		imageInfo.format = gTextureFormatTranslator[pDesc->format];
 		imageInfo.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		imageInfo.usage = textureUsageFlagsToVkImageFlags(pDesc->usage);
+		imageInfo.usage = textureUsageFlagsToVkImageFlags(pDesc->usage) | (pDesc->mipLevels == 0 ? (VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT) : (VkImageUsageFlags)0);
 		imageInfo.samples = textureSamplesToVkSamples(pDesc->sampleCount);
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -2382,6 +2414,8 @@ namespace Raven
 
 		// Set the image description of the texture to the one of the created image.
 		texture->mDesc = *pDesc;
+		texture->mDesc.mipLevels = texture->mDesc.mipLevels == 0 ? (std::floor(std::log2(std::max(pDesc->width, pDesc->height))) + 1) : pDesc->mipLevels;
+
 		texture->mVkImageDesc = imageInfo;
 		texture->mState = FResourceState::RESOURCE_STATE_UNDEFINED;
 
@@ -2442,7 +2476,7 @@ namespace Raven
 			FBufferCreateDesc stagingCreateDesc = {};
 			stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 			stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
-			stagingCreateDesc.data = nullptr;
+			stagingCreateDesc.pData = nullptr;
 			stagingCreateDesc.size = (uint32_t)texture->mAllocation->GetSize();
 
 			if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
@@ -2453,7 +2487,7 @@ namespace Raven
 			// Copy data into staging buffer.
 			void* data;
 			vmaMapMemory(mAllocator, stagingBuffer->mAllocation, &data);
-			memcpy(data, pDesc->pData, texture->mAllocation->GetSize());
+			memcpy(data, pDesc->pData, pDesc->dataSize != 0 ? pDesc->dataSize : texture->mAllocation->GetSize());
 			vmaUnmapMemory(mAllocator, stagingBuffer->mAllocation);
 
 			FVulkanFence* pTransferCompleteFence = nullptr;
@@ -2474,6 +2508,109 @@ namespace Raven
 			destroyFence(pTransferCompleteFence);
 			destroyCommandList(mTransferCommandPool, pTransferCmd);
 			destroyBuffer(stagingBuffer);
+		}
+
+		// Generate mip-maps
+		if (pDesc->mipLevels == 0)
+		{
+
+			FVulkanFence* pMipGenCompleteFence = nullptr;
+			FVulkanCommandList* pMipCmd = nullptr;
+			createCommandList((ICommandList**)&pMipCmd, mGraphicsCommandPool);
+			createFence((IFence**)&pMipGenCompleteFence);
+
+			// copy buffer.
+			cmdBegin(pMipCmd);
+
+			FTextureBarrier tBarrier;
+			tBarrier.texture = texture;
+			tBarrier.requiredState = FResourceState::RESOURCE_STATE_COPY_DEST;
+
+			cmdResourceBarriers(pMipCmd, 0, nullptr, 1, &tBarrier, true);
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.image = texture->mImage;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = 1;
+			barrier.subresourceRange.levelCount = 1;
+
+			int32_t mipWidth = pDesc->width;
+			int32_t mipHeight = pDesc->height;
+
+			for (uint32_t mip = 1; mip < texture->mDesc.mipLevels; ++mip)
+			{
+				barrier.subresourceRange.baseMipLevel = mip - 1;
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+				vkCmdPipelineBarrier(pMipCmd->mCmdBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
+
+				VkImageBlit blit = {};
+				blit.srcOffsets[0] = { 0, 0, 0 };
+				blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+				blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blit.srcSubresource.mipLevel = mip - 1;
+				blit.srcSubresource.baseArrayLayer = 0;
+				blit.srcSubresource.layerCount = 1;
+				blit.dstOffsets[0] = { 0, 0, 0 };
+				blit.dstOffsets[1] = { std::max(mipWidth / 2, 1), std::max(mipHeight / 2, 1), 1 };
+				blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				blit.dstSubresource.mipLevel = mip;
+				blit.dstSubresource.baseArrayLayer = 0;
+				blit.dstSubresource.layerCount = 1;
+
+				vkCmdBlitImage(pMipCmd->mCmdBuffer,
+					texture->mImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					texture->mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1, &blit,
+					VK_FILTER_LINEAR);
+
+				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+				vkCmdPipelineBarrier(pMipCmd->mCmdBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
+
+				if (mipWidth > 1) mipWidth /= 2;
+				if (mipHeight > 1) mipHeight /= 2;
+			}
+
+			barrier.subresourceRange.baseMipLevel = texture->mDesc.mipLevels - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+			vkCmdPipelineBarrier(pMipCmd->mCmdBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			cmdEnd(pMipCmd);
+
+			// Submit command 
+			queueSubmit(mGraphicsQueue, 1, (ICommandList**)&pMipCmd, pMipGenCompleteFence, 0, nullptr, 0, nullptr);
+
+			// Wait for transfer to complete.
+			waitForFence(pMipGenCompleteFence);
+			destroyFence(pMipGenCompleteFence);
+			destroyCommandList(mGraphicsCommandPool, pMipCmd);
 		}
 
 		*ppTexture = texture;
@@ -2525,14 +2662,14 @@ namespace Raven
 		buffer->mState = FResourceState::RESOURCE_STATE_COMMON;
 		
 		// Copy initial data inside the buffer.
-		if (buffer->mDesc.data != nullptr)
+		if (buffer->mDesc.pData != nullptr)
 		{
 			// If we have coherent memory, copy directly into the memory.
 			if (buffer->mDesc.memoryType == EMemoryType::MEMORY_TYPE_CPU)
 			{
 				void* data;
 				VkResult res = vmaMapMemory(mAllocator, buffer->mAllocation, &data);
-				memcpy(data, pDesc->data, pDesc->size);
+				memcpy(data, pDesc->pData, pDesc->dataSize != 0 ? pDesc->dataSize : pDesc->size);
 				vmaUnmapMemory(mAllocator, buffer->mAllocation);
 			}
 			else
@@ -2543,7 +2680,7 @@ namespace Raven
 				FBufferCreateDesc stagingCreateDesc = {};
 				stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 				stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
-				stagingCreateDesc.data = nullptr;
+				stagingCreateDesc.pData = nullptr;
 				stagingCreateDesc.size = pDesc->size;
 
 				if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
@@ -2554,7 +2691,7 @@ namespace Raven
 				// Copy data into staging buffer.
 				void* data;
 				vmaMapMemory(mAllocator, stagingBuffer->mAllocation, &data);
-				memcpy(data, pDesc->data, pDesc->size);
+				memcpy(data, pDesc->pData, pDesc->dataSize != 0 ? pDesc->dataSize : pDesc->size);
 				vmaUnmapMemory(mAllocator, stagingBuffer->mAllocation);
 
 				FVulkanFence* pTransferCompleteFence = nullptr;
@@ -2696,9 +2833,30 @@ namespace Raven
 		{
 			void* data;
 			vmaMapMemory(mAllocator, buffer->mAllocation, &data);
-			memcpy(data, pData, size);
+			memcpy((char*)data + dstOffset, pData, size);
 			vmaUnmapMemory(mAllocator, buffer->mAllocation);
 
+			return RR_SUCCESS;
+		}
+		else if (buffer->mDesc.memoryType == MEMORY_TYPE_CPU_TO_GPU)
+		{
+			void* data;
+			vmaMapMemory(mAllocator, buffer->mAllocation, &data);
+			memcpy((char*)data + dstOffset, pData, size);
+			vmaUnmapMemory(mAllocator, buffer->mAllocation);
+
+			VkMemoryPropertyFlags memFlags;
+			vmaGetMemoryTypeProperties(mAllocator, buffer->mAllocation->GetMemoryTypeIndex(), &memFlags);
+
+			if ((memFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+			{
+				VkMappedMemoryRange memRange = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
+				memRange.memory = buffer->mAllocation->GetMemory();
+				memRange.offset = buffer->mAllocation->GetOffset() + dstOffset;
+				memRange.size = size;
+
+				vkFlushMappedMemoryRanges(mDevice->mDevice, 1, &memRange);
+			}
 			return RR_SUCCESS;
 		}
 		else
@@ -2709,7 +2867,7 @@ namespace Raven
 			FBufferCreateDesc stagingCreateDesc = {};
 			stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 			stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
-			stagingCreateDesc.data = nullptr;
+			stagingCreateDesc.pData = nullptr;
 			stagingCreateDesc.size = size;
 
 			if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
@@ -2752,7 +2910,7 @@ namespace Raven
 		FBufferCreateDesc stagingCreateDesc = {};
 		stagingCreateDesc.memoryType = MEMORY_TYPE_CPU;
 		stagingCreateDesc.usage = BUFFER_USAGE_TRANSFER_SRC | BUFFER_USAGE_TRANSFER_DST;
-		stagingCreateDesc.data = nullptr;
+		stagingCreateDesc.pData = nullptr;
 		stagingCreateDesc.size = memRequirements.size;
 
 		if (createBuffer((IBuffer**)&stagingBuffer, &stagingCreateDesc) != RR_SUCCESS)
@@ -3195,6 +3353,9 @@ namespace Raven
 		destroyCommandPool(mTransferCommandPool);
 		destroyQueue(mTransferQueue);
 
+		destroyCommandPool(mGraphicsCommandPool);
+		destroyQueue(mGraphicsQueue);
+
 		for (auto it = mFrameBufferMap.begin(); it != mFrameBufferMap.end(); ++it)
 		{
 			destroyFrameBuffer(it->second);
@@ -3546,6 +3707,11 @@ namespace Raven
 		{
 			list->mDescriptorSetCache->mSetMap.clear();
 			vkResetDescriptorPool(mDevice->mDevice, list->mDescriptorSetCache->mDescriptorPool->mDescriptorPool, 0);
+		}
+
+		if (list->mDynamicUniformAllocator != nullptr)
+		{
+			list->mDynamicUniformAllocator->Reset(false);
 		}
 
 		VkCommandBufferBeginInfo beginInfo = {};
@@ -4134,11 +4300,45 @@ namespace Raven
         return RR_SUCCESS;
     }
 
+	ERenderResult RVulkanRenderer::cmdAllocateDynamicUniformBuffer(ICommandList* pCommandList, FDynamicUniformAllocation* pAllocation, uint32_t size, void* data)
+	{
+		RASSERT(pCommandList != nullptr);
+		RASSERT(pAllocation != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		// Create dynamic uniform allocator.
+		if (list->mDynamicUniformAllocator == nullptr)
+		{
+			list->mDynamicUniformAllocator = new FVulkanDynamicUniformAllocator(this);
+		}
+
+		VkDeviceSize alignment = mDevice->mPhysicalDevice->mProperties.limits.minUniformBufferOffsetAlignment;
+
+		// Allocate a block of memory from the dynamic uniform buffer.
+		FVulkanLinearAllocation allocation = list->mDynamicUniformAllocator->Allocate(this, size, alignment);
+		
+		if (!(size == 0 || data == nullptr))
+		{
+			// Copy the data to the buffer.
+			cmdUpdateBuffer(pCommandList, allocation.mBuffer, data, allocation.mOffset, size);
+		}
+
+		pAllocation->buffer = allocation.mBuffer;
+		pAllocation->offset = allocation.mOffset;
+		pAllocation->range = allocation.mSize;
+
+		return RR_SUCCESS;
+	}
+
 	ERenderResult RVulkanRenderer::cmdBindDescriptors(ICommandList* pCommandList, uint32_t numDescriptors, FDescriptorBinding* pDescriptors)
 	{
 		RASSERT(pCommandList != nullptr);
-		RASSERT(numDescriptors != 0);
-
+		if (numDescriptors == 0)
+		{
+			return ERenderResult::RR_SUCCESS;
+		}
 		
 		// Cast the command list interface to the vulkan type.
 		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
@@ -4192,6 +4392,7 @@ namespace Raven
 		std::vector<uint32_t> copySetIds;
 		std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
 		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
+		std::map<uint32_t, std::vector<uint32_t>> mDynamicOffsets;
 
 		for (uint32_t i = 0; i < numDescriptors; ++i)
 		{
@@ -4237,8 +4438,13 @@ namespace Raven
 						descriptorBufferInfos.push_back({});
 						VkDescriptorBufferInfo& bufferInfo = descriptorBufferInfos.back();
 						bufferInfo.buffer = static_cast<FVulkanBuffer*>(binding.ppBuffers[j])->mBuffer;
-						bufferInfo.offset = 0;
-						bufferInfo.range = VK_WHOLE_SIZE;
+						bufferInfo.offset = binding.type == DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ? 0 : binding.offset;
+						bufferInfo.range = binding.type == DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ? VK_WHOLE_SIZE : (binding.range == 0 ? VK_WHOLE_SIZE : binding.range);
+					}
+
+					if (binding.type == DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+					{
+						mDynamicOffsets[binding.set].push_back(binding.offset);
 					}
 
 					writeSet.pBufferInfo = &descriptorBufferInfos[firstDescriptor];
@@ -4337,7 +4543,7 @@ namespace Raven
 		for (uint32_t i = 0; i < copySetIds.size(); ++i)
 		{
 			// Bind descriptor sets.
-			vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, copySetIds[i], 1, &dynamicDescriptorSets[i], 0, nullptr);
+			vkCmdBindDescriptorSets(list->mCmdBuffer, gPipelineTypeTranslator[pipeline->mType], pipeline->mLayout, copySetIds[i], 1, &dynamicDescriptorSets[i], mDynamicOffsets[copySetIds[i]].size(), mDynamicOffsets[copySetIds[i]].empty() ? nullptr : mDynamicOffsets[copySetIds[i]].data());
 		}
 
 		return RR_SUCCESS;

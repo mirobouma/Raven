@@ -15,7 +15,7 @@ namespace Raven
 	*/
 	struct FTransform 
 	{
-		FTransform() : mRequireMatrixUpdate(false), mPosition(0.0f, 0.0f, 0.0f), mRotation(0.0f, 0.0f, 0.0f), mScale(1.0f, 1.0f, 1.0f) {};
+		FTransform() : mRequireMatrixUpdate(true), mPosition(0.0f, 0.0f, 0.0f), mRotation(0.0f, 0.0f, 0.0f), mScale(1.0f, 1.0f, 1.0f) {};
 			
 		void translate(float x, float y, float z)
 		{

@@ -54,7 +54,7 @@ namespace Raven
 		// Set the first thread to be the current thread, and set it's affinity.
 		_mThreads[0] = new RThread();
 		_mThreads[0]->FromCurrentThread();
-		_mThreads[0]->SetAffinity(0);
+		//_mThreads[0]->SetAffinity(0);
 
 		// Create worker threads.
 		for (uint32_t i = 1; i < _mNumThreads; ++i)
@@ -64,7 +64,7 @@ namespace Raven
 			args->threadId = i;
 
 			// Create threads and set their affinity.
-			_mThreads[i] = new RThread(ThreadStart, (void*)args, i);
+			_mThreads[i] = new RThread(ThreadStart, (void*)args, -1);
 		}
 
 		// Signal the worker threads that we're fully initialized

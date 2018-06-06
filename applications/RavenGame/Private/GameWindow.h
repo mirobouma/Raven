@@ -19,7 +19,7 @@ namespace Raven
         /*! Render function */
         void Render();
 		void createGameWindow();
-		void LoadTeapot();
+		void updateEditor();
 
     protected:
         /*! Callback function when the window is created. */

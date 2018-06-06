@@ -42,7 +42,7 @@ namespace Raven
 
             if(stackSize == 0)
             {
-                stackSize = 15360;  //16k
+                stackSize = 512000;  //16k
             }
 
             mStack = boost_context::create_fcontext_stack(Memory::AlignUp(stackSize, RPlatformLinuxInfo::GetPageSize()));

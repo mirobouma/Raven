@@ -15,6 +15,15 @@ namespace Raven
 	{
 		mRenderer = renderer;
 
+		std::string relativeTexturePath = "";
+
+		char sep = '/';
+
+		size_t i = path.rfind(sep, path.length());
+		if (i != std::string::npos) {
+			relativeTexturePath = path.substr(0, i);
+		}
+	
 		Assimp::Importer importer;
 
 		const aiScene* scene = importer.ReadFile(path,
@@ -39,19 +48,19 @@ namespace Raven
 			// Load materials
 			for (uint32_t i = 0; i < scene->mNumMaterials; i++)
 			{
-				aiString path;
+				aiString texPath;
 
 				// get color.
 				scene->mMaterials[i]->Get(AI_MATKEY_COLOR_DIFFUSE, mMaterials[i].mColor);
-				if (scene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
+				if (scene->mMaterials[i]->GetTexture(aiTextureType_DIFFUSE, 0, &texPath, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
 				{
 					int texWidth, texHeight, texChannels;
-					stbi_uc* pixels = stbi_load(path.C_Str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+					stbi_uc* pixels = stbi_load((relativeTexturePath + "/" + texPath.C_Str()).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 					uint32_t imageSize = texWidth * texHeight * 4;
 
 					if (pixels == nullptr)
 					{
-						RLOG_ERROR("failed to load texture image: %s!", path.C_Str());
+						RLOG_ERROR("failed to load texture image: %s!", texPath.C_Str());
 					}
 					else
 					{
@@ -62,11 +71,12 @@ namespace Raven
 						texDesc.baseArrayLayer = 0;
 						texDesc.baseMipLevel = 0;
 						texDesc.depth = 1;
-						texDesc.format = TEXTURE_FORMAT_RGBA8;
+						texDesc.format = TEXTURE_FORMAT_RGBA8; 
 						texDesc.width = texWidth;
 						texDesc.height = texHeight;
-						texDesc.mipLevels = 1;
+						texDesc.mipLevels = 0;
 						texDesc.pData = pixels;
+						texDesc.dataSize = imageSize;
 						texDesc.sampleCount = 1;
 						texDesc.sampleQuality = 0;
 						texDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -76,15 +86,15 @@ namespace Raven
 					}
 				}
 
-				if (scene->mMaterials[i]->GetTexture(aiTextureType_HEIGHT, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
+				if (scene->mMaterials[i]->GetTexture(aiTextureType_HEIGHT, 0, &texPath, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
 				{
 					int texWidth, texHeight, texChannels;
-					stbi_uc* pixels = stbi_load(path.C_Str(), &texWidth, &texHeight, &texChannels, STBI_default);
+					stbi_uc* pixels = stbi_load((relativeTexturePath + "/" + texPath.C_Str()).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 					uint32_t imageSize = texWidth * texHeight * 4;
 
 					if (pixels == nullptr)
 					{
-						RLOG_ERROR("failed to load texture image: %s!", path.C_Str());
+						RLOG_ERROR("failed to load texture image: %s!", texPath.C_Str());
 					}
 					else
 					{
@@ -98,8 +108,9 @@ namespace Raven
 						texDesc.format = TEXTURE_FORMAT_RGBA8;
 						texDesc.width = texWidth;
 						texDesc.height = texHeight;
-						texDesc.mipLevels = 1;
+						texDesc.mipLevels = 0;
 						texDesc.pData = pixels;
+						texDesc.dataSize = imageSize;
 						texDesc.sampleCount = 1;
 						texDesc.sampleQuality = 0;
 						texDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -109,15 +120,15 @@ namespace Raven
 					}
 				}
 
-				if (scene->mMaterials[i]->GetTexture(aiTextureType_SPECULAR, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
+				if (scene->mMaterials[i]->GetTexture(aiTextureType_SPECULAR, 0, &texPath, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS)
 				{
 					int texWidth, texHeight, texChannels;
-					stbi_uc* pixels = stbi_load(path.C_Str(), &texWidth, &texHeight, &texChannels, STBI_default);
+					stbi_uc* pixels = stbi_load((relativeTexturePath + "/" + texPath.C_Str()).c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 					uint32_t imageSize = texWidth * texHeight * 4;
 
 					if (pixels == nullptr)
 					{
-						RLOG_ERROR("failed to load texture image: %s!", path.C_Str());
+						RLOG_ERROR("failed to load texture image: %s!", texPath.C_Str());
 					}
 					else
 					{
@@ -131,8 +142,9 @@ namespace Raven
 						texDesc.format = TEXTURE_FORMAT_RGBA8;
 						texDesc.width = texWidth;
 						texDesc.height = texHeight;
-						texDesc.mipLevels = 1;
+						texDesc.mipLevels = 0;
 						texDesc.pData = pixels;
+						texDesc.dataSize = imageSize;
 						texDesc.sampleCount = 1;
 						texDesc.sampleQuality = 0;
 						texDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -174,6 +186,8 @@ namespace Raven
 					vertex.uv = glm::vec2(uv.x, uv.y);
 					vertex.tangent = glm::vec3(tangent.x, tangent.y, tangent.z);
 					vertex.bitangent = glm::vec3(bitangent.x, bitangent.y, bitangent.z);
+
+					vertices.push_back(vertex);
 				}
 
 				for (uint32_t j = 0; j < scene->mMeshes[i]->mNumFaces; j++)
@@ -191,7 +205,7 @@ namespace Raven
 				mesh.mVertexOffset = vertexAmount;
 				mesh.mIndexOffset = indexAmount;
 				mesh.mMaterial = &mMaterials[scene->mMeshes[i]->mMaterialIndex];
-
+				mesh.mMaterialIndex = scene->mMeshes[i]->mMaterialIndex;
 				vertexAmount += subMeshVertexAmount;
 				indexAmount += subMeshIndexAmount;
 
@@ -200,10 +214,10 @@ namespace Raven
 
 			// Create index buffer.
 			FBufferCreateDesc iBufferDesc = {};
-			iBufferDesc.memoryType = MEMORY_TYPE_CPU;
+			iBufferDesc.memoryType = MEMORY_TYPE_GPU;
 			iBufferDesc.size = indices.size() * sizeof(uint32_t);
 			iBufferDesc.usage = BUFFER_USAGE_TRANSFER_DST | BUFFER_USAGE_INDEX_BUFFER;
-			iBufferDesc.data = indices.data();
+			iBufferDesc.pData = indices.data();
 
 			renderer->createBuffer(&mIndexBuffer, &iBufferDesc);
 
@@ -212,7 +226,7 @@ namespace Raven
 			vBufferDesc.memoryType = MEMORY_TYPE_GPU;
 			vBufferDesc.size = vertices.size() * sizeof(FMeshVertex);
 			vBufferDesc.usage = BUFFER_USAGE_TRANSFER_DST | BUFFER_USAGE_VERTEX_BUFFER;
-			vBufferDesc.data = vertices.data();
+			vBufferDesc.pData = vertices.data();
 
 			renderer->createBuffer(&mVertexBuffer, &vBufferDesc);
 		}
@@ -230,6 +244,18 @@ namespace Raven
 		{
 			mRenderer->destroyBuffer(mIndexBuffer);
 			mIndexBuffer = nullptr;
+		}
+
+		for (uint32_t i = 0; i < mMaterials.size(); ++i)
+		{
+			for (uint32_t j = 0; j < MAX_TEXTURE_SLOTS; ++j)
+			{
+				if (mMaterials[i].mTextures[j] != nullptr)
+				{
+					mRenderer->destroyTexture(mMaterials[i].mTextures[j]);
+					mMaterials[i].mTextures[j] = nullptr;
+				}
+			}
 		}
 	}
 

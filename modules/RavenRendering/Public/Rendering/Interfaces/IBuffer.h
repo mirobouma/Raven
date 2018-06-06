@@ -27,14 +27,23 @@ namespace Raven
 		EMemoryType				memoryType;
 		FBufferUsageFlags		usage;
 		size_t					size;
-		void*					data;
+		void*					pData;
+		size_t					dataSize;
 	};
-
 
 	/*! \struct IBuffer
 	\brief Interface for a buffer. */
 	struct IBuffer 
 	{
 		virtual size_t getSize() = 0;
+	};
+
+	/*! \struct FDynamicUniformAllocation
+	\brief Dynamic uniform allocation. */
+	struct FDynamicUniformAllocation
+	{
+		IBuffer* buffer;
+		size_t offset;
+		size_t range;
 	};
 }

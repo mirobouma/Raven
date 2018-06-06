@@ -2,7 +2,6 @@
 set(MODULE_NAME "RavenRenderingVulkan")
 
 set (SourceGroup_PublicIncludes
-	"Public/RenderingVulkan/TestVulkanRenderer.h"
 	"Public/RenderingVulkan/VulkanRenderer.h"
 	"Public/RenderingVulkan/Vulkan.h"
 	"Public/RenderingVulkan/VulkanFence.h"
@@ -15,6 +14,7 @@ set (SourceGroup_PublicIncludes
 	"Public/RenderingVulkan/VulkanPipeline.h"
 	"Public/RenderingVulkan/VulkanDescriptorPool.h"
 	"Public/RenderingVulkan/VulkanDescriptorSetCache.h"
+	"Public/RenderingVulkan/VulkanDynamicUniformAllocator.h"
 	"Public/RenderingVulkan/VulkanCommandPool.h"
 	"Public/RenderingVulkan/VulkanFrameBuffer.h"
 	"Public/RenderingVulkan/VulkanCommandList.h"
@@ -27,7 +27,6 @@ set (SourceGroup_PublicIncludes
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
-	"Private/TestVulkanRenderer.cpp"
 	"Private/VulkanRenderer.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})

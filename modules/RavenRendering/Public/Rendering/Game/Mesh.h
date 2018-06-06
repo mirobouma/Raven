@@ -21,17 +21,18 @@ namespace Raven
 		uint32_t mIndexCount;
 		uint32_t mIndexOffset;
 		FMaterial* mMaterial;
+		uint32_t   mMaterialIndex;
 		FTransform mTransform;
 	};
 
 	class RMesh
 	{
+	public:
 		RMesh(IRenderer* renderer, std::string file);
 		~RMesh();
 
 		void Destroy();
 
-	protected:
 		std::vector<FSubMesh> mSubMeshes;
 		std::vector<FMaterial> mMaterials;
 		FTransform mTransform;

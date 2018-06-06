@@ -12,6 +12,7 @@
 #include "RenderingVulkan/VulkanFence.h"
 #include "RenderingVulkan/VulkanSemaphore.h"
 #include "RenderingVulkan/VulkanDescriptorPool.h"
+#include "RenderingVulkan/VulkanDynamicUniformAllocator.h"
 #include "RenderingVulkan/VulkanCommandPool.h"
 #include "RenderingVulkan/VulkanCommandList.h"
 #include "RenderingVulkan/VulkanRenderPass.h"
@@ -78,6 +79,7 @@ namespace Raven
         virtual ERenderResult cmdEnd(ICommandList *pCommandList) override;
         virtual ERenderResult cmdBeginRenderPass(ICommandList *pCommandList, uint32_t numColorAttachments, IRenderTarget **ppColorAttachments, IRenderTarget *pDepthStencilAttachment, FLoadStoreOps* pLoadStoreOps) override;
         virtual ERenderResult cmdEndRenderPass(ICommandList *pCommandList) override;
+		virtual ERenderResult cmdAllocateDynamicUniformBuffer(ICommandList* pCommandList, FDynamicUniformAllocation* pAllocation, uint32_t size, void* data) override;
         virtual ERenderResult cmdBindVertexBuffer(ICommandList *pCommandList, uint32_t numBuffers, IBuffer **ppBuffers, uint32_t startSlot) override;
         virtual ERenderResult cmdBindIndexBuffer(ICommandList *pCommandList, IBuffer *pBuffer, EIndexType type) override;
         virtual ERenderResult cmdSetViewport(ICommandList *pCommandList, FRect rect, float minDepth, float maxDepth) override;
@@ -274,7 +276,7 @@ namespace Raven
 			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1, },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, gDescriptorPoolSize * 4 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, gDescriptorPoolSize * 4 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, gDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, gDescriptorPoolSize * 4 },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, gDescriptorPoolSize },
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 },
 		};
@@ -292,7 +294,7 @@ namespace Raven
 			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1, },
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, gDynamicDescriptorPoolSize },
 			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, gDynamicDescriptorPoolSize },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, gDynamicDescriptorPoolSize },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, gDynamicDescriptorPoolSize * 4},
 			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, gDynamicDescriptorPoolSize },
 			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 },
 		};
@@ -305,6 +307,8 @@ namespace Raven
 		VmaAllocator										mAllocator; /*!< Vulkan memory allocator. */
 		FVulkanQueue*							            mTransferQueue; /*!< Transfer queue for data transfer. */
 		FVulkanCommandPool*						            mTransferCommandPool; /*!< Transfer command pool for data transfer. */
+		FVulkanQueue*							            mGraphicsQueue; /*!< Transfer queue for data transfer. */
+		FVulkanCommandPool*						            mGraphicsCommandPool; /*!< Transfer command pool for data transfer. */
 		FRendererInitializationDesc				            mRendererInfo; /*!< Copy of renderer initialization description to check for certain features. */
 		bool									            mInitialized; /*!< Boolean to store if the renderer is initialized. */
 		FVulkanDescriptorPool*					            mDescriptorPool; /*!< Global descriptor pool. */

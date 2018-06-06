@@ -23,6 +23,7 @@ namespace Raven
 	};
 
 	struct IRenderTarget;
+	struct ISemaphore;
 
 	/*! \class ISwapChain
 	\brief The ISwapChain class is an abstraction layer on top of the underlying graphics API.
@@ -55,6 +56,9 @@ namespace Raven
 		\returns On success, this command returns RR_SUCCESS.
 		*/
 		virtual IRenderTarget* getRenderTarget(uint32_t index) const = 0;
+
+		/*! Acquire the image acquired semaphore for this swapchain. */
+		virtual ISemaphore* getImageAcquiredSemaphore() const = 0;
 
 	};
 }

@@ -3,6 +3,7 @@
 #include "Platform/Interfaces/IPlatformWindow.h"
 #include "RenderingVulkan/Vulkan.h"
 #include "RenderingVulkan/VulkanRenderTarget.h"
+#include "RenderingVulkan/VulkanSemaphore.h"
 #include <vector>
 
 namespace Raven 
@@ -24,6 +25,7 @@ namespace Raven
 		IPlatformWindow*				mPlatformWindow;  /*!< Reference of the platform window associated with this SwapChain. */
 		FVulkanRenderTarget**			mRenderTargets; /*!< Render targets for this swapchain. */
 		uint32_t						mImageIndex; /*!< Current image index to render to on this SwapChain. */
+		FVulkanSemaphore*				mImageAcquiredSemaphore; /*!< Image acquired semaphore. */
 
 		/*! Implicit conversion to a VkSwapchainKHR */
 		operator VkSwapchainKHR() const { return mSwapChain; }
@@ -52,6 +54,11 @@ namespace Raven
 		{
 			RASSERT(index < mNumBackbuffers);
 			return (IRenderTarget*)mRenderTargets[index];
+		}
+
+		virtual ISemaphore* getImageAcquiredSemaphore() const override
+		{
+			return mImageAcquiredSemaphore;
 		}
 	};
 }

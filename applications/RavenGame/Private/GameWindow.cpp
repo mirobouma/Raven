@@ -8,7 +8,7 @@
 #include "Rendering/RenderGraph/Modules/RGMMesh.h"
 #include "Rendering/Game/Mesh.h"
 
-
+#include <algorithm>
 #include <stb_image.h>
 
 #include <assimp/Importer.hpp>
@@ -145,8 +145,8 @@ namespace Raven
 		FRenderTargetCreateDesc texDesc = {};
 		texDesc.memoryType = MEMORY_TYPE_GPU;
 		texDesc.format = TEXTURE_FORMAT_RGBA8;
-		texDesc.width = (uint32_t)max(gameWindowBackbufferSize.x, 1);
-		texDesc.height = (uint32_t)max(gameWindowBackbufferSize.y, 1);
+		texDesc.width = (uint32_t)std::max((uint32_t)gameWindowBackbufferSize.x, (uint32_t)1);
+		texDesc.height = (uint32_t)std::max((uint32_t)gameWindowBackbufferSize.y, (uint32_t)1);
 		texDesc.sampleCount = 1;
 		texDesc.sampleQuality = 0;
 		texDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -158,8 +158,8 @@ namespace Raven
 		FRenderTargetCreateDesc dsDesc = {};
 		dsDesc.memoryType = MEMORY_TYPE_GPU;
 		dsDesc.format = TEXTURE_FORMAT_D32_FLOAT;
-		dsDesc.width = max(gameWindowBackbufferSize.x, 1);
-		dsDesc.height = max(gameWindowBackbufferSize.y, 1);
+		dsDesc.width = std::max((uint32_t)gameWindowBackbufferSize.x, (uint32_t)1);
+		dsDesc.height = std::max((uint32_t)gameWindowBackbufferSize.y, (uint32_t)1);
 		dsDesc.sampleCount = 1;
 		dsDesc.sampleQuality = 0;
 		dsDesc.tiling = IMAGE_TILING_OPTIMAL;

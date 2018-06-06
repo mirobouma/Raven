@@ -114,7 +114,7 @@ namespace Raven
 			return mTransformMatrix;
 		}
 
-		const glm::vec3& GetUp()
+		const glm::vec3 GetUp()
 		{
 			glm::mat4 orientation;
 			orientation = glm::rotate(mRotation.x, glm::vec3(1, 0, 0));
@@ -125,7 +125,7 @@ namespace Raven
 			return glm::normalize(glm::vec3(up));	
 		}
 
-		const glm::vec3& GetRight()
+		const glm::vec3 GetRight()
 		{
 			glm::mat4 orientation;
 			orientation = glm::rotate(mRotation.x, glm::vec3(1, 0, 0));
@@ -137,7 +137,7 @@ namespace Raven
 		}
 			
 
-		const glm::vec3& GetForward()
+		const glm::vec3 GetForward()
 		{
 			glm::mat4 orientation;
 			orientation = glm::rotate(mRotation.x, glm::vec3(1, 0, 0));

@@ -18,6 +18,7 @@
 #include <assimp/DefaultLogger.hpp> // logger
 #include <chrono>
 #include "UI/UI.h"
+#undef max
 
 namespace Raven
 {

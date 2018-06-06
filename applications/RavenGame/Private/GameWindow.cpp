@@ -545,14 +545,15 @@ namespace Raven
 		FVirtualResourceRef* depth = gRGMCommon.RGImportTarget(builder, renderer, "depth", gDepthStencil);
 
 		// Draw Meshes (forward).
-		FRGMForwardTargets targets;
-		targets = gRGMMesh.RGDrawMeshesForward(builder, offscreen, depth, 1, &gRealMesh);
-
-		// Draw UI
 		if (d_gameWindowOpen)
 		{
-			bb_data.pBackbuffer = gUIRenderer.render(builder, bb_data.pBackbuffer);
+		FRGMForwardTargets targets;
+		targets = gRGMMesh.RGDrawMeshesForward(builder, offscreen, depth, 1, &gRealMesh);
 		}
+
+		// Draw UI
+		bb_data.pBackbuffer = gUIRenderer.render(builder, bb_data.pBackbuffer);
+	
 
 		// Submit command list to the graphics queue and present the backbuffer.
 		gRGMCommon.RGSubmitAndPresent(builder, _SwapChain, bb_data.pBackbuffer);

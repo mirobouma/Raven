@@ -42,8 +42,8 @@ endif()
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Tooling - some must be declared before adding other subdirectories
-project_enable_sanitizer_build()
-project_enable_documentation()
+#project_enable_sanitizer_build()
+#project_enable_documentation()
 
 # Options
 option(BUILD_DOCUMENTATION "Build documentation" OFF)
@@ -77,11 +77,14 @@ if(FIX_OUTPUT_PATH)
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
+	
 else()
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
 endif()
+
+set(GLM_INSTALL_ENABLE OFF CACHE BOOL "GLM install" FORCE)
 
 #add third-party modules.
 project_add_3rdparty(json)

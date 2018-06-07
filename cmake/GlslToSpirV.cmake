@@ -34,14 +34,21 @@ macro(enable_glsl_to_spirv_compiling trgt)
 		Shaders 
 		DEPENDS ${SPIRV_BINARY_FILES}
 		)
-
-	add_custom_command(TARGET Shaders POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/"
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-			"${PROJECT_BINARY_DIR}/shaders"
-			"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders"
-			)
-
+	if(NOT FIX_OUTPUT_PATH)
+		add_custom_command(TARGET Shaders POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/shaders/"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory
+				"${PROJECT_BINARY_DIR}/shaders"
+				"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/shaders"
+				)
+	else()
+		add_custom_command(TARGET Shaders POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/"
+			COMMAND ${CMAKE_COMMAND} -E copy_directory
+				"${PROJECT_BINARY_DIR}/shaders"
+				"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders"
+				)
+	endif()
 	add_dependencies(${trgt} Shaders)
 
 endmacro()

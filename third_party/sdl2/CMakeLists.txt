@@ -1,4 +1,3 @@
-
 add_library(sdl2 INTERFACE)
 target_include_directories(sdl2 INTERFACE ${SDL2_INCLUDE_DIRS})
 target_link_libraries(sdl2 INTERFACE ${SDL2_LIBS})

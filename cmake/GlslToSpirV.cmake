@@ -42,4 +42,6 @@ macro(enable_glsl_to_spirv_compiling trgt)
 			"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders"
 			)
 
+	add_dependencies(${trgt} Shaders)
+
 endmacro()

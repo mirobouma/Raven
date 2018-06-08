@@ -103,6 +103,7 @@ namespace Raven
 		if (threadId == UINT32_MAX)
 		{
 			RLOG_WARNING("Tried to profile function but the thread is not registered in the task scheduler.");
+			return;
 		}
 
 		auto it = GProfiler->_mThreadProfilers.find(threadId);
@@ -146,9 +147,9 @@ namespace Raven
 		{
 			auto currentTime = std::chrono::high_resolution_clock::now();
 
-			for (uint32_t i = 0; i < GProfiler->_mThreadProfilers.size(); ++i)
+			for (auto it = GProfiler->_mThreadProfilers.begin(); it != GProfiler->_mThreadProfilers.end(); ++it)
 			{
-				GProfiler->_mThreadProfilers[i]._endTime = currentTime;
+				it->second._endTime = currentTime;
 			}
 
 			GProfiler->_mProfiling = false;
@@ -218,10 +219,11 @@ namespace Raven
 
 			auto currentTime = std::chrono::high_resolution_clock::now();
 
-			for (uint32_t i = 0; i < GProfiler->_mThreadProfilers.size(); ++i)
+			for (auto it = GProfiler->_mThreadProfilers.begin(); it != GProfiler->_mThreadProfilers.end(); ++it)
 			{
-				GProfiler->_mThreadProfilers[i].data.clear();
-				GProfiler->_mThreadProfilers[i]._startTime = currentTime;
+				it->second.data.clear();
+				it->second._startTime = currentTime;
+				it->second.inScope = false;
 			}
 			GProfiler->_startTime = currentTime;
 			GProfiler->_mProfilerMutex.unlock();

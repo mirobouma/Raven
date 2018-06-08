@@ -54,7 +54,7 @@ namespace Raven
 		// Set the first thread to be the current thread, and set it's affinity.
 		_mThreads[0] = new RThread();
 		_mThreads[0]->FromCurrentThread();
-		//_mThreads[0]->SetAffinity(0);
+		_mThreads[0]->SetAffinity(0);
 
 		// Create worker threads.
 		for (uint32_t i = 1; i < _mNumThreads; ++i)
@@ -64,7 +64,7 @@ namespace Raven
 			args->threadId = i;
 
 			// Create threads and set their affinity.
-			_mThreads[i] = new RThread(ThreadStart, (void*)args, -1);
+			_mThreads[i] = new RThread(ThreadStart, (void*)args, i);
 		}
 
 		// Signal the worker threads that we're fully initialized
@@ -207,10 +207,10 @@ namespace Raven
 		}
 #endif
 		PROFILER_END_SCOPE
-
+		PROFILER_START_SCOPE("Switch Fiber");
 		// Switch to a new fiber.
 		_mFibers[currentFiberIndex].SwitchToFiber(&_mFibers[freeFiberIndex]);
-
+		PROFILER_END_SCOPE
 #ifdef ENABLE_PROFILING
 		if (gotProfilerContext)
 		{

@@ -405,6 +405,7 @@ namespace Raven
 
 	void RRenderGraphBuilder::createPhysicalResources(RRenderGraph* graph)
 	{
+		std::vector<RPhysicalResource*> mTakenResources;
 		for (auto resourcePair = mVirtualResources.begin(); resourcePair != mVirtualResources.end(); ++resourcePair)
 		{
 			FVirtualResource* resource = resourcePair->second.get();
@@ -413,29 +414,58 @@ namespace Raven
 			{
 			case VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER:
 			{
-				RPhysicalResource physRes;
-				physRes.mBuffer = resource->mDesc.mImportedBuffer;
-				physRes.mType = PHYSICAL_RESOURCE_TYPE_BUFFER;
+				RPhysicalResource* physRes = new RPhysicalResource();
 
-				graph->mPhysicalResources[resource->mName] = std::move(physRes);
+				physRes->mBuffer = resource->mDesc.mImportedBuffer;
+				physRes->mType = PHYSICAL_RESOURCE_TYPE_BUFFER;
+				physRes->mDesc = resource->mDesc;
+
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
 			case VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET:
 			{
-				RPhysicalResource physRes;
-				physRes.mRenderTarget = resource->mDesc.mImportedRenderTarget;
-				physRes.mType = PHYSICAL_RESOURCE_TYPE_RENDER_TARGET;
+				RPhysicalResource* physRes = new RPhysicalResource();
 
-				graph->mPhysicalResources[resource->mName] = std::move(physRes);
+				physRes->mRenderTarget = resource->mDesc.mImportedRenderTarget;
+				physRes->mType = PHYSICAL_RESOURCE_TYPE_RENDER_TARGET;
+				physRes->mDesc = resource->mDesc;
+
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
 			case VIRTUAL_RESOURCE_TYPE_IMPORTED_TEXTURE:
 			{
-				RPhysicalResource physRes;
-				physRes.mTexture = resource->mDesc.mImportedTexture;
-				physRes.mType = PHYSICAL_RESOURCE_TYPE_TEXTURE;
+				RPhysicalResource* physRes = new RPhysicalResource();
 
-				graph->mPhysicalResources[resource->mName] = std::move(physRes);
+				physRes->mTexture = resource->mDesc.mImportedTexture;
+				physRes->mType = PHYSICAL_RESOURCE_TYPE_TEXTURE;
+				physRes->mDesc = resource->mDesc;
+
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				graph->mPhysicalResources[resource->mName] = physRes;
+			}
+			break;
+			case VIRTUAL_RESOURCE_TYPE_BUFFER:
+			{
+				RPhysicalResource* physRes = new RPhysicalResource();
+
+				// todo
+
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				graph->mPhysicalResources[resource->mName] = physRes;
+			}
+			break;
+			case VIRTUAL_RESOURCE_TYPE_TEXTURE:
+			{
+				RPhysicalResource* physRes = new RPhysicalResource();
+
+				// todo
+
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
 			default:
@@ -925,7 +955,7 @@ namespace Raven
 			{
 				FVirtualResourceRef* ref = virtualPass->mVirtualResourceReferences[j].get();
 
-				pass->mPhysicalResourceMappings[ref->mName] = &retGraph->mPhysicalResources[ref->mResource->mName];
+				pass->mPhysicalResourceMappings[ref->mName] = retGraph->mPhysicalResources[ref->mResource->mName];
 
 				if (ref->mParent == nullptr && ref->mWriteFlags != 0)
 				{

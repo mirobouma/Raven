@@ -161,7 +161,7 @@ namespace Raven
 	struct RPhysicalResource
 	{
 		EPhysicalResourceType mType;
-
+		FVirtualResourceDesc mDesc;
 		union
 		{
 			IBuffer*			mBuffer;
@@ -261,7 +261,7 @@ namespace Raven
 		/*! Reset to default state.*/
 		void reset();
 
-		std::map<std::string,	RPhysicalResource>		mPhysicalResources;
+		std::map<std::string,	RPhysicalResource*>		mPhysicalResources;
 		std::vector<std::unique_ptr<RCompiledPass>>		mPasses;
 		RRenderGraphManager*							mManager;
 		ISemaphore*										mRenderCompleteSemaphore;
@@ -318,6 +318,7 @@ namespace Raven
 	{
 	public:
 		friend class RRenderGraph;
+		friend class RRenderGraphBuilder;
 
 		/*! Initialize the graph manager. */
 		void initialize(IRenderer* renderer, IQueue* graphicsQueue, IQueue* computeQueue);
@@ -357,6 +358,11 @@ namespace Raven
 
 		std::queue<ICommandList*> mFreeComputeCommandLists; /*!< Queue of free command lists (recycled). */
 		std::vector<ICommandList*> mComputeCommandLists; /*!< Vector of all existing command lists. */
+
+		uint64_t mFrameCounter; /*!< Frame counter to keep track of resources to recycle. */
+
+		// Resources required for scene graph.
+		std::map<std::unique_ptr<RPhysicalResource>, uint64_t> mResources;
 
 		RRenderGraph* mRenderGraphs[MAX_FRAMES_AT_ONCE]; /*!< array of render graphs per frame. */
 	};

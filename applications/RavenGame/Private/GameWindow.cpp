@@ -462,11 +462,11 @@ namespace Raven
 								endTime = prof._endTime;
 						}
 
-						float windowSize = ImGui::GetWindowSize().x;
+						float windowSize = ImGui::GetWindowSize().x - (ImGui::GetStyle().ScrollbarSize * 2.0f);
 
 						float scale = windowSize / std::chrono::duration<float, std::chrono::seconds::period>(endTime - beginTime).count();
 
-						ImGui::Text("Frame time %5.3f ms", std::chrono::duration<float, std::chrono::seconds::period>(endTime - beginTime).count() * 1000.0f);
+						ImGui::Text("Frame time %7.5f ms", std::chrono::duration<float, std::chrono::seconds::period>(endTime - beginTime).count() * 1000.0f);
 
 						ImGui::Separator();
 						ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
@@ -499,7 +499,7 @@ namespace Raven
 								ImGui::Button(prof.data[j].name.c_str(), ImVec2(gProfilerZoom* scale * std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].end - prof.data[j].begin).count(), gProfilerBlockHeight));
 								if (ImGui::IsItemHovered())
 								{
-									ImGui::SetTooltip("%s\nDuration %5.3f ms", prof.data[j].name.c_str(), std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].end - prof.data[j].begin).count() * 1000);
+									ImGui::SetTooltip("%s\nDuration %7.5f ms", prof.data[j].name.c_str(), std::chrono::duration<float, std::chrono::seconds::period>(prof.data[j].end - prof.data[j].begin).count() * 1000);
 								}
 								ImGui::SameLine();
 							}

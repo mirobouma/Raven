@@ -6,6 +6,9 @@
 #include "Rendering/RenderGraph/RenderGraph.h"
 #include "Rendering/RenderGraph/Modules/RGMCommon.h"
 #include "Rendering/RenderGraph/Modules/RGMMesh.h"
+#include "Rendering/RenderGraph/Modules/RGMSSAO.h"
+#include "Rendering/RenderGraph/Modules/RGMVolumetric.h"
+
 #include "Rendering/Game/Mesh.h"
 
 #include <algorithm>
@@ -36,8 +39,16 @@ namespace Raven
 
 	RGMCommon gRGMCommon;
 	RGMMesh gRGMMesh;
+	RGMSSAO gRGMSSAO;
+	RGMVolumetricFog gRGMVolumetric;
+
+	RCamera gCamera;
+	RCamera gShadowCamera;
 
 	RUIRenderer	gUIRenderer;
+
+	FSSAOVars gSSAOVars;
+	FVolumetricFogVars gVolumetricVars;
 
 	ImVec2 gameWindowSize = {1, 1};
 	ImVec2 gameWindowBackbufferSize = { 1, 1 };
@@ -88,14 +99,41 @@ namespace Raven
 		gRGMCommon.Load(renderer, _SwapChain);
 		gRGMMesh.Init(renderer);
 		gRGMMesh.Load(renderer, _SwapChain);
-
+		gRGMSSAO.Init(renderer);
+		gRGMSSAO.Load(renderer, _SwapChain);
+		gRGMVolumetric.Init(renderer);
+		gRGMVolumetric.Load(renderer, _SwapChain);
+		
 		// Create game backbuffer.
 		createGameWindow();
 
 		// Initialize UI renderer.
 		gUIRenderer.initialize(renderer, this, _SwapChain);
 
-		gRealMesh = new RMesh(renderer, "models/sponza/sponza.obj");
+		gRealMesh = new RMesh(renderer, "models/sponzaPBR/sponza.obj", 0.05f);
+
+		gSSAOVars.cSampleRadius = 2.4f;
+		gSSAOVars.cIntensity = 1.1f;
+		gSSAOVars.cScale = 1.0f;
+		gSSAOVars.cBias = 0.1f;
+
+		gVolumetricVars.EnableHeightFog = false;
+		gVolumetricVars.LightCol = glm::vec4(0.91, 0.61f, 0.35f, 1.0f);
+		gVolumetricVars.AmbientFog = 0.2f;
+		gVolumetricVars.LightMieG = 0.05f;
+		gVolumetricVars.LightIntensity = 1.0f;
+		gVolumetricVars.LightScatteringCoef = 0.020f;
+		gVolumetricVars.LightExtinctionCoef = 0.0005f;
+		gVolumetricVars.SkyboxExtinctionCoef = 0.005f;
+		gVolumetricVars.NumSteps = 25;
+		gVolumetricVars.MaxRayLength = 1000.0f;
+		gVolumetricVars.EnableHeightFog = false;
+		gVolumetricVars.HeightFog = 1.0f;
+		gVolumetricVars.HeightFogScale = 0.007f;
+		gVolumetricVars.NoiseSpeed = 1.0f;
+		gVolumetricVars.FogDensity = 1.0f;
+		gVolumetricVars.EnableNoise = false;
+
     }
 
     void RGameWindow::OnResize(int width, int height)
@@ -136,7 +174,7 @@ namespace Raven
 			renderer->destroyRenderTarget(gBackbuffer);
 			gBackbuffer = nullptr;
 		}
-
+		
 		if (gDepthStencil != nullptr)
 		{
 			renderer->destroyRenderTarget(gDepthStencil);
@@ -168,7 +206,7 @@ namespace Raven
 
 		renderer->createRenderTarget(&gDepthStencil, &dsDesc);
 
-		renderer->waitForDevice();
+		//renderer->waitForDevice();
 	}
 
     void RGameWindow::OnClose()
@@ -180,9 +218,13 @@ namespace Raven
 
 		gRGMCommon.Unload(renderer);
 		gRGMMesh.Unload(renderer);
+		gRGMSSAO.Unload(renderer);
+		gRGMVolumetric.Unload(renderer);
 
 		gRGMCommon.Destroy(renderer);
 		gRGMMesh.Destroy(renderer);
+		gRGMSSAO.Destroy(renderer);
+		gRGMVolumetric.Destroy(renderer);
 
 		gRenderGraphManager->destroy();
 		delete gRenderGraphManager;
@@ -427,7 +469,23 @@ namespace Raven
 			ImGui::EndDock();
 
 			if (ImGui::BeginDock("Properties", &d_propertyWindowOpen)) {
-				ImGui::Text("I'm LonelyWaiting!");
+				ImGui::Text("SSAO");
+				ImGui::Separator();
+				ImGui::SliderFloat("Bias", &gSSAOVars.cBias, 0.001f, 0.3f);
+				ImGui::SliderFloat("Intensity", &gSSAOVars.cIntensity, 0.0f, 5.0f);
+				ImGui::SliderFloat("Sample Radius", &gSSAOVars.cSampleRadius, 0.01f, 5.0f);
+				ImGui::Text("Fog");
+				ImGui::Separator();
+				ImGui::SliderFloat("Fog Intensity", &gVolumetricVars.LightIntensity, 0.0f, 2.0f);
+				ImGui::SliderInt("Steps", (int*)&gVolumetricVars.NumSteps, 1, 256);
+				ImGui::SliderFloat("Max ray length", &gVolumetricVars.MaxRayLength, 1.0f, 1000.0f);
+				ImGui::SliderFloat("Mie", &gVolumetricVars.LightMieG, 0.0f, 1.0f);
+				ImGui::SliderFloat("Light extiction coefficient", &gVolumetricVars.LightExtinctionCoef, 0.0f, 0.02f);
+				ImGui::SliderFloat("Light scattering coefficien", &gVolumetricVars.LightScatteringCoef, 0.0f, 0.02f);
+				ImGui::SliderFloat("Sky extinction coefficient", &gVolumetricVars.SkyboxExtinctionCoef, 0.0f, 0.02f);
+				ImGui::SliderFloat("Fog Density", &gVolumetricVars.FogDensity, 0.0f, 2.0f);
+				ImGui::SliderFloat("Ambient Fog", &gVolumetricVars.AmbientFog, 0.0f, 1.0f);
+				ImGui::ColorPicker4("Light Color", (float*)&gVolumetricVars.LightCol);
 			}
 			ImGui::EndDock();
 
@@ -532,7 +590,16 @@ namespace Raven
     {
 		// Update editor (Record IMGUI commands).
 		updateEditor();
-		
+
+		static auto startTime = std::chrono::high_resolution_clock::now();
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() / 10.0f;
+
+		// Create dynamic uniform allocation.
+		gCamera.setPerspectiveProjection(45.0f, (float)gBackbuffer->GetDesc()->width / (float)gBackbuffer->GetDesc()->height, 0.1f, 1000.0f);
+		gCamera.getTransform()->setPosition(FVector3(sin(time * glm::radians(90.0f)) * 25.0f, -35.0f, cos(time * glm::radians(90.0f)) * 25.0f));
+		gCamera.getTransform()->lookAt(FVector3(0.0f, -25.0f, 0.0f));
+
 		// render graph builder for this
 		RRenderGraphBuilder* builder = gRenderGraphManager->get_new_graph_builder();
 		
@@ -540,16 +607,44 @@ namespace Raven
 		FRGMCommonBackbufferTargets bb_data = gRGMCommon.RGAcquireBackbuffer(builder, renderer, _SwapChain);
 	
 		// Import offscreen render target.
-		FVirtualResourceRef* offscreen = gRGMCommon.RGImportTarget(builder, renderer, "offscreen", gBackbuffer);
+		FVirtualResourceRef* offscreen = gRGMCommon.RGImportTarget(builder, "offscreen", gBackbuffer);
 
 		// Import depth-stencil.
-		FVirtualResourceRef* depth = gRGMCommon.RGImportTarget(builder, renderer, "depth", gDepthStencil);
+		FVirtualResourceRef* depth = gRGMCommon.RGImportTarget(builder, "depth", gDepthStencil);
 
 		// Draw Meshes (forward).
 		if (d_gameWindowOpen)
 		{
-		FRGMForwardTargets targets;
-		targets = gRGMMesh.RGDrawMeshesForward(builder, offscreen, depth, 1, &gRealMesh);
+			// Draw G-Buffer
+			FRGMDeferredTargets deferred_targets;
+			deferred_targets = gRGMMesh.RGDrawMeshesDeferredGBuffer(builder, depth, &gCamera, 1, &gRealMesh);
+
+			// Compute SSAO
+			FRGMDeferredSSAOTargets ssaotargets;
+			ssaotargets = gRGMSSAO.RGDrawSSAO_Deferred(builder, deferred_targets.pDepth, deferred_targets.pNormal, deferred_targets.pPosition, &gCamera, gSSAOVars);
+
+			// Create shadow map and draw shadows;
+			FVirtualResourceDesc shadowMapDesc;
+			shadowMapDesc.mType = VIRTUAL_RESOURCE_TYPE_TEXTURE;
+			shadowMapDesc.mTextureDesc.depth = 1;
+			shadowMapDesc.mTextureDesc.format = TEXTURE_FORMAT_D32_FLOAT;
+			shadowMapDesc.mTextureDesc.width = 2048;
+			shadowMapDesc.mTextureDesc.height = 2048;
+			shadowMapDesc.mTextureDesc.sampleCount = 1;
+			shadowMapDesc.mTextureDesc.sampleQuality = 1;
+
+			gShadowCamera.setOrthoProjection(200.0f, 200.0f, 0.1f, 700.0f);
+			gShadowCamera.getTransform()->setPosition(FVector3(100.0f, -410.0f,-150.0f));
+			gShadowCamera.getTransform()->lookAt(FVector3(0.0f, 0.0f, 0.0f));
+
+			FVirtualResourceRef* shadowMap = gRGMCommon.RGCreateTarget(builder, "shadowmap_1", shadowMapDesc);
+			FRGMForwardTargets shadowTargets = gRGMMesh.RGDrawDepth(builder, shadowMap, &gShadowCamera, 1, &gRealMesh);
+
+			FRGMVolumetricFogTargets volumeTargets = gRGMVolumetric.RGDrawVolumetricFog(builder, deferred_targets.pPosition, deferred_targets.pDepth, shadowTargets.pDepth, &gCamera, &gShadowCamera, gVolumetricVars);
+
+			// Compose targets together.
+			FRGMDeferredComposeTargets deferred_compose;
+			deferred_compose = gRGMMesh.RGDrawMeshesDeferredCompose(builder, offscreen, deferred_targets.pAlbedo, volumeTargets.pSceneDepth, volumeTargets.pScenePosition, ssaotargets.pNormal, ssaotargets.pSSAO, volumeTargets.pShadowDepth, volumeTargets.pOutput, &gCamera, &gShadowCamera);
 		}
 
 		// Draw UI

@@ -11,7 +11,7 @@
 
 namespace Raven
 {
-	RMesh::RMesh(IRenderer* renderer, std::string path)
+	RMesh::RMesh(IRenderer* renderer, std::string path, float importScale)
 	{
 		mRenderer = renderer;
 
@@ -27,12 +27,7 @@ namespace Raven
 		Assimp::Importer importer;
 
 		const aiScene* scene = importer.ReadFile(path,
-			aiProcess_CalcTangentSpace |
-			aiProcess_Triangulate |
-			aiProcess_GenSmoothNormals |
-			aiProcess_SplitLargeMeshes |
-			aiProcess_SortByPType |
-			aiProcess_PreTransformVertices);
+			aiProcess_FlipWindingOrder | aiProcess_Triangulate | aiProcess_PreTransformVertices | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals);
 
 		auto error = importer.GetErrorString();
 
@@ -83,6 +78,8 @@ namespace Raven
 						texDesc.usage = TEXTURE_USAGE_SAMPLED | TEXTURE_USAGE_TRANSFER_DST;
 
 						renderer->createTexture(&mMaterials[i].mTextures[TEXTURE_SLOT_ALBEDO], &texDesc);
+
+						stbi_image_free(pixels);
 					}
 				}
 
@@ -117,6 +114,8 @@ namespace Raven
 						texDesc.usage = TEXTURE_USAGE_SAMPLED | TEXTURE_USAGE_TRANSFER_DST;
 
 						renderer->createTexture(&mMaterials[i].mTextures[TEXTURE_SLOT_NORMAL], &texDesc);
+
+						stbi_image_free(pixels);
 					}
 				}
 
@@ -151,6 +150,8 @@ namespace Raven
 						texDesc.usage = TEXTURE_USAGE_SAMPLED | TEXTURE_USAGE_TRANSFER_DST;
 
 						renderer->createTexture(&mMaterials[i].mTextures[TEXTURE_SLOT_ROUGHNESS], &texDesc);
+
+						stbi_image_free(pixels);
 					}
 				}
 			}
@@ -163,7 +164,7 @@ namespace Raven
 
 				for (uint32_t j = 0; j < scene->mMeshes[i]->mNumVertices; j++)
 				{
-					aiVector3D vert = scene->mMeshes[i]->mVertices[j];
+					aiVector3D vert = scene->mMeshes[i]->mVertices[j] * importScale;
 					aiVector3D normal = scene->mMeshes[i]->mNormals[j];
 					aiVector3D tangent = aiVector3D(0.0f, 1.0f, 0.0f);
 					aiVector3D bitangent = aiVector3D(0.0f, 1.0f, 0.0f);
@@ -181,8 +182,8 @@ namespace Raven
 					}
 
 					FMeshVertex vertex;
-					vertex.position = glm::vec3(vert.x, vert.y, vert.z);
-					vertex.normal = glm::vec3(normal.x, normal.y, normal.z);
+					vertex.position = glm::vec3(vert.x, -vert.y, vert.z);
+					vertex.normal = glm::vec3(normal.x, -normal.y, normal.z);
 					vertex.uv = glm::vec2(uv.x, uv.y);
 					vertex.tangent = glm::vec3(tangent.x, tangent.y, tangent.z);
 					vertex.bitangent = glm::vec3(bitangent.x, bitangent.y, bitangent.z);

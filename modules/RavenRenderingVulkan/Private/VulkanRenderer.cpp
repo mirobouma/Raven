@@ -489,6 +489,9 @@ namespace Raven
 		if (state & RESOURCE_STATE_DEPTH_WRITE) {
 			rflags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		}
+		if (state & RESOURCE_STATE_DEPTH_READ) {
+			rflags |= VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+		}
 		if ((state & RESOURCE_STATE_SHADER_RESOURCE) || (state & RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)) {
 			rflags |= VK_ACCESS_SHADER_READ_BIT;
 		}
@@ -509,6 +512,9 @@ namespace Raven
 
 		if ((state & RESOURCE_STATE_RENDER_TARGET) != 0)
 			return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		if ((state & RESOURCE_STATE_DEPTH_READ) != 0)
+			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		if ((state & RESOURCE_STATE_DEPTH_WRITE) != 0)
 			return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -1614,7 +1620,7 @@ namespace Raven
 			rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 			rasterizer.lineWidth = 1.0f;
 			rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-			rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+			rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
 			rasterizer.depthBiasEnable = VK_FALSE;
 			rasterizer.depthBiasConstantFactor = 0.0f; // Optional
 			rasterizer.depthBiasClamp = 0.0f; // Optional
@@ -2323,6 +2329,7 @@ namespace Raven
 		samplerInfo.mipLodBias = pDesc->mipLodBias;
 		samplerInfo.mipmapMode = gMipModeTranslator[pDesc->mipmapMode];
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.pNext = nullptr;
 
 		// Create image object.
 		if (vkCreateSampler(mDevice->mDevice, &samplerInfo, nullptr, &sampler->mSampler) != VK_SUCCESS)
@@ -3892,6 +3899,9 @@ namespace Raven
 			if(pDepthStencilAttachment != nullptr)
 			{
 				FVulkanRenderTarget* depthAttachment = static_cast<FVulkanRenderTarget*>(pDepthStencilAttachment);
+				fbDesc.width = depthAttachment->mTexture->mDesc.width;
+				fbDesc.height = depthAttachment->mTexture->mDesc.height;
+				fbDesc.layers = depthAttachment->mTexture->mDesc.arrayLayers;
 				attachments[numColorAttachments] = depthAttachment;
 			}
 
@@ -4000,8 +4010,7 @@ namespace Raven
 		return RR_SUCCESS;
     }
 
-    ERenderResult
-    RVulkanRenderer::cmdSetViewport(ICommandList *pCommandList, FRect rect, float minDepth, float maxDepth)
+    ERenderResult RVulkanRenderer::cmdSetViewport(ICommandList *pCommandList, FRect rect, float minDepth, float maxDepth)
 	{
 		RASSERT(pCommandList != nullptr);
 
@@ -4020,6 +4029,18 @@ namespace Raven
 
 		return RR_SUCCESS;
     }
+
+	ERenderResult RVulkanRenderer::cmdSetDynamicDepthBias(ICommandList* pCommandList, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor)
+	{
+		RASSERT(pCommandList != nullptr);
+
+		// Cast the command list interface to the vulkan type.
+		FVulkanCommandList* list = static_cast<FVulkanCommandList*>(pCommandList);
+
+		vkCmdSetDepthBias(list->mCmdBuffer, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
+
+		return RR_SUCCESS;
+	}
 
     ERenderResult RVulkanRenderer::cmdSetScissorRects(ICommandList *pCommandList, FRect rect)
 	{
@@ -4390,8 +4411,8 @@ namespace Raven
 		std::vector<VkWriteDescriptorSet> writeSets;
 		std::vector<VkCopyDescriptorSet> copySets;
 		std::vector<uint32_t> copySetIds;
-		std::vector<VkDescriptorBufferInfo> descriptorBufferInfos;
-		std::vector<VkDescriptorImageInfo> descriptorImageInfos;
+		std::vector<std::unique_ptr<std::vector<VkDescriptorBufferInfo>>> descriptorBufferInfos;
+		std::vector<std::unique_ptr<std::vector<VkDescriptorImageInfo>>> descriptorImageInfos;
 		std::map<uint32_t, std::vector<uint32_t>> mDynamicOffsets;
 
 		for (uint32_t i = 0; i < numDescriptors; ++i)
@@ -4431,15 +4452,16 @@ namespace Raven
 				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_BUFFER:
 				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
 				{
-					uint32_t firstDescriptor = static_cast<uint32_t>(descriptorBufferInfos.size());
+					uint32_t firstVector = static_cast<uint32_t>(descriptorBufferInfos.size());
+					descriptorBufferInfos.push_back(std::unique_ptr<std::vector<VkDescriptorBufferInfo>>(new std::vector<VkDescriptorBufferInfo>()));
 
 					for(uint32_t j = 0; j < binding.numDescriptors; ++j)
 					{
-						descriptorBufferInfos.push_back({});
-						VkDescriptorBufferInfo& bufferInfo = descriptorBufferInfos.back();
+						descriptorBufferInfos[firstVector]->push_back({});
+						VkDescriptorBufferInfo& bufferInfo = descriptorBufferInfos[firstVector]->back();
 						bufferInfo.buffer = static_cast<FVulkanBuffer*>(binding.ppBuffers[j])->mBuffer;
 						bufferInfo.offset = binding.type == DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ? 0 : binding.offset;
-						bufferInfo.range = binding.type == DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ? VK_WHOLE_SIZE : (binding.range == 0 ? VK_WHOLE_SIZE : binding.range);
+						bufferInfo.range = (binding.range == 0 ? VK_WHOLE_SIZE : binding.range);
 					}
 
 					if (binding.type == DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
@@ -4447,7 +4469,7 @@ namespace Raven
 						mDynamicOffsets[binding.set].push_back(binding.offset);
 					}
 
-					writeSet.pBufferInfo = &descriptorBufferInfos[firstDescriptor];
+					writeSet.pBufferInfo = &descriptorBufferInfos[firstVector].get()->at(0);
 				}
 				break;
 				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
@@ -4465,18 +4487,19 @@ namespace Raven
 				case EDescriptorType::DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 				case EDescriptorType::DESCRIPTOR_TYPE_STORAGE_IMAGE:
 				{
-                    uint32_t firstDescriptor = static_cast<uint32_t>(descriptorImageInfos.size());
+					uint32_t firstVector = static_cast<uint32_t>(descriptorImageInfos.size());
+					descriptorImageInfos.push_back(std::unique_ptr<std::vector<VkDescriptorImageInfo>>(new std::vector<VkDescriptorImageInfo>()));
 
                     for(uint32_t j = 0; j < binding.numDescriptors; ++j)
                     {
-                        descriptorImageInfos.push_back({});
-                        VkDescriptorImageInfo &imageInfo = descriptorImageInfos.back();
-                        imageInfo.imageView = static_cast<FVulkanTexture *>(binding.ppTextures[j])->mImageView;
+                        descriptorImageInfos[firstVector]->push_back({});
+                        VkDescriptorImageInfo &imageInfo = descriptorImageInfos[firstVector]->back();
+                        imageInfo.imageView = static_cast<FVulkanTexture*>(binding.ppTextures[j])->mImageView;
                         imageInfo.imageLayout = translateResourceStateToImageLayout(static_cast<FVulkanTexture *>(binding.ppTextures[j])->mState);
                         imageInfo.sampler = nullptr;
                     }
 
-					writeSet.pImageInfo = &descriptorImageInfos[firstDescriptor];
+					writeSet.pImageInfo = &descriptorImageInfos[firstVector].get()->at(0);
 				}
 				break;
 
@@ -4538,8 +4561,9 @@ namespace Raven
 			copySets.push_back(copySet);
 		}
 	
-		vkUpdateDescriptorSets(mDevice->mDevice, static_cast<uint32_t>(writeSets.size()), writeSets.data(), static_cast<uint32_t>(copySets.size()), copySets.data());
-
+		vkUpdateDescriptorSets(mDevice->mDevice, static_cast<uint32_t>(writeSets.size()), writeSets.data(), 0, nullptr);
+		vkUpdateDescriptorSets(mDevice->mDevice, 0, nullptr, static_cast<uint32_t>(copySets.size()), copySets.data());
+		
 		for (uint32_t i = 0; i < copySetIds.size(); ++i)
 		{
 			// Bind descriptor sets.

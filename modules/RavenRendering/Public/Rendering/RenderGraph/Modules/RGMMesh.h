@@ -1,6 +1,7 @@
 #pragma once
 #include "Rendering/RenderGraph/IRenderGraphModule.h"
 #include "Rendering/Game/Mesh.h"
+#include "Math/Camera.h"
 
 namespace Raven
 {
@@ -13,6 +14,26 @@ namespace Raven
 		FVirtualResourceRef* pDepth;
 	};
 
+	struct FRGMDeferredTargets
+	{
+		FVirtualResourceRef* pAlbedo;
+		FVirtualResourceRef* pPosition;
+		FVirtualResourceRef* pNormal;
+		FVirtualResourceRef* pDepth;
+	};
+
+	struct FRGMDeferredComposeTargets
+	{
+		FVirtualResourceRef* pOutput;
+		FVirtualResourceRef* pAlbedo;
+		FVirtualResourceRef* pPosition;
+		FVirtualResourceRef* pSSAO;
+		FVirtualResourceRef* pNormal;
+		FVirtualResourceRef* pDepth;
+		FVirtualResourceRef* pShadowMap;
+		FVirtualResourceRef* pVolumetricFog;
+	};
+	
 	/*!\struct FForwardMeshUniforms
 	\brief structure of uniforms we need to draw a mesh. 
 	*/
@@ -21,6 +42,30 @@ namespace Raven
 		glm::mat4 view;
 		glm::mat4 proj;
 		glm::vec4 camPos;
+		glm::vec2 screenSize;
+	};
+
+	struct FDeferredUniforms 
+	{
+		glm::mat4 cModel;
+		glm::mat4 cView;
+		glm::mat4 cProj;
+
+		float cFarZ;
+		float cNearZ;
+	};
+
+	struct FDeferredComposeUniforms
+	{
+		glm::mat4 cView;
+		glm::mat4 cProj;
+		glm::mat4 cInvView;
+		glm::mat4 cShadowMatrix;
+		glm::vec4 cLightDir;
+
+		float cFarZ;
+		float cNearZ;
+		glm::vec2 cScreenSize;
 	};
 
 	/*!\class RGMMesh
@@ -41,14 +86,48 @@ namespace Raven
 		/*! Unload resources. */
 		virtual void Unload(IRenderer* pRenderer);
 
+		/*! Depth pre-pass. */
+		FRGMForwardTargets RGDrawDepth(RRenderGraphBuilder* pBuilder, FVirtualResourceRef* depth, RCamera* pCamera, uint32_t numMeshes, RMesh** ppMeshes);
+
+		/*!  Draw meshes (forward) using pre-pass depth. */
+		FRGMForwardTargets RGDrawMeshesForwardDepthPrepass(RRenderGraphBuilder* pBuilder, FVirtualResourceRef* pColor, FVirtualResourceRef* pDepth, FVirtualResourceRef* pSsao, RCamera* pCamera, uint32_t numMeshes, RMesh** ppMeshes);
+
+		/*! Generate G-Buffer. */
+		FRGMDeferredTargets RGDrawMeshesDeferredGBuffer(RRenderGraphBuilder* pBuilder, FVirtualResourceRef* pDepth, RCamera* pCamera, uint32_t numMeshes, RMesh** ppMeshes);
+
 		/*! Acquire next swapchain image and import the target into the render graph system. */
-		FRGMForwardTargets RGDrawMeshesForward(RRenderGraphBuilder* pBuilder, FVirtualResourceRef* color, FVirtualResourceRef* depth, uint32_t numMeshes, RMesh** ppMeshes);
+		FRGMDeferredComposeTargets RGDrawMeshesDeferredCompose(RRenderGraphBuilder* pBuilder, FVirtualResourceRef* pOutput, FVirtualResourceRef* pAlbedo, FVirtualResourceRef* pDepth, FVirtualResourceRef* pPosition, FVirtualResourceRef* pNormals, FVirtualResourceRef* pSsao, FVirtualResourceRef* pShadowMap, FVirtualResourceRef* pVolumetricFog, RCamera* pCamera, RCamera* pShadowCamera);
+
 
 	protected:
+
+		void CreateDepthResources(IRenderer* pRenderer);
+		void CreateForwardResources(IRenderer* pRenderer);
+		void CreateDeferredResources(IRenderer* pRenderer);
+
 		FForwardMeshUniforms mUniforms;
 		ISampler*			 mSampler;
-		IShader*			 mShader;
-		IRootSignature*		 mRootSignature;
-		IPipeline*			 mPipeline;
+		ISampler*			 mShadowSampler;
+		IShader*			 mForwardShader;
+		IRootSignature*		 mForwardRootSignature;
+		IShader*			 mPrepassShader;
+		IRootSignature*		 mPrepassRootSignature;
+		IPipeline*			 mPipelineDepthPrepass;
+		IPipeline*			 mPipelineForwardNoDepthWrite;
+		FDepthStencilState	 mNoDepthWriteState;
+
+		FRasterizerState     mRasterizerState;
+		FDeferredUniforms	 mDeferredUniforms;
+		IShader*			 mDeferredShader;
+		IRootSignature*		 mDeferredRootSignature;
+		IPipeline*			 mDeferredPipeline;
+
+		IShader*			 mDeferredComposeShader;
+		IRootSignature*		 mDeferredComposeRootSignature;
+		IPipeline*			 mDeferredComposePipeline;
+
+		IBuffer*			 mFSVertexBuffer;
+		IBuffer*			 mFSIndexBuffer;
+		ITexture*			 mBlackTexture;
 	};
 }

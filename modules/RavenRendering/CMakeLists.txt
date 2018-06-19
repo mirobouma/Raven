@@ -26,6 +26,8 @@ set (SourceGroup_PublicIncludes
 	"Public/Rendering/RenderGraph/IRenderGraphModule.h"
 	"Public/Rendering/RenderGraph/Modules/RGMMesh.h"
 	"Public/Rendering/RenderGraph/Modules/RGMCommon.h"
+	"Public/Rendering/RenderGraph/Modules/RGMSSAO.h"
+	"Public/Rendering/RenderGraph/Modules/RGMVolumetric.h"
 )
 
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
@@ -36,6 +38,8 @@ set (SourceGroup_Source
 	"Private/RenderGraph/RenderGraph.cpp"
 	"Private/RenderGraph/Modules/RGMCommon.cpp"
 	"Private/RenderGraph/Modules/RGMMesh.cpp"
+	"Private/RenderGraph/Modules/RGMSSAO.cpp"
+	"Private/RenderGraph/Modules/RGMVolumetric.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 
@@ -45,6 +49,6 @@ set (SOURCE
 )
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC RavenCore RavenPlatform assimp stb_image)
+target_link_libraries(${MODULE_NAME} PUBLIC RavenCore RavenPlatform assimp stb_image RavenMath)
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
 

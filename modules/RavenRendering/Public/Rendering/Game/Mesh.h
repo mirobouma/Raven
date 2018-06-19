@@ -28,7 +28,7 @@ namespace Raven
 	class RMesh
 	{
 	public:
-		RMesh(IRenderer* renderer, std::string file);
+		RMesh(IRenderer* renderer, std::string file, float importScale);
 		~RMesh();
 
 		void Destroy();

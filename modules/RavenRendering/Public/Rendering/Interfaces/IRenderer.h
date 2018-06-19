@@ -380,6 +380,12 @@ namespace Raven
 		*/
 		virtual ERenderResult cmdSetScissorRects(ICommandList* pCommandList, FRect rect) = 0;
 
+		/*! Set dynamic depth bias.
+		\param[in] pCommandList pCommandList points to the command list to use for this command.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult cmdSetDynamicDepthBias(ICommandList* pCommandList, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) = 0;
+		
 		/*! bind a pipeline.
 		\param[in] pCommandList pCommandList points to the command list to use for this command.
 		\returns On success, this command returns RR_SUCCESS.

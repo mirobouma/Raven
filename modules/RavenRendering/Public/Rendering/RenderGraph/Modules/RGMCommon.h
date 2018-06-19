@@ -33,7 +33,10 @@ namespace Raven
 		FRGMCommonBackbufferTargets RGAcquireBackbuffer(RRenderGraphBuilder* pBuilder, IRenderer* renderer, ISwapChain* swapChain);
 
 		/*! Import a target into the system. */
-		FVirtualResourceRef* RGImportTarget(RRenderGraphBuilder* pBuilder, IRenderer* renderer, std::string name, IRenderTarget* target);
+		FVirtualResourceRef* RGImportTarget(RRenderGraphBuilder* pBuilder, std::string name, IRenderTarget* target);
+
+		/*! Create a render graph target. */
+		FVirtualResourceRef* RGCreateTarget(RRenderGraphBuilder* pBuilder, std::string name, FVirtualResourceDesc& desc);
 
 		/*! Submit all the commands of the render graph and present the backbuffer. */
 		void RGSubmitAndPresent(RRenderGraphBuilder* pBuilder, ISwapChain* pSwapchain, FVirtualResourceRef* backbuffer);

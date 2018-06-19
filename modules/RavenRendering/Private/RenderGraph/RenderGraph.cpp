@@ -31,6 +31,103 @@ namespace Raven
 		return ret;
 	};
 
+	constexpr EMemoryType gResourceAccessToMemoryTypeTranslator(ERenderGraphResourceAccess access)
+	{
+		EMemoryType type = EMemoryType::MEMORY_TYPE_GPU;
+
+		switch (access)
+		{
+		case ERenderGraphResourceAccess::RENDER_GRAPH_RESOURCE_ACCESS_GPU:
+		{
+			type = EMemoryType::MEMORY_TYPE_GPU;
+		}
+		break;
+		case ERenderGraphResourceAccess::RENDER_GRAPH_RESOURCE_ACCESS_CPU:
+		{
+			type = EMemoryType::MEMORY_TYPE_CPU_TO_GPU;
+		}
+		break;
+		case ERenderGraphResourceAccess::RENDER_GRAPH_RESOURCE_ACCESS_GPU_AND_CPU:
+		{
+			type = EMemoryType::MEMORY_TYPE_GPU_TO_CPU;
+		}
+		break;
+		default:
+		{
+			RLOG_ERROR("Unknown render graph resource access, will default memory type to GPU.");
+		}
+		break;
+		}
+
+		return type;
+	}
+
+	FTextureUsageFlags virtualResourceFlagsToTextureUsage(FRenderGraphResourceReadState read, FRenderGraphResourceWriteState write)
+	{
+		FTextureUsageFlags flags = FTextureUsageFlags::TEXTURE_USAGE_SAMPLED;
+
+		if ((read & FRenderGraphResourceReadState::RENDER_GRAPH_RESOURCE_READ_STATE_SAMPLED) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_SAMPLED;
+		}
+
+		if ((read & FRenderGraphResourceReadState::RENDER_GRAPH_RESOURCE_READ_STATE_DEPTH_READ) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT;
+		}
+
+		// Created resources should never be able to be presented since backbuffers are imported targets, however, add this for security.
+		if ((read & FRenderGraphResourceReadState::RENDER_GRAPH_RESOURCE_READ_STATE_PRESENT) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_COLOR_ATTACHMENT;
+		}
+
+		if ((read & FRenderGraphResourceReadState::RENDER_GRAPH_RESOURCE_READ_STATE_READBACK) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_TRANSFER_SRC;
+		}
+
+		if ((write & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_UAV) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_STORAGE;
+		}
+
+		if ((write & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_COLOR_ATTACHMENT;
+		}
+
+		if ((write & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_DEPTH_WRITE) != 0)
+		{
+			flags |= FTextureUsageFlags::TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT;
+		}
+
+		return flags;
+	}
+		
+	FBufferUsageFlags virtualResourceFlagsToBufferUsage(FRenderGraphResourceReadState read, FRenderGraphResourceWriteState write)
+	{
+		FBufferUsageFlags flags = (FBufferUsageFlags)0;
+
+		if ((read & FRenderGraphResourceReadState::RENDER_GRAPH_RESOURCE_READ_STATE_SAMPLED) != 0)
+		{
+			flags |= FBufferUsageFlags::BUFFER_USAGE_UNIFORM_BUFFER;
+		}
+
+		if ((read & FRenderGraphResourceReadState::RENDER_GRAPH_RESOURCE_READ_STATE_READBACK) != 0)
+		{
+			flags |= FBufferUsageFlags::BUFFER_USAGE_TRANSFER_SRC;
+		}
+
+		if ((write & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_UAV) != 0)
+		{
+			flags |= FBufferUsageFlags::BUFFER_USAGE_STORAGE_BUFFER;
+		}
+
+		return flags;
+	}
+
+
 
 	FResourceState gWriteFlagTranslator(FRenderGraphResourceWriteState state)
 	{
@@ -53,6 +150,10 @@ namespace Raven
 				ret = RESOURCE_STATE_UNORDERED_ACCESS;
 			}
 			break;
+			default:
+			{
+				RLOG_WARNING("Unknown write flags when trying to translate FRenderGraphResourceWriteState to FResourceState");
+			}
 		}
 		
 		return ret;
@@ -170,6 +271,7 @@ namespace Raven
 			mGraphBuilder->mVirtualResources[name] = std::unique_ptr<FVirtualResource>(new FVirtualResource());
 			FVirtualResource* virtualResource = mGraphBuilder->mVirtualResources[name].get();
 
+			virtualResource->mName = name;
 			virtualResource->mDesc = desc;
 			virtualResource->mMaxResourceAccess = RENDER_GRAPH_RESOURCE_ACCESS_GPU;
 			virtualResource->mTotalReadFlags = (FRenderGraphResourceReadState)0;
@@ -450,22 +552,138 @@ namespace Raven
 			break;
 			case VIRTUAL_RESOURCE_TYPE_BUFFER:
 			{
-				RPhysicalResource* physRes = new RPhysicalResource();
+				bool foundCompatibleResource = false;
 
-				// todo
+				for (auto it = mManager->mResources.begin(); it != mManager->mResources.end(); ++it)
+				{
+					// Check if this virtual resource is compatible.
+					if (isVirtualResourceCompatible(resource, it->first.get()))
+					{
+						auto physResource = std::find(mTakenResources.begin(), mTakenResources.end(), it->first.get());
 
-				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
-				graph->mPhysicalResources[resource->mName] = physRes;
+						// Check if this physical resource is not already used by a different virtual resource.
+						if (physResource == mTakenResources.end())
+						{
+							mTakenResources.push_back(it->first.get());
+							it->second = mManager->mFrameCounter;
+
+							graph->mPhysicalResources[resource->mName] = it->first.get();
+							foundCompatibleResource = true;
+							break;
+						}
+					}
+				}
+
+				// We didn't find a compatible resource therefore we will have to create a new one.
+				if (!foundCompatibleResource)
+				{
+					RPhysicalResource* physRes = new RPhysicalResource();
+			
+					physRes->mType = EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_BUFFER;
+
+					FBufferCreateDesc desc;
+					desc.pData = nullptr;
+					desc.size = resource->mDesc.mBufferDesc.size;
+					desc.memoryType = gResourceAccessToMemoryTypeTranslator(resource->mMaxResourceAccess);
+					desc.usage = virtualResourceFlagsToBufferUsage(resource->mTotalReadFlags, resource->mTotalWriteFlags);
+				
+					mManager->GetRenderer()->createBuffer(&physRes->mBuffer, &desc);
+					physRes->mDesc = resource->mDesc;
+
+					// Register the physical resource.
+					mTakenResources.push_back(physRes);
+					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+					graph->mPhysicalResources[resource->mName] = physRes;
+				}
 			}
 			break;
 			case VIRTUAL_RESOURCE_TYPE_TEXTURE:
 			{
-				RPhysicalResource* physRes = new RPhysicalResource();
+				bool foundCompatibleResource = false;
 
-				// todo
+				for (auto it = mManager->mResources.begin(); it != mManager->mResources.end(); ++it)
+				{
+					// Check if this virtual resource is compatible.
+					if (isVirtualResourceCompatible(resource, it->first.get()))
+					{
+						auto physResource = std::find(mTakenResources.begin(), mTakenResources.end(), it->first.get());
 
-				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
-				graph->mPhysicalResources[resource->mName] = physRes;
+						// Check if this physical resource is not already used by a different virtual resource.
+						if (physResource == mTakenResources.end())
+						{
+							mTakenResources.push_back(it->first.get());
+							it->second = mManager->mFrameCounter;
+
+							graph->mPhysicalResources[resource->mName] = it->first.get();
+							foundCompatibleResource = true;
+							break;
+						}
+					}
+				}
+
+				// We didn't find a compatible resource therefore we will have to create a new one.
+				if (!foundCompatibleResource)
+				{
+					RPhysicalResource* physRes = new RPhysicalResource();
+
+					// Check if this resource should be a render target.
+					if ((resource->mTotalWriteFlags & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT) != 0 ||
+						(resource->mTotalWriteFlags & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_DEPTH_WRITE) != 0)
+					{
+						physRes->mType = EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_RENDER_TARGET;
+
+						FRenderTargetCreateDesc desc;
+						desc.format = resource->mDesc.mTextureDesc.format;
+						desc.width = resource->mDesc.mTextureDesc.width;
+						desc.height = resource->mDesc.mTextureDesc.height;
+						desc.nativeSwapchainImage = nullptr;
+						desc.sampleCount = resource->mDesc.mTextureDesc.sampleCount;
+						desc.sampleQuality = resource->mDesc.mTextureDesc.sampleQuality;
+						desc.memoryType = gResourceAccessToMemoryTypeTranslator(resource->mMaxResourceAccess);
+
+						desc.usage = ((resource->mTotalWriteFlags & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT) != 0
+							? FRenderTargetUsage::RENDER_TARGET_USAGE_COLOR_ATTACHMENT : (FRenderTargetUsage)0) |
+							((resource->mTotalWriteFlags & FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_DEPTH_WRITE) != 0
+								? FRenderTargetUsage::RENDER_TARGET_USAGE_DEPTH_STENCIL_ATTACHMENT : (FRenderTargetUsage)0);
+
+						desc.tiling = ((resource->mTotalReadFlags & RENDER_GRAPH_RESOURCE_READ_STATE_READBACK) != 0) ? EImageTiling::IMAGE_TILING_LINEAR : EImageTiling::IMAGE_TILING_OPTIMAL;
+
+						physRes->mDesc = resource->mDesc;
+
+						mManager->GetRenderer()->createRenderTarget(&physRes->mRenderTarget, &desc);
+					}
+					else
+					{
+						physRes->mType = EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_TEXTURE;
+
+						FTextureCreateDesc desc;
+						desc.format = resource->mDesc.mTextureDesc.format;
+						desc.width = resource->mDesc.mTextureDesc.width;
+						desc.height = resource->mDesc.mTextureDesc.height;
+						desc.depth = resource->mDesc.mTextureDesc.depth;
+						desc.arrayLayers = 1;
+						desc.baseArrayLayer = 0;
+						desc.baseMipLevel = 0;
+						desc.mipLevels = 1;
+						desc.pData = nullptr;
+						desc.type = desc.depth != 1 ? ETextureType::TEXTURE_TYPE_3D : desc.height != 1 ? ETextureType::TEXTURE_TYPE_2D : ETextureType::TEXTURE_TYPE_1D;
+						desc.usage = virtualResourceFlagsToTextureUsage(resource->mTotalReadFlags, resource->mTotalWriteFlags);
+						desc.nativeSwapchainImage = nullptr;
+						desc.sampleCount = resource->mDesc.mTextureDesc.sampleCount;
+						desc.sampleQuality = resource->mDesc.mTextureDesc.sampleQuality;
+						desc.memoryType = gResourceAccessToMemoryTypeTranslator(resource->mMaxResourceAccess);
+						desc.tiling = ((resource->mTotalReadFlags & RENDER_GRAPH_RESOURCE_READ_STATE_READBACK) != 0) ? EImageTiling::IMAGE_TILING_LINEAR : EImageTiling::IMAGE_TILING_OPTIMAL;
+
+						physRes->mDesc = resource->mDesc;
+
+						mManager->GetRenderer()->createTexture(&physRes->mTexture, &desc);
+					}
+
+					// Register the physical resource.
+					mTakenResources.push_back(physRes);
+					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+					graph->mPhysicalResources[resource->mName] = physRes;
+				}
 			}
 			break;
 			default:
@@ -475,6 +693,24 @@ namespace Raven
 			break;
 			}
 		}
+	}
+
+	bool RRenderGraphBuilder::isVirtualResourceCompatible(FVirtualResource* virtualResource, RPhysicalResource* physicalResource)
+	{
+		// These are not the same type therefore incompatible.
+		if (virtualResource->mDesc.mType != physicalResource->mDesc.mType)
+		{
+			return false;
+		}
+
+		size_t hash1 = 0;
+		size_t hash2 = 0;
+
+		hash1 = hash_bytes(&virtualResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash1);
+		hash2 = hash_bytes(&physicalResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash2);
+
+		return hash1 == hash2;
+		
 	}
 
 	void RRenderGraphBuilder::addResourceBarrier(FVirtualResourceRef* to, RCompiledPass* pass, EBarrierLocation location)
@@ -488,6 +724,7 @@ namespace Raven
 
 			switch (to->mResource->mDesc.mType)
 			{
+			case VIRTUAL_RESOURCE_TYPE_BUFFER:
 			case VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER:
 			{
 				// Buffer barrier.
@@ -513,7 +750,6 @@ namespace Raven
 				}
 			}
 			break;
-
 			case VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET:
 			{
 				// Texture barrier.
@@ -541,11 +777,19 @@ namespace Raven
 
 			}
 			break;
+			case VIRTUAL_RESOURCE_TYPE_TEXTURE:
 			case VIRTUAL_RESOURCE_TYPE_IMPORTED_TEXTURE:
 			{
 				// Texture barrier.
 				FTextureBarrier barrier;
-				barrier.texture = resource->mTexture;
+				if (resource->mType == EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_RENDER_TARGET)
+				{
+					barrier.texture = resource->mRenderTarget->GetTexture();
+				}
+				else
+				{
+					barrier.texture = resource->mTexture;
+				}
 
 				if (to->mReadFlags != 0)
 				{
@@ -785,6 +1029,7 @@ namespace Raven
 		mGraphicsQueue = graphicsQueue;
 		mComputeQueue = computeQueue;
 		mRenderer = renderer;
+		mFrameCounter = 0;
 
 		FCommandPoolCreateDesc poolDesc;
 		poolDesc.type = ECommandType::COMMAND_TYPE_DIRECT;
@@ -811,6 +1056,43 @@ namespace Raven
 
 	void RRenderGraphManager::destroy()
 	{
+		mRenderer->waitForDevice();
+
+		for (auto it = mResources.begin(); it != mResources.end(); ++it)
+		{
+			RPhysicalResource* resource = it->first.get();
+		
+			switch (resource->mDesc.mType)
+			{
+			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_BUFFER:
+			{
+				if (resource->mBuffer != nullptr)
+				{
+					mRenderer->destroyBuffer(resource->mBuffer);
+				}
+			}
+			break;
+			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_TEXTURE:
+			{
+				if (resource->mType == EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_RENDER_TARGET)
+				{
+					if (resource->mRenderTarget != nullptr)
+					{
+						mRenderer->destroyRenderTarget(resource->mRenderTarget);
+					}
+				}
+				else
+				{
+					if (resource->mTexture != nullptr)
+					{
+						mRenderer->destroyTexture(resource->mTexture);
+					}
+				}
+			}
+			break;
+			}
+		}
+
 		for (uint32_t i = 0; i < mGraphicsCommandLists.size(); ++i)
 		{
 			mRenderer->destroyCommandList(mGraphicsCommandPool, mGraphicsCommandLists[i]);
@@ -913,12 +1195,12 @@ namespace Raven
 	EGraphBuilderResult RRenderGraphManager::validate_and_build(RRenderGraphBuilder* pBuilder, RRenderGraph** ppGraph)
 	{
 		mCurrentIndex = (mCurrentIndex + 1) % MAX_FRAMES_AT_ONCE;
+		
+		RRenderGraph* retGraph = mRenderGraphs[mCurrentIndex];
 
 		// Wait for the frame to finish.
-		IFence* pNextFence = mRenderCompleteFences[mCurrentIndex];
+		IFence* pNextFence = retGraph->mRenderCompleteFence;
 		mRenderer->waitForFence(pNextFence);
-
-		RRenderGraph* retGraph = mRenderGraphs[mCurrentIndex];
 
 		// We have to reset this graph from the previous state.
 		retGraph->reset();
@@ -981,6 +1263,50 @@ namespace Raven
 
 	RRenderGraphBuilder* RRenderGraphManager::get_new_graph_builder()
 	{
+		mFrameCounter++;
+		
+		// Destroy resource that haven't been used for a full cycle.
+		for (auto it = mResources.begin(); it != mResources.end();) 
+		{
+			RPhysicalResource* resource = it->first.get();
+			if (resource->mDesc.mType == EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER ||
+				resource->mDesc.mType == EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_TEXTURE ||
+				resource->mDesc.mType == EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET)
+			{
+				mResources.erase(it++);
+			}
+			else if (mFrameCounter - it->second > MAX_FRAMES_AT_ONCE) 
+			{
+				//mRenderer->waitForDevice();
+
+				switch (resource->mDesc.mType)
+				{
+				case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_BUFFER:
+				{
+					mRenderer->destroyBuffer(resource->mBuffer);
+				}
+				break;
+				case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_TEXTURE:
+				{
+					if (resource->mType == EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_RENDER_TARGET)
+					{
+						mRenderer->destroyRenderTarget(resource->mRenderTarget);
+					}
+					else
+					{
+						mRenderer->destroyTexture(resource->mTexture);
+					}
+				}
+				break;
+				}
+
+				mResources.erase(it++);
+			}
+			else {
+				++it;
+			}
+		}
+
 		RRenderGraphBuilder* builder = new RRenderGraphBuilder(this);
 		return builder;
 	}

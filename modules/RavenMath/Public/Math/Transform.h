@@ -1,9 +1,6 @@
 #pragma once
 #include "Math.h"
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include "glm/gtx/transform.hpp"
-
 namespace Raven 
 {
 	const float radToDeg = glm::pi<float>() / 180.0f;
@@ -83,9 +80,10 @@ namespace Raven
 				return;
 
 			glm::vec3 direction = glm::normalize(position - mPosition);
-			mRotation.x = asinf(-direction.y)* radToDeg;
-			mRotation.y = -atan2f(-direction.x, -direction.z)*radToDeg;
 
+			mRotation.x = asinf(direction.y);
+			mRotation.y = -atan2f(direction.x, direction.z);
+			mRequireMatrixUpdate = true;
 		}
 		
 		const FVector3& GetScale()

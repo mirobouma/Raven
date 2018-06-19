@@ -44,7 +44,7 @@ namespace Raven
 		return output;
 	}
 
-	FVirtualResourceRef* RGMCommon::RGImportTarget(RRenderGraphBuilder* pBuilder, IRenderer* renderer, std::string name, IRenderTarget* target)
+	FVirtualResourceRef* RGMCommon::RGImportTarget(RRenderGraphBuilder* pBuilder, std::string name, IRenderTarget* target)
 	{
 		FVirtualResourceRef* output = nullptr;
 
@@ -58,6 +58,20 @@ namespace Raven
 
 			// import resource.
 			output = builder.import_resource(name.c_str(), import);
+		});
+
+		return output;
+	}
+
+	FVirtualResourceRef* RGMCommon::RGCreateTarget(RRenderGraphBuilder* pBuilder, std::string name, FVirtualResourceDesc& desc)
+	{
+		FVirtualResourceRef* output = nullptr;
+
+		// Add the pass and setup its inputs and outputs.
+		auto pass = pBuilder->add_pass("create_resource", [&](RRenderPassBuilder& builder)
+		{
+			// import resource.
+			output = builder.create_resource(name.c_str(), desc);
 		});
 
 		return output;

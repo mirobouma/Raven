@@ -72,36 +72,36 @@ void ApplicationStart(int argc, char*argv[])
 				break;
 			}
 			PROFILER_END_SCOPE
-			PROFILER_START_SCOPE("Make Tasks");
-			
-				std::vector<RTaskCounter> counters(20);
-			
-				for (uint32_t i = 0; i < 20; ++i)
-				{
-					auto t = GTaskScheduler->MakeTask([=] {
-						PROFILER_START_SCOPE("Sleep first");
-			
-			
-						auto t2 = GTaskScheduler->MakeTask([=] {
-							PROFILER_START_SCOPE("Sleep second");
-			
-						});
-			
-						RTaskCounter counter;
-						GTaskScheduler->ExecuteTask(&counter, t2);
-						GTaskScheduler->WaitForCounter(&counter);
-			
-					});
-			
-					GTaskScheduler->ExecuteTask(&counters[i], t);
-				}
-			
-				PROFILER_START_SCOPE("Wait for all tasks");
-				for (uint32_t i = 0; i < 20; ++i)
-				{
-					GTaskScheduler->WaitForCounter(&counters[i]);
-				}
-				PROFILER_END_SCOPE
+			//PROFILER_START_SCOPE("Make Tasks");
+			//
+			//	std::vector<RTaskCounter> counters(20);
+			//
+			//	for (uint32_t i = 0; i < 20; ++i)
+			//	{
+			//		auto t = GTaskScheduler->MakeTask([=] {
+			//			PROFILER_START_SCOPE("Sleep first");
+			//
+			//
+			//			auto t2 = GTaskScheduler->MakeTask([=] {
+			//				PROFILER_START_SCOPE("Sleep second");
+			//
+			//			});
+			//
+			//			RTaskCounter counter;
+			//			GTaskScheduler->ExecuteTask(&counter, t2);
+			//			GTaskScheduler->WaitForCounter(&counter);
+			//
+			//		});
+			//
+			//		GTaskScheduler->ExecuteTask(&counters[i], t);
+			//	}
+			//
+			//	PROFILER_START_SCOPE("Wait for all tasks");
+			//	for (uint32_t i = 0; i < 20; ++i)
+			//	{
+			//		GTaskScheduler->WaitForCounter(&counters[i]);
+			//	}
+			//	PROFILER_END_SCOPE
 
 			PROFILER_START_SCOPE("Render Window");
 			if (Window != nullptr)

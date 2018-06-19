@@ -65,6 +65,7 @@ namespace Raven
 		RENDER_GRAPH_RESOURCE_READ_STATE_SAMPLED = 1 << 0,
 		RENDER_GRAPH_RESOURCE_READ_STATE_DEPTH_READ = 1 << 1,
 		RENDER_GRAPH_RESOURCE_READ_STATE_PRESENT = 1 << 2,
+		RENDER_GRAPH_RESOURCE_READ_STATE_READBACK = 1 << 3,
 		MAX_RENDER_GRAPH_RESOURCE_READ_STATE = 3
 	} FRenderGraphResourceReadState;
 	DECL_ENUM_AS_FLAGS(FRenderGraphResourceReadState);
@@ -162,6 +163,7 @@ namespace Raven
 	{
 		EPhysicalResourceType mType;
 		FVirtualResourceDesc mDesc;
+
 		union
 		{
 			IBuffer*			mBuffer;
@@ -302,6 +304,9 @@ namespace Raven
 
 		/*! Add resource barrier on a compiled render pass. */
 		void addResourceBarrier(FVirtualResourceRef* to, RCompiledPass* pass, EBarrierLocation location);
+
+		/*! Check if this virtual resource is compatible. */
+		bool isVirtualResourceCompatible(FVirtualResource* virtualResource, RPhysicalResource* physicalResource);
 
 		/*! Recursive function to retrieve a dependency for a resource. */
 		uint32_t getParentDependency(FVirtualResourceRef* resource);

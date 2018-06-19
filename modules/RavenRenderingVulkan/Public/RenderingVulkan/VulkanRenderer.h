@@ -94,6 +94,7 @@ namespace Raven
 		virtual ERenderResult cmdPushConstant(ICommandList* pCommandList, FShaderStageFlags stages, uint32_t size, uint32_t offset, void* values) override;
         virtual ERenderResult cmdDispatch(ICommandList *pCommandList, uint32_t numGroupsX, uint32_t numGroupsY, uint32_t numGroupsZ) override;
 		virtual ERenderResult cmdBindDescriptors(ICommandList* pCommandList, uint32_t numDescriptors, FDescriptorBinding* pDescriptors) override;
+		virtual ERenderResult cmdSetDynamicDepthBias(ICommandList* pCommandList, float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) override;
 
         virtual bool isInitialized() const override;
 

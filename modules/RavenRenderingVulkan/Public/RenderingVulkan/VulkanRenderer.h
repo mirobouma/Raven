@@ -38,6 +38,7 @@ namespace Raven
 		virtual ERenderResult destroy() override;
 		virtual ERenderResult createSwapChain(IPlatformWindow* pNativeWindow, ISwapChain** ppSwapChain) override;
 		virtual ERenderResult destroySwapChain(ISwapChain* pSwapChain) override;
+		virtual ERenderResult recreateSwapChain(ISwapChain* pSwapChain) override;
 		virtual ERenderResult createQueue(IQueue** ppQueue, FQueueCreateDesc* pDesc) override;
 		virtual ERenderResult destroyQueue(IQueue* pQueue) override;
 		virtual ERenderResult createCommandPool(ICommandPool** ppCmdPool, IQueue* pQueue, FCommandPoolCreateDesc* pDesc) override;

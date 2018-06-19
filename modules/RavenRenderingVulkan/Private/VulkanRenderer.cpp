@@ -1272,22 +1272,6 @@ namespace Raven
 
 		for (uint32_t i = 0; i < swapChainImages.size(); i++)
 		{
-			//VkImageViewCreateInfo viewInfo = {};
-			//viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			//viewInfo.image = swapChain->mSwapChainImages[i];
-			//viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			//viewInfo.format = swapChain->mSurfaceFormat.format;
-			//viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			//viewInfo.subresourceRange.baseMipLevel = 0;
-			//viewInfo.subresourceRange.levelCount = 1;
-			//viewInfo.subresourceRange.baseArrayLayer = 0;
-			//viewInfo.subresourceRange.layerCount = 1;
-			//
-			//if (vkCreateImageView(mDevice->mDevice, &viewInfo, nullptr, &swapChain->mSwapChainImageViews[i]) != VK_SUCCESS)
-			//{
-			//	RLOG_ERROR("Failed to create image views for the swapchain.");
-			//}
-
 			FRenderTargetCreateDesc rtDesc = {};
 			rtDesc.format = VkFormatToGenericFormat(swapChain->mSurfaceFormat.format);
 			rtDesc.width = swapChain->mSwapChainExtent.width;
@@ -1326,6 +1310,147 @@ namespace Raven
 		destroySemaphore(swapChain->mImageAcquiredSemaphore);
 
 		delete pSwapchain;
+		return RR_SUCCESS;
+	}
+
+	ERenderResult RVulkanRenderer::recreateSwapChain(ISwapChain* pSwapchain)
+	{
+		RASSERT(mDevice != nullptr);
+		RASSERT(pSwapchain != nullptr);
+
+		waitForDevice();
+
+		FVulkanSwapChain* swapChain = static_cast<FVulkanSwapChain*>(pSwapchain);
+
+		for (uint32_t i = 0; i < swapChain->mNumBackbuffers; ++i)
+		{
+			vkDestroyImageView(mDevice->mDevice, swapChain->mRenderTargets[i]->mTexture->mImageView, nullptr);
+		}
+
+		free(swapChain->mRenderTargets);
+		vkDestroySwapchainKHR(mDevice->mDevice, swapChain->mSwapChain, nullptr);
+		vkDestroySurfaceKHR(mInstance, swapChain->mSurface, nullptr);
+
+		destroySemaphore(swapChain->mImageAcquiredSemaphore);
+
+		// Create surface for window.
+		if (createWindowSurface(swapChain->mPlatformWindow, &swapChain->mSurface) != RR_SUCCESS)
+		{
+			RLOG_ERROR("Failed to create surface for the specified window.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+
+		VkBool32 deviceSupport = false;
+		vkGetPhysicalDeviceSurfaceSupportKHR(mDevice->mPhysicalDevice->mPhysicalDevice, mDevice->mQueueIndices.mGraphicsQueueIndex, swapChain->mSurface, &deviceSupport);
+		if (deviceSupport != VK_TRUE)
+		{
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		// Retrieve swapchain support details into the surface object.
+		if (querySwapchainSupport(mDevice, swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We do not support swapchain creation for this device (Missing extensions?).");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		if (chooseSwapChainSurfaceFormat(swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We could not find a suitable SwapChain surface format.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		if (chooseSwapChainPresentMode(swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We could not find a suitable SwapChain present mode.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		if (chooseSwapChainExtent(swapChain) != RR_SUCCESS)
+		{
+			RLOG_ERROR("We could not find a suitable SwapChain surface format.");
+			delete swapChain;
+
+			return RR_INITIALIZATION_FAILED;
+		}
+
+		// Select how many backbuffers we need in the swap chain, we preferably want the minimum amount + 1 for minimal latency without tearing.
+		uint32_t imageCount = swapChain->mSurfaceCapabilities.minImageCount + 1;
+		if (swapChain->mSurfaceCapabilities.maxImageCount > 0 && imageCount > swapChain->mSurfaceCapabilities.maxImageCount)
+		{
+			imageCount = swapChain->mSurfaceCapabilities.maxImageCount;
+		}
+
+		// Fill the swapchain creation info structure.
+		VkSwapchainCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		createInfo.surface = swapChain->mSurface;
+		createInfo.minImageCount = imageCount;
+		createInfo.imageFormat = swapChain->mSurfaceFormat.format;
+		createInfo.imageColorSpace = swapChain->mSurfaceFormat.colorSpace;
+		createInfo.imageExtent = swapChain->mSwapChainExtent;
+		createInfo.imageArrayLayers = 1; // no VR support.
+		createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+		// If the present queue and graphics queue are not on the same queue, set the swapchain images to concurrect sharing.
+		//if (graphicsIndex != presentIndex) {
+		//	createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		//	createInfo.queueFamilyIndexCount = 2;
+		//	createInfo.pQueueFamilyIndices = queueFamilyIndices;
+		//}
+		//else
+		//{ // If the present queue and graphics queue ARE on the same queue, only one queue can have ownership at a time, and ownership has to be transferred to the other before presenting or rendering.
+		createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		createInfo.queueFamilyIndexCount = 0; // Optional
+		createInfo.pQueueFamilyIndices = nullptr; // Optional
+												  //}
+
+		createInfo.preTransform = swapChain->mSurfaceCapabilities.currentTransform; // We don't want any transformation so we set it to the current transform.
+		createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // We don't want to use the alpha bit for blending with other windows so set it to OPAQUE.
+		createInfo.presentMode = swapChain->mSurfacePresentMode; // Set the present mode to the one we selected.
+		createInfo.clipped = VK_TRUE; // We don't need to read the swapchain image, so if another window is obscuring it, we don't care about it's colours.
+		createInfo.oldSwapchain = VK_NULL_HANDLE; // For now we only need 1 swapchain ever and dont care.
+
+		if (vkCreateSwapchainKHR(mDevice->mDevice, &createInfo, nullptr, &swapChain->mSwapChain) != VK_SUCCESS)
+		{
+			RLOG_ERROR("Failed to create SwapChain object.");
+		}
+
+		std::vector<VkImage>	swapChainImages; /*!< Vector containing a VkImage for each backbuffer in the SwapChain. */
+
+		// Retrieve swap chain images.
+		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, nullptr);
+		swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(mDevice->mDevice, swapChain->mSwapChain, &imageCount, swapChainImages.data());
+
+		swapChain->mNumBackbuffers = imageCount;
+		swapChain->mRenderTargets = (FVulkanRenderTarget**)malloc(sizeof(FVulkanRenderTarget*) * imageCount);
+
+
+		for (uint32_t i = 0; i < swapChainImages.size(); i++)
+		{
+			FRenderTargetCreateDesc rtDesc = {};
+			rtDesc.format = VkFormatToGenericFormat(swapChain->mSurfaceFormat.format);
+			rtDesc.width = swapChain->mSwapChainExtent.width;
+			rtDesc.height = swapChain->mSwapChainExtent.height;
+			rtDesc.sampleCount = 1;
+			rtDesc.sampleQuality = 0;
+			rtDesc.usage = FRenderTargetUsage::RENDER_TARGET_USAGE_COLOR_ATTACHMENT;
+			rtDesc.nativeSwapchainImage = swapChainImages[i];
+			createRenderTarget((IRenderTarget**)(&swapChain->mRenderTargets[i]), &rtDesc);
+		}
+
+		createSemaphore((ISemaphore**)&swapChain->mImageAcquiredSemaphore);
+
 		return RR_SUCCESS;
 	}
 
@@ -3557,7 +3682,22 @@ namespace Raven
 		presentInfo.pResults = results.data();
 
 		// Present our SwapChain images.
-		if (vkQueuePresentKHR(queue->mQueue, &presentInfo) != VK_SUCCESS)
+		VkResult result = vkQueuePresentKHR(queue->mQueue, &presentInfo);
+		if (result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+				for (uint32_t i = 0; i < numSwapChains; ++i)
+				{
+					FVulkanSwapChain* swapChain = static_cast<FVulkanSwapChain*>(ppSwapChains[i]);
+					RASSERT(swapChain != nullptr);
+
+					recreateSwapChain(swapChain);
+				}
+
+				queuePresent(queue, numSwapChains, ppSwapChains, numWaitSemaphores, ppWaitSemaphores);
+				return RR_SUCCESS;
+
+		}
+		else if (result != VK_SUCCESS)
 		{
 			RLOG_ERROR("Failed to present a swapchain.");
 		}

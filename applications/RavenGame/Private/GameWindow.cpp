@@ -588,6 +588,11 @@ namespace Raven
 
     void RGameWindow::Render()
     {
+		if (_SwapChain->getWidth() == 0 && _SwapChain->getHeight() == 0)
+		{
+			return;
+		}
+
 		// Update editor (Record IMGUI commands).
 		updateEditor();
 

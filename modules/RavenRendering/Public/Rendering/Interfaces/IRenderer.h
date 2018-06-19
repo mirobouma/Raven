@@ -89,6 +89,12 @@ namespace Raven
 		*/
 		virtual ERenderResult destroySwapChain(ISwapChain* pSwapchain) = 0;
 
+		/*! Recreate a swapchain.
+		\param[in] pSwapChain pSwapChain points to a ISwapChain handle which has to be destroyed.
+		\returns On success, this command returns RR_SUCCESS.
+		*/
+		virtual ERenderResult recreateSwapChain(ISwapChain* pSwapchain) = 0;
+
 		/*! create a command queue.
 		\param[in] ppQueue ppQueue points a IQueue handle in which the resulting command queue reference is stored.
 		\param[in] pDesc rDesc points to a structure describing additional creation info.

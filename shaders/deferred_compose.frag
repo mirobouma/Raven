@@ -76,7 +76,7 @@ void main()
 	float ssao = texture(sampler2D(uTexSSAO, uSampler0), fragTexCoord).r;
 	vec3 normal = normalize(texture(sampler2D(uTexNormal, uSampler0), fragTexCoord).xyz * 2.0 - 1.0);
 	vec3 position = texture(sampler2D(uTexPosition, uSampler0), fragTexCoord).xyz;
-	vec4 fog = texture(sampler2D(uTexVolumetricFog, uSampler0), fragTexCoord);
+	//vec4 fog = texture(sampler2D(uTexVolumetricFog, uSampler0), fragTexCoord);
 
 	vec3 L = transpose(inverse(mat3(cView))) * normalize(cLightDir.xyz);
 	float NdotL = max(0.0, dot(normal, -L));
@@ -85,6 +85,7 @@ void main()
 	int n = 0;
 	vec2 texelSize = 1.0 / cScreenSize;
 	float result = 0.0;
+	vec3 result2 = vec3(0.0);
 
 	for (int x = -blurRange; x < blurRange; x++) 
 	{
@@ -92,11 +93,15 @@ void main()
 		{
 			vec2 offset = vec2(float(x), float(y)) * texelSize;
 			result += texture(sampler2D(uTexSSAO, uSampler0), fragTexCoord + offset).x;
+			vec4 fog = texture(sampler2D(uTexVolumetricFog, uSampler0), fragTexCoord + offset);
+
+			result2 += fog.xyz * fog.w;
 			n++;
 		}
 	}
 	float ssao2 = result / (float(n));
+	vec3 fog2 = result2 / (float(n));
 
-	outColor = clamp(tex * clamp(clamp(doShadow(position) * NdotL, 0.0, 1.0), 0.2, 1.0) * ssao2.rrrr + vec4(fog.xyz * fog.w, 0.0), 0.0, 1.0);
+	outColor = clamp(tex * clamp(clamp(doShadow(position) * NdotL, 0.0, 1.0), 0.2, 1.0) * ssao2.rrrr + vec4(fog2, 0.0), 0.0, 1.0);
 	outColor.w = 1.0f;
 }

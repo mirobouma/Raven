@@ -60,6 +60,9 @@ namespace Raven
 	float gAspectWidth = 16.0f;
 	float gAspectHeight = 9.0f;
 
+	float gLightRotX = 80.0f;
+	float gLightRotY = 40.0f;
+
 	bool d_demoWindowOpen = false;
 	bool d_gameWindowOpen = true;
 	bool d_consoleWindowOpen = true;
@@ -184,8 +187,8 @@ namespace Raven
 		FRenderTargetCreateDesc texDesc = {};
 		texDesc.memoryType = MEMORY_TYPE_GPU;
 		texDesc.format = TEXTURE_FORMAT_RGBA8;
-		texDesc.width = (uint32_t)std::max((uint32_t)gameWindowBackbufferSize.x, (uint32_t)1);
-		texDesc.height = (uint32_t)std::max((uint32_t)gameWindowBackbufferSize.y, (uint32_t)1);
+		texDesc.width = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.x, (int32_t)1);
+		texDesc.height = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.y, (int32_t)1);
 		texDesc.sampleCount = 1;
 		texDesc.sampleQuality = 0;
 		texDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -197,8 +200,8 @@ namespace Raven
 		FRenderTargetCreateDesc dsDesc = {};
 		dsDesc.memoryType = MEMORY_TYPE_GPU;
 		dsDesc.format = TEXTURE_FORMAT_D32_FLOAT;
-		dsDesc.width = std::max((uint32_t)gameWindowBackbufferSize.x, (uint32_t)1);
-		dsDesc.height = std::max((uint32_t)gameWindowBackbufferSize.y, (uint32_t)1);
+		dsDesc.width = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.x, (int32_t)1);
+		dsDesc.height = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.y, (int32_t)1);
 		dsDesc.sampleCount = 1;
 		dsDesc.sampleQuality = 0;
 		dsDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -474,6 +477,10 @@ namespace Raven
 				ImGui::SliderFloat("Bias", &gSSAOVars.cBias, 0.001f, 0.3f);
 				ImGui::SliderFloat("Intensity", &gSSAOVars.cIntensity, 0.0f, 5.0f);
 				ImGui::SliderFloat("Sample Radius", &gSSAOVars.cSampleRadius, 0.01f, 5.0f);
+				ImGui::Text("Light");
+				ImGui::Separator();
+				ImGui::SliderFloat("Rotation X", &gLightRotX, -360.0f, 360.0f);
+				ImGui::SliderFloat("Rotation Y", &gLightRotY, -360.0f, 360.0f);
 				ImGui::Text("Fog");
 				ImGui::Separator();
 				ImGui::SliderFloat("Fog Intensity", &gVolumetricVars.LightIntensity, 0.0f, 2.0f);
@@ -639,7 +646,8 @@ namespace Raven
 			shadowMapDesc.mTextureDesc.sampleQuality = 1;
 
 			gShadowCamera.setOrthoProjection(200.0f, 200.0f, 0.1f, 700.0f);
-			gShadowCamera.getTransform()->setPosition(FVector3(100.0f, -410.0f,-150.0f));
+			gShadowCamera.getTransform()->setRotation(glm::vec3(gLightRotX * glm::pi<float>() / 180.0f, gLightRotY * glm::pi<float>() / 180.0f, 0.0f));
+			gShadowCamera.getTransform()->setPosition(-gShadowCamera.getTransform()->GetForward() * 400.0f);
 			gShadowCamera.getTransform()->lookAt(FVector3(0.0f, 0.0f, 0.0f));
 
 			FVirtualResourceRef* shadowMap = gRGMCommon.RGCreateTarget(builder, "shadowmap_1", shadowMapDesc);

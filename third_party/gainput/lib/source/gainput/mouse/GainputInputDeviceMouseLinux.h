@@ -3,7 +3,7 @@
 #define GAINPUTINPUTDEVICEMOUSELINUX_H_
 
 #include <X11/Xlib.h>
-
+#include "SDL.h"
 #include "GainputInputDeviceMouseImpl.h"
 #include <gainput/GainputHelpers.h>
 
@@ -85,6 +85,50 @@ public:
 				const DeviceButtonId buttonId = buttonEvent.button-1;
 				GAINPUT_ASSERT(buttonId <= MouseButtonMax);
 				const bool pressed = event.type == ButtonPress;
+
+				if (!pressed && pressedThisFrame_[buttonId])
+				{
+					// This is a mouse wheel button. Ignore release now, reset next frame.
+					isWheel_[buttonId] = true;
+				}
+				else if (buttonEvent.button < MouseButtonCount)
+				{
+					HandleButton(device_, nextState_, delta_, buttonId, pressed);
+				}
+
+				if (pressed)
+				{
+					pressedThisFrame_[buttonId] = true;
+				}
+				break;
+			}
+		}
+	}
+
+	void HandleEvent(SDL_Event& event)
+	{
+		GAINPUT_ASSERT(state_);
+		GAINPUT_ASSERT(previousState_);
+
+		switch (event.type)
+		{
+			case SDL_MOUSEMOTION:
+			{
+				const SDL_MouseMotionEvent& motionEvent = event.motion;
+				const float x = float(motionEvent.x)/float(manager_.GetDisplayWidth());
+				const float y = float(motionEvent.y)/float(manager_.GetDisplayHeight());
+				HandleAxis(device_, nextState_, delta_, MouseAxisX, x);
+				HandleAxis(device_, nextState_, delta_, MouseAxisY, y);
+				break;
+			}
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+			{
+				const SDL_MouseButtonEvent& buttonEvent = event.button;
+						GAINPUT_ASSERT(buttonEvent.button > 0);
+				const DeviceButtonId buttonId = buttonEvent.button-1;
+						GAINPUT_ASSERT(buttonId <= MouseButtonMax);
+				const bool pressed = event.type == SDL_MOUSEBUTTONDOWN;
 
 				if (!pressed && pressedThisFrame_[buttonId])
 				{

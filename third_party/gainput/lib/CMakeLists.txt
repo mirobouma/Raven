@@ -58,9 +58,14 @@ elseif(APPLE)
       target_link_libraries(gainput ${APPKIT})
   endif()
 elseif(UNIX AND NOT APPLE)
+
+    if (NOT(TARGET sdl2))
+        message("SDL2 doesnt exist")
+    endif()
+
     find_package(X11 REQUIRED)
-    target_link_libraries(gainputstatic X11)
-    target_link_libraries(gainput X11)
+    target_link_libraries(gainputstatic X11 sdl2)
+    target_link_libraries(gainput X11 sdl2)
 endif()
 
 # Library installation directory

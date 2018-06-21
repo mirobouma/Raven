@@ -52,6 +52,8 @@ public:
 	 * ButtonRelease, KeyPress, KeyRelease.
 	 */
 	void HandleEvent(XEvent& event);
+	void HandleEvent(SDL_Event& event);
+
 #endif
 #if defined(GAINPUT_PLATFORM_WIN)
 	/// [WINDOWS ONLY] Lets the InputManager handle the given Windows message.

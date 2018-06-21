@@ -5,7 +5,7 @@
 #include <X11/Xlib.h>
 #include <X11/XKBlib.h>
 #include <X11/Xutil.h>
-
+#include "SDL.h"
 #include "GainputInputDeviceKeyboardImpl.h"
 #include <gainput/GainputHelpers.h>
 
@@ -20,6 +20,7 @@ public:
 		device_(device),
 		textInputEnabled_(true),
 		dialect_(manager_.GetAllocator()),
+		dialect_sdl_(manager_.GetAllocator()),
 		state_(&state),
 		previousState_(&previousState),
 		nextState_(manager.GetAllocator(), KeyCount_),
@@ -161,6 +162,119 @@ public:
 		dialect_[XK_asterisk] = KeyAsterisk;
 		dialect_[XK_colon] = KeyColon;
 		dialect_[XK_exclam] = KeyExclam;
+
+		// SDL
+		dialect_sdl_[SDLK_ESCAPE] = KeyEscape;
+		dialect_sdl_[SDLK_F1] = KeyF1;
+		dialect_sdl_[SDLK_F2] = KeyF2;
+		dialect_sdl_[SDLK_F3] = KeyF3;
+		dialect_sdl_[SDLK_F4] = KeyF4;
+		dialect_sdl_[SDLK_F5] = KeyF5;
+		dialect_sdl_[SDLK_F6] = KeyF6;
+		dialect_sdl_[SDLK_F7] = KeyF7;
+		dialect_sdl_[SDLK_F8] = KeyF8;
+		dialect_sdl_[SDLK_F9] = KeyF9;
+		dialect_sdl_[SDLK_F10] = KeyF10;
+		dialect_sdl_[SDLK_F11] = KeyF11;
+		dialect_sdl_[SDLK_F12] = KeyF12;
+		dialect_sdl_[SDLK_PRINTSCREEN] = KeyPrint;
+		dialect_sdl_[SDLK_SCROLLLOCK] = KeyScrollLock;
+		dialect_sdl_[SDLK_PAUSE] = KeyBreak;
+
+		dialect_sdl_[SDLK_SPACE] = KeySpace;
+
+		dialect_sdl_[SDLK_QUOTE] = KeyApostrophe;
+		dialect_sdl_[SDLK_COMMA] = KeyComma;
+		dialect_sdl_[SDLK_MINUS] = KeyMinus;
+		dialect_sdl_[SDLK_PERIOD] = KeyPeriod;
+		dialect_sdl_[SDLK_SLASH] = KeySlash;
+
+		dialect_sdl_[SDLK_0] = Key0;
+		dialect_sdl_[SDLK_1] = Key1;
+		dialect_sdl_[SDLK_2] = Key2;
+		dialect_sdl_[SDLK_3] = Key3;
+		dialect_sdl_[SDLK_4] = Key4;
+		dialect_sdl_[SDLK_5] = Key5;
+		dialect_sdl_[SDLK_6] = Key6;
+		dialect_sdl_[SDLK_7] = Key7;
+		dialect_sdl_[SDLK_8] = Key8;
+		dialect_sdl_[SDLK_9] = Key9;
+
+		dialect_sdl_[SDLK_SEMICOLON] = KeySemicolon;
+		dialect_sdl_[SDLK_LESS] = KeyLess;
+		dialect_sdl_[SDLK_EQUALS] = KeyEqual;
+
+		dialect_sdl_[SDLK_a] = KeyA;
+		dialect_sdl_[SDLK_b] = KeyB;
+		dialect_sdl_[SDLK_c] = KeyC;
+		dialect_sdl_[SDLK_d] = KeyD;
+		dialect_sdl_[SDLK_e] = KeyE;
+		dialect_sdl_[SDLK_f] = KeyF;
+		dialect_sdl_[SDLK_g] = KeyG;
+		dialect_sdl_[SDLK_h] = KeyH;
+		dialect_sdl_[SDLK_i] = KeyI;
+		dialect_sdl_[SDLK_j] = KeyJ;
+		dialect_sdl_[SDLK_k] = KeyK;
+		dialect_sdl_[SDLK_l] = KeyL;
+		dialect_sdl_[SDLK_m] = KeyM;
+		dialect_sdl_[SDLK_n] = KeyN;
+		dialect_sdl_[SDLK_o] = KeyO;
+		dialect_sdl_[SDLK_p] = KeyP;
+		dialect_sdl_[SDLK_q] = KeyQ;
+		dialect_sdl_[SDLK_r] = KeyR;
+		dialect_sdl_[SDLK_s] = KeyS;
+		dialect_sdl_[SDLK_t] = KeyT;
+		dialect_sdl_[SDLK_u] = KeyU;
+		dialect_sdl_[SDLK_v] = KeyV;
+		dialect_sdl_[SDLK_w] = KeyW;
+		dialect_sdl_[SDLK_x] = KeyX;
+		dialect_sdl_[SDLK_y] = KeyY;
+		dialect_sdl_[SDLK_z] = KeyZ;
+
+		dialect_sdl_[SDLK_LEFTBRACKET] = KeyBracketLeft;
+		dialect_sdl_[SDLK_BACKSLASH] = KeyBackslash;
+		dialect_sdl_[SDLK_RIGHTBRACKET] = KeyBracketRight;
+
+		dialect_sdl_[SDLK_BACKQUOTE] = KeyGrave;
+
+		dialect_sdl_[SDLK_LEFT] = KeyLeft;
+		dialect_sdl_[SDLK_RIGHT] = KeyRight;
+		dialect_sdl_[SDLK_UP] = KeyUp;
+		dialect_sdl_[SDLK_DOWN] = KeyDown;
+		dialect_sdl_[SDLK_INSERT] = KeyInsert;
+		dialect_sdl_[SDLK_HOME] = KeyHome;
+		dialect_sdl_[SDLK_DELETE] = KeyDelete;
+		dialect_sdl_[SDLK_END] = KeyEnd;
+		dialect_sdl_[SDLK_PAGEUP] = KeyPageUp;
+		dialect_sdl_[SDLK_PAGEDOWN] = KeyPageDown;
+
+		dialect_sdl_[SDLK_NUMLOCKCLEAR] = KeyNumLock;
+		dialect_sdl_[SDLK_KP_DIVIDE] = KeyKpDivide;
+		dialect_sdl_[SDLK_KP_MULTIPLY] = KeyKpMultiply;
+		dialect_sdl_[SDLK_KP_MINUS] = KeyKpSubtract;
+		dialect_sdl_[SDLK_KP_PLUS] = KeyKpAdd;
+		dialect_sdl_[SDLK_KP_ENTER] = KeyKpEnter;
+
+		dialect_sdl_[SDLK_BACKSPACE] = KeyBackSpace;
+		dialect_sdl_[SDLK_TAB] = KeyTab;
+		dialect_sdl_[SDLK_RETURN] = KeyReturn;
+		dialect_sdl_[SDLK_CAPSLOCK] = KeyCapsLock;
+		dialect_sdl_[SDLK_LSHIFT] = KeyShiftL;
+		dialect_sdl_[SDLK_LCTRL] = KeyCtrlL;
+		dialect_sdl_[SDLK_LGUI] = KeySuperL;
+		dialect_sdl_[SDLK_LALT] = KeyAltL;
+		dialect_sdl_[SDLK_RALT] = KeyAltR;
+		dialect_sdl_[SDLK_RGUI] = KeySuperR;
+		dialect_sdl_[SDLK_MENU] = KeyMenu;
+		dialect_sdl_[SDLK_RCTRL] = KeyCtrlR;
+		dialect_sdl_[SDLK_RSHIFT] = KeyShiftR;
+
+		dialect_sdl_[SDLK_PLUS] = KeyPlus;
+		dialect_sdl_[SDLK_RIGHTPAREN] = KeyRightParenthesis;
+		dialect_sdl_[SDLK_DOLLAR] = KeyDollar;
+		dialect_sdl_[SDLK_ASTERISK] = KeyAsterisk;
+		dialect_sdl_[SDLK_COLON] = KeyColon;
+		dialect_sdl_[SDLK_EXCLAIM] = KeyExclam;
 	}
 
 	InputDevice::DeviceVariant GetVariant() const
@@ -236,12 +350,34 @@ public:
 		}
 	}
 
+
+	void HandleEvent(SDL_Event& event)
+	{
+				GAINPUT_ASSERT(state_);
+				GAINPUT_ASSERT(previousState_);
+
+		if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
+		{
+			SDL_KeyboardEvent& keyEvent = event.key;
+			SDL_Keycode keySym = keyEvent.keysym.sym;
+
+			const bool pressed = event.type == SDL_KEYDOWN;
+
+			if (dialect_sdl_.count(keySym))
+			{
+				const DeviceButtonId buttonId = dialect_sdl_[keySym];
+				HandleButton(device_, nextState_, delta_, buttonId, pressed);
+			}
+		}
+	}
+
 private:
 	InputManager& manager_;
 	InputDevice& device_;
 	bool textInputEnabled_;
 	RingBuffer<GAINPUT_TEXT_INPUT_QUEUE_LENGTH, char> textBuffer_;
 	HashMap<unsigned, DeviceButtonId> dialect_;
+	HashMap<unsigned, DeviceButtonId> dialect_sdl_;
 	InputState* state_;
 	InputState* previousState_;
 	InputState nextState_;

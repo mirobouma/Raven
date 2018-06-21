@@ -71,6 +71,7 @@
 
 #include <cstdlib>
 #include <stdint.h>
+#include "SDL.h"
 
 union _XEvent;
 typedef _XEvent XEvent;

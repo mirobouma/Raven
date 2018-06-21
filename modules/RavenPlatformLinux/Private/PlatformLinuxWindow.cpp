@@ -1,7 +1,7 @@
 #include "PlatformLinux/PlatformLinuxWindow.h"
 #include "SDL.h"
 #include "imgui/imgui.h"
-
+#include "Core/Input/InputManager.h"
 namespace Raven 
 {
     uint32_t mouse_x = 0;
@@ -100,8 +100,12 @@ namespace Raven
 	{
 		SDL_Event event;
 
+		GInputManager->GetInputManager()->Update();
+
 		while (SDL_PollEvent(&event))
         {
+			GInputManager->GetInputManager()->HandleEvent(event);
+
 				switch (event.type)
 				{
                     case SDL_WINDOWEVENT:

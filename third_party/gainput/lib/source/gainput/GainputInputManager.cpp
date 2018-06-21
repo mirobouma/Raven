@@ -336,6 +336,38 @@ InputManager::HandleEvent(XEvent& event)
 		}
 	}
 }
+
+	void
+	InputManager::HandleEvent(SDL_Event& event)
+	{
+		for (DeviceMap::const_iterator it = devices_.begin();
+			 it != devices_.end();
+			 ++it)
+		{
+#if defined(GAINPUT_DEV)
+			if (it->second->IsSynced())
+		{
+			continue;
+		}
+#endif
+			if (it->second->GetType() == InputDevice::DT_KEYBOARD
+				&& it->second->GetVariant() == InputDevice::DV_STANDARD)
+			{
+				InputDeviceKeyboard* keyboard = static_cast<InputDeviceKeyboard*>(it->second);
+				InputDeviceKeyboardImplLinux* keyboardImpl = static_cast<InputDeviceKeyboardImplLinux*>(keyboard->GetPimpl());
+						GAINPUT_ASSERT(keyboardImpl);
+				keyboardImpl->HandleEvent(event);
+			}
+			else if (it->second->GetType() == InputDevice::DT_MOUSE
+					 && it->second->GetVariant() == InputDevice::DV_STANDARD)
+			{
+				InputDeviceMouse* mouse = static_cast<InputDeviceMouse*>(it->second);
+				InputDeviceMouseImplLinux* mouseImpl = static_cast<InputDeviceMouseImplLinux*>(mouse->GetPimpl());
+						GAINPUT_ASSERT(mouseImpl);
+				mouseImpl->HandleEvent(event);
+			}
+		}
+	}
 #endif
 
 #if defined(GAINPUT_PLATFORM_WIN)

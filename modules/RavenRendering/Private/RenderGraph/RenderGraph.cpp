@@ -522,7 +522,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_BUFFER;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				mManager->mResources.insert(std::make_pair(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter));
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -534,7 +534,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_RENDER_TARGET;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				mManager->mResources.insert(std::make_pair(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter));
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -546,7 +546,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_TEXTURE;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+				mManager->mResources.insert(std::make_pair(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter));
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -592,7 +592,7 @@ namespace Raven
 
 					// Register the physical resource.
 					mTakenResources.push_back(physRes);
-					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+					mManager->mResources.insert(std::make_pair(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter));
 					graph->mPhysicalResources[resource->mName] = physRes;
 				}
 			}
@@ -681,7 +681,7 @@ namespace Raven
 
 					// Register the physical resource.
 					mTakenResources.push_back(physRes);
-					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
+					mManager->mResources.insert(std::make_pair(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter));
 					graph->mPhysicalResources[resource->mName] = physRes;
 				}
 			}

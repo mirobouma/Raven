@@ -57,10 +57,6 @@ elseif(APPLE)
       find_library(APPKIT AppKit)
       target_link_libraries(gainput ${APPKIT})
   endif()
-elseif(UNIX AND NOT APPLE)
-    find_package(X11 REQUIRED)
-    target_link_libraries(gainputstatic X11)
-    target_link_libraries(gainput X11)
 endif()
 
 # Library installation directory
@@ -75,9 +71,9 @@ set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 #    FILES_MATCHING PATTERN "*.h"
 #)
 
-#install(
-#    TARGETS ${install_libs}
-#    LIBRARY DESTINATION "${libdir}"
-#    ARCHIVE DESTINATION "${libdir}"
-#    RUNTIME DESTINATION "bin"
-#)
+install(
+    TARGETS ${install_libs}
+    LIBRARY DESTINATION "${libdir}"
+    ARCHIVE DESTINATION "${libdir}"
+    RUNTIME DESTINATION "bin"
+)

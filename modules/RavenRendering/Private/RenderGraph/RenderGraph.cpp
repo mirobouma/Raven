@@ -522,7 +522,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_BUFFER;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -534,7 +534,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_RENDER_TARGET;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -546,7 +546,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_TEXTURE;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -592,7 +592,7 @@ namespace Raven
 
 					// Register the physical resource.
 					mTakenResources.push_back(physRes);
-					mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 					graph->mPhysicalResources[resource->mName] = physRes;
 				}
 			}
@@ -681,7 +681,7 @@ namespace Raven
 
 					// Register the physical resource.
 					mTakenResources.push_back(physRes);
-					mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 					graph->mPhysicalResources[resource->mName] = physRes;
 				}
 			}
@@ -706,10 +706,8 @@ namespace Raven
 		size_t hash1 = 0;
 		size_t hash2 = 0;
 
-        FVirtualTextureDesc desc = virtualResource->mDesc.GetTextureDesc();
-
-		hash1 = hash_bytes(&desc, sizeof(FVirtualTextureDesc), hash1);
-		hash2 = hash_bytes(&desc, sizeof(FVirtualTextureDesc), hash2);
+		hash1 = hash_bytes(&virtualResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash1);
+		hash2 = hash_bytes(&physicalResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash2);
 
 		return hash1 == hash2;
 		

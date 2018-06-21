@@ -130,7 +130,7 @@ namespace Raven
 		// Initialize UI renderer.
 		gUIRenderer.initialize(renderer, this, _SwapChain);
 
-		gRealMesh = new RMesh(renderer, "models/SponzaPBR/sponza.obj", 0.05f);
+		gRealMesh = new RMesh(renderer, "models/sponzaPBR/sponza.obj", 0.05f);
 
 		gSSAOVars.cSampleRadius = 2.4f;
 		gSSAOVars.cIntensity = 1.1f;

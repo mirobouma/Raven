@@ -104,7 +104,7 @@ namespace Raven
 
 		return flags;
 	}
-		
+
 	FBufferUsageFlags virtualResourceFlagsToBufferUsage(FRenderGraphResourceReadState read, FRenderGraphResourceWriteState write)
 	{
 		FBufferUsageFlags flags = (FBufferUsageFlags)0;
@@ -135,27 +135,27 @@ namespace Raven
 
 		switch (state)
 		{
-			case FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT:
-			{
-				ret = RESOURCE_STATE_RENDER_TARGET;
-			}
-			break;
-			case FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_DEPTH_WRITE:
-			{
-				ret = RESOURCE_STATE_DEPTH_WRITE;
-			}
-			break;
-			case FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_UAV:
-			{
-				ret = RESOURCE_STATE_UNORDERED_ACCESS;
-			}
-			break;
-			default:
-			{
-				RLOG_WARNING("Unknown write flags when trying to translate FRenderGraphResourceWriteState to FResourceState");
-			}
+		case FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT:
+		{
+			ret = RESOURCE_STATE_RENDER_TARGET;
 		}
-		
+		break;
+		case FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_DEPTH_WRITE:
+		{
+			ret = RESOURCE_STATE_DEPTH_WRITE;
+		}
+		break;
+		case FRenderGraphResourceWriteState::RENDER_GRAPH_RESOURCE_WRITE_STATE_UAV:
+		{
+			ret = RESOURCE_STATE_UNORDERED_ACCESS;
+		}
+		break;
+		default:
+		{
+			RLOG_WARNING("Unknown write flags when trying to translate FRenderGraphResourceWriteState to FResourceState");
+		}
+		}
+
 		return ret;
 	};
 
@@ -175,9 +175,9 @@ namespace Raven
 			ref->mReadFlags = (FRenderGraphResourceReadState)0;
 			ref->mWriteFlags = (FRenderGraphResourceWriteState)0;
 			ref->mResourceAccess = RENDER_GRAPH_RESOURCE_ACCESS_GPU;
-		
+
 			mPass->mVirtualResourceReferences.push_back(std::unique_ptr<FVirtualResourceRef>(ref));
-			
+
 			return ref;
 		}
 		else
@@ -295,7 +295,7 @@ namespace Raven
 			// Create reference to this resource in the current render pass.
 			mPass->mVirtualResourceReferences.push_back(std::unique_ptr<FVirtualResourceRef>(ref));
 
-			return ref;	
+			return ref;
 		}
 	}
 
@@ -316,9 +316,9 @@ namespace Raven
 		}
 
 		// Check if we already reference this resource in this pass.
-		auto resRef = std::find_if(mPass->mVirtualResourceReferences.begin(), mPass->mVirtualResourceReferences.end(), 
-			[&](std::unique_ptr<FVirtualResourceRef>& ref) { 
-			return ref.get()->mResource == vResource; 
+		auto resRef = std::find_if(mPass->mVirtualResourceReferences.begin(), mPass->mVirtualResourceReferences.end(),
+			[&](std::unique_ptr<FVirtualResourceRef>& ref) {
+			return ref.get()->mResource == vResource;
 		});
 
 		// If we already reference this resource, update the reference with additional access flags.
@@ -354,7 +354,7 @@ namespace Raven
 			mPass->mInputs.push_back(ref);
 
 			return ref;
-		}	
+		}
 	}
 
 	RRenderGraphBuilder::~RRenderGraphBuilder()
@@ -367,53 +367,53 @@ namespace Raven
 	{
 		switch (mType)
 		{
-			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET:
-			{
-				const FTextureCreateDesc* importedTextureDesc = mImportedRenderTarget->GetTexture()->GetDesc();
+		case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_RENDER_TARGET:
+		{
+			const FTextureCreateDesc* importedTextureDesc = mImportedRenderTarget->GetTexture()->GetDesc();
 
-				FVirtualTextureDesc desc = {};
-				desc.depth = importedTextureDesc->depth;
-				desc.width = importedTextureDesc->width;
-				desc.height = importedTextureDesc->height;
-				desc.sampleCount = importedTextureDesc->sampleCount;
-				desc.sampleQuality = importedTextureDesc->sampleQuality;
-				desc.format = importedTextureDesc->format;
+			FVirtualTextureDesc desc = {};
+			desc.depth = importedTextureDesc->depth;
+			desc.width = importedTextureDesc->width;
+			desc.height = importedTextureDesc->height;
+			desc.sampleCount = importedTextureDesc->sampleCount;
+			desc.sampleQuality = importedTextureDesc->sampleQuality;
+			desc.format = importedTextureDesc->format;
 
-				return desc;
-			}
-			break;
-			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_TEXTURE:
-			{
-				const FTextureCreateDesc* importedTextureDesc = mImportedTexture->GetDesc();
+			return desc;
+		}
+		break;
+		case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_TEXTURE:
+		{
+			const FTextureCreateDesc* importedTextureDesc = mImportedTexture->GetDesc();
 
-				FVirtualTextureDesc desc = {};
-				desc.depth = importedTextureDesc->depth;
-				desc.width = importedTextureDesc->width;
-				desc.height = importedTextureDesc->height;
-				desc.sampleCount = importedTextureDesc->sampleCount;
-				desc.sampleQuality = importedTextureDesc->sampleQuality;
-				desc.format = importedTextureDesc->format;
+			FVirtualTextureDesc desc = {};
+			desc.depth = importedTextureDesc->depth;
+			desc.width = importedTextureDesc->width;
+			desc.height = importedTextureDesc->height;
+			desc.sampleCount = importedTextureDesc->sampleCount;
+			desc.sampleQuality = importedTextureDesc->sampleQuality;
+			desc.format = importedTextureDesc->format;
 
-				return desc;
-			}
-			break;
-			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_TEXTURE:
-			{
-				return mTextureDesc;
-			}
-			break;
-			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_BUFFER:
-			{
-				FVirtualTextureDesc desc = {};
-				desc.width = mBufferDesc.size;
-			}
-			break;
-			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER:
-			{
-				FVirtualTextureDesc desc = {};
-				desc.width = mImportedBuffer->getSize();
-			}
-			break;
+			return desc;
+		}
+		break;
+		case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_TEXTURE:
+		{
+			return mTextureDesc;
+		}
+		break;
+		case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_BUFFER:
+		{
+			FVirtualTextureDesc desc = {};
+			desc.width = mBufferDesc.size;
+		}
+		break;
+		case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER:
+		{
+			FVirtualTextureDesc desc = {};
+			desc.width = mImportedBuffer->getSize();
+		}
+		break;
 		}
 
 		return FVirtualTextureDesc();
@@ -522,7 +522,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_BUFFER;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -534,7 +534,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_RENDER_TARGET;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -546,7 +546,7 @@ namespace Raven
 				physRes->mType = PHYSICAL_RESOURCE_TYPE_TEXTURE;
 				physRes->mDesc = resource->mDesc;
 
-				mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+				mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 				graph->mPhysicalResources[resource->mName] = physRes;
 			}
 			break;
@@ -578,7 +578,7 @@ namespace Raven
 				if (!foundCompatibleResource)
 				{
 					RPhysicalResource* physRes = new RPhysicalResource();
-			
+
 					physRes->mType = EPhysicalResourceType::PHYSICAL_RESOURCE_TYPE_BUFFER;
 
 					FBufferCreateDesc desc;
@@ -586,13 +586,13 @@ namespace Raven
 					desc.size = resource->mDesc.mBufferDesc.size;
 					desc.memoryType = gResourceAccessToMemoryTypeTranslator(resource->mMaxResourceAccess);
 					desc.usage = virtualResourceFlagsToBufferUsage(resource->mTotalReadFlags, resource->mTotalWriteFlags);
-				
+
 					mManager->GetRenderer()->createBuffer(&physRes->mBuffer, &desc);
 					physRes->mDesc = resource->mDesc;
 
 					// Register the physical resource.
 					mTakenResources.push_back(physRes);
-					mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 					graph->mPhysicalResources[resource->mName] = physRes;
 				}
 			}
@@ -681,7 +681,7 @@ namespace Raven
 
 					// Register the physical resource.
 					mTakenResources.push_back(physRes);
-					mManager->mResources[std::unique_ptr<RPhysicalResource>(physRes)] = mManager->mFrameCounter;
+					mManager->mResources.insert_or_assign(std::unique_ptr<RPhysicalResource>(physRes), mManager->mFrameCounter);
 					graph->mPhysicalResources[resource->mName] = physRes;
 				}
 			}
@@ -706,13 +706,11 @@ namespace Raven
 		size_t hash1 = 0;
 		size_t hash2 = 0;
 
-        FVirtualTextureDesc desc = virtualResource->mDesc.GetTextureDesc();
-
-		hash1 = hash_bytes(&desc, sizeof(FVirtualTextureDesc), hash1);
-		hash2 = hash_bytes(&desc, sizeof(FVirtualTextureDesc), hash2);
+		hash1 = hash_bytes(&virtualResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash1);
+		hash2 = hash_bytes(&physicalResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash2);
 
 		return hash1 == hash2;
-		
+
 	}
 
 	void RRenderGraphBuilder::addResourceBarrier(FVirtualResourceRef* to, RCompiledPass* pass, EBarrierLocation location)
@@ -732,7 +730,7 @@ namespace Raven
 				// Buffer barrier.
 				FBufferBarrier barrier;
 				barrier.buffer = resource->mBuffer;
-			
+
 				if (to->mReadFlags != 0)
 				{
 					barrier.requiredState = gReadFlagTranslator(to->mReadFlags);
@@ -876,7 +874,7 @@ namespace Raven
 					RLOG_WARNING("Trying to read from a resource bound as depth write in a pass.");
 				}
 
-				if ((resource->mReadFlags  != 0) && ((resource->mWriteFlags & RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT) != 0))
+				if ((resource->mReadFlags != 0) && ((resource->mWriteFlags & RENDER_GRAPH_RESOURCE_WRITE_STATE_COLOR_ATTACHMENT) != 0))
 				{
 					RLOG_WARNING("Trying to read from a resource bound as color attachment in a pass.");
 				}
@@ -905,7 +903,7 @@ namespace Raven
 				if (passIndex != UINT32_MAX)
 				{
 					dependencyMap[i].push_back(passIndex);
-				}		
+				}
 			}
 		}
 	}
@@ -940,7 +938,7 @@ namespace Raven
 		if (it != mPhysicalResourceMappings.end())
 		{
 			RPhysicalResource* resource = it->second;
-			
+
 			if (resource->mType == PHYSICAL_RESOURCE_TYPE_BUFFER)
 			{
 				return resource->mBuffer;
@@ -1063,7 +1061,7 @@ namespace Raven
 		for (auto it = mResources.begin(); it != mResources.end(); ++it)
 		{
 			RPhysicalResource* resource = it->first.get();
-		
+
 			switch (resource->mDesc.mType)
 			{
 			case EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_BUFFER:
@@ -1171,7 +1169,7 @@ namespace Raven
 		}
 		break;
 		}
-	
+
 
 		return nullptr;
 	}
@@ -1197,7 +1195,7 @@ namespace Raven
 	EGraphBuilderResult RRenderGraphManager::validate_and_build(RRenderGraphBuilder* pBuilder, RRenderGraph** ppGraph)
 	{
 		mCurrentIndex = (mCurrentIndex + 1) % MAX_FRAMES_AT_ONCE;
-		
+
 		RRenderGraph* retGraph = mRenderGraphs[mCurrentIndex];
 
 		// Wait for the frame to finish.
@@ -1266,9 +1264,9 @@ namespace Raven
 	RRenderGraphBuilder* RRenderGraphManager::get_new_graph_builder()
 	{
 		mFrameCounter++;
-		
+
 		// Destroy resource that haven't been used for a full cycle.
-		for (auto it = mResources.begin(); it != mResources.end();) 
+		for (auto it = mResources.begin(); it != mResources.end();)
 		{
 			RPhysicalResource* resource = it->first.get();
 			if (resource->mDesc.mType == EVirtualResourceType::VIRTUAL_RESOURCE_TYPE_IMPORTED_BUFFER ||
@@ -1277,7 +1275,7 @@ namespace Raven
 			{
 				mResources.erase(it++);
 			}
-			else if (mFrameCounter - it->second > MAX_FRAMES_AT_ONCE) 
+			else if (mFrameCounter - it->second > MAX_FRAMES_AT_ONCE)
 			{
 				//mRenderer->waitForDevice();
 
@@ -1312,5 +1310,5 @@ namespace Raven
 		RRenderGraphBuilder* builder = new RRenderGraphBuilder(this);
 		return builder;
 	}
-	
+
 }

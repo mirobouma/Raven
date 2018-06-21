@@ -8,6 +8,7 @@
 #include "Rendering/RenderGraph/Modules/RGMMesh.h"
 #include "Rendering/RenderGraph/Modules/RGMSSAO.h"
 #include "Rendering/RenderGraph/Modules/RGMVolumetric.h"
+#include "Core/Input/InputManager.h"
 
 #include "Rendering/Game/Mesh.h"
 
@@ -49,12 +50,14 @@ namespace Raven
 
 	FSSAOVars gSSAOVars;
 	FVolumetricFogVars gVolumetricVars;
+	RInputMapping* InputMap;
 
 	ImVec2 gameWindowSize = {1, 1};
 	ImVec2 gameWindowBackbufferSize = { 1, 1 };
 	ImVec2 gameWindowPos = {0, 0};
 	float gProfilerBlockHeight = 40;
 	float gProfilerZoom = 1.0f;
+	bool gShowEditor = true;
 
 	bool bKeepAspectRatio = true;
 	float gAspectWidth = 16.0f;
@@ -68,6 +71,20 @@ namespace Raven
 	bool d_consoleWindowOpen = true;
 	bool d_propertyWindowOpen = true;
 	bool d_profilerWindowOpen = true;
+
+	enum InputMappings
+	{
+		F1,
+		MouseX,
+		MouseR,
+		MouseY,
+		W,
+		A,
+		S,
+		D,
+		E,
+		Q
+	};
 
     RGameWindow::RGameWindow(const char* title, FVector2 size, FVector2 position, EPlatformWindowFlags flags, IWindowMessageHandler* handler)
             : RRenderableWindow(title, size, position, flags, handler)
@@ -125,17 +142,29 @@ namespace Raven
 		gVolumetricVars.AmbientFog = 0.2f;
 		gVolumetricVars.LightMieG = 0.05f;
 		gVolumetricVars.LightIntensity = 1.0f;
-		gVolumetricVars.LightScatteringCoef = 0.020f;
-		gVolumetricVars.LightExtinctionCoef = 0.0005f;
-		gVolumetricVars.SkyboxExtinctionCoef = 0.005f;
+		gVolumetricVars.LightScatteringCoef = 0.008f;
+		gVolumetricVars.LightExtinctionCoef = 0.0003f;
+		gVolumetricVars.SkyboxExtinctionCoef = 1.0f;
 		gVolumetricVars.NumSteps = 25;
 		gVolumetricVars.MaxRayLength = 1000.0f;
 		gVolumetricVars.EnableHeightFog = false;
 		gVolumetricVars.HeightFog = 1.0f;
 		gVolumetricVars.HeightFogScale = 0.007f;
 		gVolumetricVars.NoiseSpeed = 1.0f;
-		gVolumetricVars.FogDensity = 1.0f;
+		gVolumetricVars.FogDensity = 0.8f;
 		gVolumetricVars.EnableNoise = false;
+
+		InputMap = GInputManager->CreateMapping();
+		InputMap->getMap()->MapFloat(InputMappings::MouseX, GInputManager->GetMouseId(), gainput::MouseAxisX);
+		InputMap->getMap()->MapFloat(InputMappings::MouseY, GInputManager->GetMouseId(), gainput::MouseAxisY);
+		InputMap->getMap()->MapBool(InputMappings::MouseR, GInputManager->GetMouseId(), gainput::MouseButtonRight);
+		InputMap->getMap()->MapBool(InputMappings::F1, GInputManager->GetKeyboardId(), gainput::KeyF1);
+		InputMap->getMap()->MapBool(InputMappings::W, GInputManager->GetKeyboardId(), gainput::KeyW);
+		InputMap->getMap()->MapBool(InputMappings::A, GInputManager->GetKeyboardId(), gainput::KeyA);
+		InputMap->getMap()->MapBool(InputMappings::S, GInputManager->GetKeyboardId(), gainput::KeyS);
+		InputMap->getMap()->MapBool(InputMappings::D, GInputManager->GetKeyboardId(), gainput::KeyD);
+		InputMap->getMap()->MapBool(InputMappings::E, GInputManager->GetKeyboardId(), gainput::KeyE);
+		InputMap->getMap()->MapBool(InputMappings::Q, GInputManager->GetKeyboardId(), gainput::KeyQ);
 
     }
 
@@ -143,6 +172,8 @@ namespace Raven
     {
         // Call super.
 		RRenderableWindow::OnResize(width, height);
+
+		createGameWindow();
     }
 
     void RGameWindow::OnMove(int x, int y)
@@ -184,24 +215,36 @@ namespace Raven
 			gDepthStencil = nullptr;
 		}
 
-		FRenderTargetCreateDesc texDesc = {};
-		texDesc.memoryType = MEMORY_TYPE_GPU;
-		texDesc.format = TEXTURE_FORMAT_RGBA8;
-		texDesc.width = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.x, (int32_t)1);
-		texDesc.height = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.y, (int32_t)1);
-		texDesc.sampleCount = 1;
-		texDesc.sampleQuality = 0;
-		texDesc.tiling = IMAGE_TILING_OPTIMAL;
-		texDesc.usage = FRenderTargetUsage::RENDER_TARGET_USAGE_COLOR_ATTACHMENT;
-			
-		renderer->createRenderTarget(&gBackbuffer, &texDesc);
+		if (gShowEditor)
+		{
+			FRenderTargetCreateDesc texDesc = {};
+			texDesc.memoryType = MEMORY_TYPE_GPU;
+			texDesc.format = TEXTURE_FORMAT_BGRA8;
+			texDesc.width = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.x, (int32_t)1);
+			texDesc.height = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.y, (int32_t)1);
+			texDesc.sampleCount = 1;
+			texDesc.sampleQuality = 0;
+			texDesc.tiling = IMAGE_TILING_OPTIMAL;
+			texDesc.usage = FRenderTargetUsage::RENDER_TARGET_USAGE_COLOR_ATTACHMENT;
 
+			renderer->createRenderTarget(&gBackbuffer, &texDesc);
+		}
 
 		FRenderTargetCreateDesc dsDesc = {};
 		dsDesc.memoryType = MEMORY_TYPE_GPU;
 		dsDesc.format = TEXTURE_FORMAT_D32_FLOAT;
-		dsDesc.width = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.x, (int32_t)1);
-		dsDesc.height = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.y, (int32_t)1);
+
+		if (gShowEditor)
+		{
+			dsDesc.width = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.x, (int32_t)1);
+			dsDesc.height = (uint32_t)std::max((int32_t)gameWindowBackbufferSize.y, (int32_t)1);
+		}
+		else
+		{
+			dsDesc.width = (uint32_t)std::max((int32_t)_SwapChain->getWidth(), (int32_t)1);
+			dsDesc.height = (uint32_t)std::max((int32_t)_SwapChain->getHeight(), (int32_t)1);
+		}
+
 		dsDesc.sampleCount = 1;
 		dsDesc.sampleQuality = 0;
 		dsDesc.tiling = IMAGE_TILING_OPTIMAL;
@@ -251,6 +294,20 @@ namespace Raven
 
 		GLogManager->DeregisterLogger(&mLogger);
     }
+
+	void RGameWindow::handleGameInput(float dt)
+	{
+		if (InputMap->getMap()->GetBool(InputMappings::MouseR))
+		{
+			gCamera.getTransform()->rotate(-InputMap->getMap()->GetFloatDelta(InputMappings::MouseY) * 2.0f, InputMap->getMap()->GetFloatDelta(InputMappings::MouseX) * 2.0f, 0.0f);
+		}
+		gCamera.getTransform()->translate(gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::W));
+		gCamera.getTransform()->translate(gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::D));
+		gCamera.getTransform()->translate(-gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::A));
+		gCamera.getTransform()->translate(-gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::S));
+		gCamera.getTransform()->translate(gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::E));
+		gCamera.getTransform()->translate(-gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::Q));
+	}
 
 	void RGameWindow::updateEditor()
 	{
@@ -378,6 +435,8 @@ namespace Raven
 				}
 				if (ImGui::IsWindowFocused())
 				{
+					handleGameInput(1.0f / 60.0f);
+
 					ImVec4 borderColor = ImVec4(1.0, 0.6f, 0.0f, 1.0f);
 
 					ImGui::PushStyleColor(ImGuiCol_Button, borderColor);
@@ -489,7 +548,7 @@ namespace Raven
 				ImGui::SliderFloat("Mie", &gVolumetricVars.LightMieG, 0.0f, 1.0f);
 				ImGui::SliderFloat("Light extiction coefficient", &gVolumetricVars.LightExtinctionCoef, 0.0f, 0.02f);
 				ImGui::SliderFloat("Light scattering coefficien", &gVolumetricVars.LightScatteringCoef, 0.0f, 0.02f);
-				ImGui::SliderFloat("Sky extinction coefficient", &gVolumetricVars.SkyboxExtinctionCoef, 0.0f, 0.02f);
+				ImGui::SliderFloat("Sky extinction coefficient", &gVolumetricVars.SkyboxExtinctionCoef, 0.0f, 1.0f);
 				ImGui::SliderFloat("Fog Density", &gVolumetricVars.FogDensity, 0.0f, 2.0f);
 				ImGui::SliderFloat("Ambient Fog", &gVolumetricVars.AmbientFog, 0.0f, 1.0f);
 				ImGui::ColorPicker4("Light Color", (float*)&gVolumetricVars.LightCol);
@@ -595,22 +654,43 @@ namespace Raven
 
     void RGameWindow::Render()
     {
+		
+		static auto startTime = std::chrono::high_resolution_clock::now();
+		
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() / 10.0f;
+
 		if (_SwapChain->getWidth() == 0 && _SwapChain->getHeight() == 0)
 		{
 			return;
 		}
 
-		// Update editor (Record IMGUI commands).
-		updateEditor();
+		if (InputMap->getMap()->GetBoolIsNew(InputMappings::F1))
+		{
+			gShowEditor = !gShowEditor;
+			createGameWindow();
+		}
 
-		static auto startTime = std::chrono::high_resolution_clock::now();
-		auto currentTime = std::chrono::high_resolution_clock::now();
-		float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count() / 10.0f;
+		if (gShowEditor)
+		{
+			// Update editor (Record IMGUI commands).
+			updateEditor();
+		}
+		else
+		{
+			handleGameInput(1.0f / 60.0f);
+		}
 
+	
 		// Create dynamic uniform allocation.
-		gCamera.setPerspectiveProjection(45.0f, (float)gBackbuffer->GetDesc()->width / (float)gBackbuffer->GetDesc()->height, 0.1f, 1000.0f);
-		gCamera.getTransform()->setPosition(FVector3(sin(time * glm::radians(90.0f)) * 25.0f, -35.0f, cos(time * glm::radians(90.0f)) * 25.0f));
-		gCamera.getTransform()->lookAt(FVector3(0.0f, -25.0f, 0.0f));
+		if (gShowEditor)
+		{
+			gCamera.setPerspectiveProjection(45.0f, (float)gBackbuffer->GetDesc()->width / (float)gBackbuffer->GetDesc()->height, 0.1f, 1000.0f);
+		}
+		else
+		{
+			gCamera.setPerspectiveProjection(45.0f, (float)_SwapChain->getWidth() / (float)_SwapChain->getHeight(), 0.1f, 1000.0f);
+		}
 
 		// render graph builder for this
 		RRenderGraphBuilder* builder = gRenderGraphManager->get_new_graph_builder();
@@ -619,7 +699,16 @@ namespace Raven
 		FRGMCommonBackbufferTargets bb_data = gRGMCommon.RGAcquireBackbuffer(builder, renderer, _SwapChain);
 	
 		// Import offscreen render target.
-		FVirtualResourceRef* offscreen = gRGMCommon.RGImportTarget(builder, "offscreen", gBackbuffer);
+		FVirtualResourceRef* offscreen; 
+		
+		if (gShowEditor)
+		{
+			offscreen = gRGMCommon.RGImportTarget(builder, "offscreen", gBackbuffer);
+		}
+		else
+		{
+			offscreen = bb_data.pBackbuffer;
+		}
 
 		// Import depth-stencil.
 		FVirtualResourceRef* depth = gRGMCommon.RGImportTarget(builder, "depth", gDepthStencil);
@@ -658,10 +747,18 @@ namespace Raven
 			// Compose targets together.
 			FRGMDeferredComposeTargets deferred_compose;
 			deferred_compose = gRGMMesh.RGDrawMeshesDeferredCompose(builder, offscreen, deferred_targets.pAlbedo, volumeTargets.pSceneDepth, volumeTargets.pScenePosition, ssaotargets.pNormal, ssaotargets.pSSAO, volumeTargets.pShadowDepth, volumeTargets.pOutput, &gCamera, &gShadowCamera);
+
+			if (!gShowEditor)
+			{
+				bb_data.pBackbuffer = deferred_compose.pOutput;
+			}
 		}
 
-		// Draw UI
-		bb_data.pBackbuffer = gUIRenderer.render(builder, bb_data.pBackbuffer);
+		if (gShowEditor)
+		{
+			// Draw UI
+			bb_data.pBackbuffer = gUIRenderer.render(builder, bb_data.pBackbuffer);
+		}
 	
 
 		// Submit command list to the graphics queue and present the backbuffer.

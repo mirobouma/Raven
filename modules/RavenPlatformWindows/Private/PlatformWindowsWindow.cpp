@@ -1,6 +1,7 @@
 #include "PlatformWindows/PlatformWindowsWindow.h"
 #include "PlatformWindows/PlatformWindows.h"
 #include "PlatformWindows/Util/WString.h"
+#include "Core/Input/InputManager.h"
 
 #include <locale>
 
@@ -126,6 +127,8 @@ namespace Raven {
 		// this struct holds Windows event messages
 		MSG msg;
 
+		GInputManager->GetInputManager()->Update();
+
 		// Check to see if any messages are waiting in the queue
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
@@ -134,6 +137,8 @@ namespace Raven {
 
 			// send the message to the WindowProc function
 			DispatchMessage(&msg);
+
+			GInputManager->GetInputManager()->HandleMessage(msg);
 		}
 	}
 

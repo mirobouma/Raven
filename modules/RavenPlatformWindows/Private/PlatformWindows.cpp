@@ -1,5 +1,6 @@
 #include "PlatformWindows/PlatformWindows.h"
 #include "PlatformWindows/PlatformWindowsWindow.h"
+#include "Core/Input/InputManager.h"
 #include "imgui/imgui.h"
 
 namespace Raven {
@@ -32,6 +33,8 @@ namespace Raven {
 		{
 			gCurrWidth = LOWORD(lParam);
 			gCurrHeight = HIWORD(lParam);
+
+			GInputManager->SetDisplaySize(gCurrWidth, gCurrHeight);
 		}
 		case WM_EXITSIZEMOVE:
 		{

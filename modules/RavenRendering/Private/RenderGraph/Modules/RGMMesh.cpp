@@ -150,7 +150,7 @@ namespace Raven
 		pipelineDesc.pRasterizerState = &mRasterizerState;
 		pipelineDesc.depthStencilFormat = TEXTURE_FORMAT_D32_FLOAT;
 		pipelineDesc.numRenderTargets = 0;
-		pipelineDesc.renderTargetFormats[0] = TEXTURE_FORMAT_RGBA8;
+		pipelineDesc.renderTargetFormats[0] = TEXTURE_FORMAT_BGRA8;
 ;
 		pipelineDesc.primitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE;
 		pipelineDesc.sampleCount = pSwapChain->getRenderTarget(0)->GetDesc()->sampleCount;
@@ -163,7 +163,7 @@ namespace Raven
 		pipelineDesc.pDepthStencilState = &mNoDepthWriteState;
 		pipelineDesc.depthStencilFormat = TEXTURE_FORMAT_D32_FLOAT;
 		pipelineDesc.numRenderTargets = 1;
-		pipelineDesc.renderTargetFormats[0] = TEXTURE_FORMAT_RGBA8;
+		pipelineDesc.renderTargetFormats[0] = TEXTURE_FORMAT_BGRA8;
 		pRenderer->createPipeline(&mPipelineForwardNoDepthWrite, &pipelineDesc);
 
 		// Create graphics pipeline.
@@ -193,7 +193,7 @@ namespace Raven
 		deferredComposePipelineDesc.pRasterizerState = nullptr;
 		deferredComposePipelineDesc.depthStencilFormat = TEXTURE_FORMAT_UNKNOWN;
 		deferredComposePipelineDesc.numRenderTargets = 1;
-		deferredComposePipelineDesc.renderTargetFormats[0] = TEXTURE_FORMAT_RGBA8;
+		deferredComposePipelineDesc.renderTargetFormats[0] = TEXTURE_FORMAT_BGRA8;
 		deferredComposePipelineDesc.primitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE;
 		deferredComposePipelineDesc.sampleCount = pSwapChain->getRenderTarget(0)->GetDesc()->sampleCount;
 		deferredComposePipelineDesc.sampleQuality = pSwapChain->getRenderTarget(0)->GetDesc()->sampleQuality;
@@ -835,9 +835,9 @@ namespace Raven
 			loadStoreOps.colorClearValues[0][2] = 0.0f;
 			loadStoreOps.colorClearValues[0][3] = 0.0f;
 
-			loadStoreOps.colorClearValues[1][0] = 0.0f;
-			loadStoreOps.colorClearValues[1][1] = 0.0f;
-			loadStoreOps.colorClearValues[1][2] = 0.0f;
+			loadStoreOps.colorClearValues[1][0] = 0.22f;
+			loadStoreOps.colorClearValues[1][1] = 0.69f;
+			loadStoreOps.colorClearValues[1][2] = 0.87f;
 			loadStoreOps.colorClearValues[1][3] = 0.0f;
 
 			loadStoreOps.colorClearValues[2][0] = 0.0f;

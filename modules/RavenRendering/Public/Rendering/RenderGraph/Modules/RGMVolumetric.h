@@ -21,6 +21,7 @@ namespace Raven
 		glm::mat4		cView;
 		glm::mat4		cInvView;
 		glm::mat4		cShadowMat;
+		glm::vec4		cFrustumCorners[4];
 		glm::vec4		cLightDir;
 		glm::vec4		cLightCol;
 		glm::vec4		cLightMieG;

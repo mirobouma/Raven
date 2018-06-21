@@ -7,6 +7,7 @@ layout (std140, set=0, binding=0) uniform cbGlobals
 	uniform mat4	 cView;
 	uniform mat4	 cInvView;
 	uniform mat4	 cShadowMat;
+	uniform vec4	 cFrustumCorners[4];
 	uniform vec4	 cLightDir;
 	uniform vec4	 cLightCol;
 	uniform vec4	 cLightMieG;
@@ -36,7 +37,27 @@ layout (set=1, binding=4) uniform sampler		  uDepthSampler;
 
 
 layout(location = 0) in vec2 fs_UV; 
+layout(location = 1) in vec3 fs_inFarW;
+
 layout(location = 0) out vec4 outColor;
+
+float linearizeDepth(in float depth)
+{
+	float c1 = cFarZ / cNearZ;
+    float c0 = 1.0 - c1;
+	float linearDepth = 1.0 / (c0 * depth + c1);
+
+	return linearDepth;
+}
+
+vec3 getPosition(in vec2 uv) 
+{
+	float depth = texture(sampler2D(uSceneDepth, uDepthSampler), uv).x;
+	float linearDepth = linearizeDepth(depth);
+
+	// view space
+	return fs_inFarW * linearDepth;
+}
 
 #define PI 3.1415926535897932384626422832795028841971
 float doShadow(vec3 viewPos)
@@ -159,10 +180,10 @@ void main()
 	
 	// Sample depth texture
 	float depth = texture(sampler2D(uSceneDepth, uDepthSampler), fs_UV).x;
-	vec4 positiondepth = texture(sampler2D(uScenePosition, uDepthSampler), fs_UV);
+	//vec4 positiondepth = texture(sampler2D(uScenePosition, uDepthSampler), fs_UV);
 
-	vec3 position = positiondepth.xyz;
-	float linearDepth = positiondepth.z;
+	vec3 position = getPosition(fs_UV);
+	float linearDepth = linearizeDepth(depth);
 	 
 	// Calculate the ray from the camera to the far plane and multiply it by linear depth (0-1)
 	vec3 vpos = position;
@@ -186,5 +207,5 @@ void main()
 		color.w = mix(color.w, 1, cSkyboxExtinctionCoef);
 	}
 
-    outColor = color;
+    outColor = clamp(color, 0.0, 1.0);
 }

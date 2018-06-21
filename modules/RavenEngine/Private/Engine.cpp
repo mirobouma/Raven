@@ -5,7 +5,7 @@
 #include "WindowSystem/WindowSystem.h"
 #include "Core/Debug/LogManager.h"
 #include "RenderingVulkan/VulkanRenderer.h"
-
+#include "Core/Input/InputManager.h"
 namespace Raven {
 
 	REngine* REngine::Create()
@@ -33,6 +33,9 @@ namespace Raven {
 	{
 		// Initialize logger.
 		RLogManager::Initialize(LS_Debug);
+
+		// Initialize input.
+		RInputManager::Initialize();
 
 		// Initialize critical systems.
 		RWindowSystem::Initialize();
@@ -73,6 +76,9 @@ namespace Raven {
 
 		// Destroy renderer.
 		GEngine->_Renderer->destroy();
+
+		// Destroy input manager.
+		RInputManager::Destroy();
 
 		// Destroy windowing system interface.
 		RWindowSystem::Destroy();

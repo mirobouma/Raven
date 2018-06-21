@@ -20,6 +20,7 @@ namespace Raven
         void Render();
 		void createGameWindow();
 		void updateEditor();
+		void handleGameInput(float dt);
 
     protected:
         /*! Callback function when the window is created. */

@@ -7,6 +7,7 @@ set (SourceGroup_PublicIncludes
 	"Public/Core/Utility/Enum.h"
 	"Public/Core/Utility/Hash.h"
 	"Public/Core/Debug/LogManager.h"
+	"Public/Core/Input/InputManager.h"
 	"Public/Core/Debug/Profiler.h"
 	"Public/Core/Threading/Thread.h"
 	"Public/Core/Threading/Fiber.h"
@@ -35,6 +36,7 @@ set (SourceGroup_Source
 	"Private/Memory/StackAllocator.cpp"
 	"Private/Memory/PoolAllocator.cpp"
 	"Private/Memory/BuddyAllocator.cpp"
+	"Private/Input/InputManager.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 
@@ -44,6 +46,6 @@ set (SOURCE
 )
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC RavenMath RavenHAL)
+target_link_libraries(${MODULE_NAME} PUBLIC RavenMath RavenHAL gainputstatic)
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
 

@@ -74,7 +74,8 @@ void main()
 {
 	vec4 tex = texture(sampler2D(uTexAlbedo, uSampler0), fragTexCoord);
 	float ssao = texture(sampler2D(uTexSSAO, uSampler0), fragTexCoord).r;
-	vec3 normal = normalize(texture(sampler2D(uTexNormal, uSampler0), fragTexCoord).xyz * 2.0 - 1.0);
+	vec4 normalTex = texture(sampler2D(uTexNormal, uSampler0), fragTexCoord);
+	vec3 normal = normalize(normalTex.xyz * 2.0 - 1.0);
 	vec3 position = texture(sampler2D(uTexPosition, uSampler0), fragTexCoord).xyz;
 	//vec4 fog = texture(sampler2D(uTexVolumetricFog, uSampler0), fragTexCoord);
 
@@ -102,6 +103,6 @@ void main()
 	float ssao2 = result / (float(n));
 	vec3 fog2 = result2 / (float(n));
 
-	outColor = clamp(tex * clamp(clamp(doShadow(position) * NdotL, 0.0, 1.0), 0.2, 1.0) * ssao2.rrrr + vec4(fog2, 0.0), 0.0, 1.0);
+	outColor = clamp((normalTex.w == 1.0 ? (tex * clamp(clamp(doShadow(position) * NdotL, 0.0, 1.0), 0.2, 1.0) * ssao2.rrrr) : tex) + vec4(fog2, 0.0), 0.0, 1.0);
 	outColor.w = 1.0f;
 }

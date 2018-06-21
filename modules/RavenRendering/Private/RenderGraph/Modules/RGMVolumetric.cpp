@@ -286,6 +286,29 @@ namespace Raven
 		
 			FDynamicUniformAllocation uniformAlloc;
 			
+
+			glm::mat4 invMvp = glm::inverse(camera->getProjectionMatrix());
+
+			glm::vec4 farTopLeftVert = invMvp * glm::vec4(-1, 1, 1, 1);
+			glm::vec4 farTopRightVert = invMvp * glm::vec4(1, 1, 1, 1);
+			glm::vec4 farBottomLeftVert = invMvp * glm::vec4(-1, -1, 1, 1);
+			glm::vec4 farBottomRightVert = invMvp * glm::vec4(1, -1, 1, 1);
+
+			farTopLeftVert /= farTopLeftVert.w;
+			farTopRightVert /= farTopRightVert.w;
+			farBottomLeftVert /= farBottomLeftVert.w;
+			farBottomRightVert /= farBottomRightVert.w;
+
+			farTopLeftVert.w = 1.f;
+			farTopRightVert.w = 1.f;
+			farBottomLeftVert.w = 1.f;
+			farBottomRightVert.w = 1.f;
+
+			mConstants.cFrustumCorners[0] = farBottomLeftVert;
+			mConstants.cFrustumCorners[1] = farBottomRightVert;
+			mConstants.cFrustumCorners[2] = farTopRightVert;
+			mConstants.cFrustumCorners[3] = farTopLeftVert;
+
 			mConstants.cScreenSize = glm::vec2(output->GetDesc()->width, output->GetDesc()->height);
 			mConstants.cView = camera->getTransform()->getMatrix();
 			mConstants.cInvView = glm::inverse(mConstants.cView);

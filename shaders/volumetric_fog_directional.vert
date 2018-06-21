@@ -10,6 +10,7 @@ layout (std140, set=0, binding=0) uniform cbGlobals
 	uniform mat4	 cView;
 	uniform mat4	 cInvView;
 	uniform mat4	 cShadowMat;
+	uniform vec4	 cFrustumCorners[4];
 	uniform vec4	 cLightDir;
 	uniform vec4	 cLightCol;
 	uniform vec4	 cLightMieG;
@@ -31,10 +32,12 @@ layout (std140, set=0, binding=0) uniform cbGlobals
 	uniform bool	 cEnableNoise;
 };
 
-layout(location = 0) out vec2 fs_UV;            
+layout(location = 0) out vec2 fs_UV;           
+layout(location = 1) out vec3 outFarW;
 
 void main ()
 {
 	fs_UV = vs_UV;
+	outFarW = cFrustumCorners[gl_VertexIndex].xyz;
     gl_Position = vec4(vs_Pos, 1.0, 1.0);
 }

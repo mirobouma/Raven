@@ -706,8 +706,11 @@ namespace Raven
 		size_t hash1 = 0;
 		size_t hash2 = 0;
 
-		hash1 = hash_bytes(&virtualResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash1);
-		hash2 = hash_bytes(&physicalResource->mDesc.GetTextureDesc(), sizeof(FVirtualTextureDesc), hash2);
+		FVirtualTextureDesc desc = virtualResource->mDesc.GetTextureDesc();
+		FVirtualTextureDesc desc2 = physicalResource->mDesc.GetTextureDesc();
+
+		hash1 = hash_bytes(&desc, sizeof(FVirtualTextureDesc), hash1);
+		hash2 = hash_bytes(&desc2, sizeof(FVirtualTextureDesc), hash2);
 
 		return hash1 == hash2;
 

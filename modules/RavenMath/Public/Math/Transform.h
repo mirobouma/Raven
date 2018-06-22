@@ -1,5 +1,6 @@
 #pragma once
 #include "Math.h"
+#include <glm/gtx/euler_angles.hpp>
 
 namespace Raven 
 {
@@ -79,10 +80,10 @@ namespace Raven
 			if ((position - mPosition) == glm::vec3(0, 0, 0)) 
 				return;
 
-			glm::vec3 direction = glm::normalize(position - mPosition);
+			glm::vec3 direction = -glm::normalize(position - mPosition);
 
-			mRotation.x = asinf(direction.y);
-			mRotation.y = -atan2f(direction.x, direction.z);
+			mRotation.x = glm::degrees(asinf(direction.y));
+			mRotation.y = glm::degrees(-atan2f(direction.x, direction.z));
 			mRequireMatrixUpdate = true;
 		}
 		
@@ -115,20 +116,20 @@ namespace Raven
 		const glm::vec3 GetUp()
 		{
 			glm::mat4 orientation;
-			orientation = glm::rotate(mRotation.x, glm::vec3(1, 0, 0));
-			orientation = glm::rotate(orientation, mRotation.y, glm::vec3(0, 1, 0));
-			orientation = glm::rotate(orientation, mRotation.z, glm::vec3(0, 0, 1));
+			orientation = glm::rotate(glm::radians(mRotation.x), glm::vec3(1, 0, 0));
+			orientation = glm::rotate(orientation, glm::radians(mRotation.y), glm::vec3(0, 1, 0));
+			orientation = glm::rotate(orientation, glm::radians(mRotation.z), glm::vec3(0, 0, 1));
 
-			glm::vec4 up = glm::vec4(0, 1, 0, 0) * orientation;
+			glm::vec4 up = glm::vec4(0, -1, 0, 0) * orientation;
 			return glm::normalize(glm::vec3(up));	
 		}
 
 		const glm::vec3 GetRight()
 		{
 			glm::mat4 orientation;
-			orientation = glm::rotate(mRotation.x, glm::vec3(1, 0, 0));
-			orientation = glm::rotate(orientation, mRotation.y, glm::vec3(0, 1, 0));
-			orientation = glm::rotate(orientation, mRotation.z, glm::vec3(0, 0, 1));
+			orientation = glm::rotate(glm::radians(mRotation.x), glm::vec3(1, 0, 0));
+			orientation = glm::rotate(orientation, glm::radians(mRotation.y), glm::vec3(0, 1, 0));
+			orientation = glm::rotate(orientation, glm::radians(mRotation.z), glm::vec3(0, 0, 1));
 
 			glm::vec4 right = glm::vec4(1, 0, 0, 0) * orientation;
 			return glm::normalize(glm::vec3(right));
@@ -138,11 +139,11 @@ namespace Raven
 		const glm::vec3 GetForward()
 		{
 			glm::mat4 orientation;
-			orientation = glm::rotate(mRotation.x, glm::vec3(1, 0, 0));
-			orientation = glm::rotate(orientation, mRotation.y, glm::vec3(0, 1, 0));
-			orientation = glm::rotate(orientation, mRotation.z, glm::vec3(0, 0, 1));
+			orientation = glm::rotate(glm::radians(mRotation.x), glm::vec3(1, 0, 0));
+			orientation = glm::rotate(orientation, glm::radians(mRotation.y), glm::vec3(0, 1, 0));
+			orientation = glm::rotate(orientation, glm::radians(mRotation.z), glm::vec3(0, 0, 1));
 
-			glm::vec4 forward = glm::vec4(0, 0, 1, 0) * orientation;
+			glm::vec4 forward = glm::vec4(0, 0, -1, 0) * orientation;
 			return glm::normalize(glm::vec3(forward));
 		}
 

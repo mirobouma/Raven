@@ -9,6 +9,7 @@
 #include "Rendering/RenderGraph/Modules/RGMSSAO.h"
 #include "Rendering/RenderGraph/Modules/RGMVolumetric.h"
 #include "Core/Input/InputManager.h"
+#include "Core/Utility/Timer.h"
 
 #include "Rendering/Game/Mesh.h"
 
@@ -47,6 +48,7 @@ namespace Raven
 	RCamera gShadowCamera;
 
 	RUIRenderer	gUIRenderer;
+	RTimer		gTimer;
 
 	FSSAOVars gSSAOVars;
 	FVolumetricFogVars gVolumetricVars;
@@ -62,6 +64,9 @@ namespace Raven
 	bool bKeepAspectRatio = true;
 	float gAspectWidth = 16.0f;
 	float gAspectHeight = 9.0f;
+
+	float gCameraMoveSpeed = 20.0f;
+	float gCameraViewSpeed = 20.0f;
 
 	float gLightRotX = -80.0f;
 	float gLightRotY = -40.0f;
@@ -178,6 +183,8 @@ namespace Raven
 		InputMap->getMap()->MapFloat(InputMappings::PadRY, GInputManager->GetPadId(), gainput::PadButtonRightStickY);
 		InputMap->getMap()->MapFloat(InputMappings::PadRT, GInputManager->GetPadId(), gainput::PadButtonR2);
 		InputMap->getMap()->MapFloat(InputMappings::PadLT, GInputManager->GetPadId(), gainput::PadButtonL2);
+
+		gTimer = RTimer();
 
     }
 
@@ -315,23 +322,23 @@ namespace Raven
 			gCamera.getTransform()->rotate(-InputMap->getMap()->GetFloatDelta(InputMappings::MouseY) * 100.0f, InputMap->getMap()->GetFloatDelta(InputMappings::MouseX) * 100.0f, 0.0f);
 		}
 
-		gCamera.getTransform()->translate(gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::W));
-		gCamera.getTransform()->translate(gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::D));
-		gCamera.getTransform()->translate(-gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::A));
-		gCamera.getTransform()->translate(-gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::S));
-		gCamera.getTransform()->translate(gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::E));
-		gCamera.getTransform()->translate(-gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::Q));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::W));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::D));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::A));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::S));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::E));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::Q));
 
 		//gainput::InputDevicePad* pad = static_cast<gainput::InputDevicePad*>(GInputManager->GetInputManager()->GetDevice(GInputManager->GetPadId()));
 		//pad->Vibrate(1.0f, 0.0f);
 
-		gCamera.getTransform()->rotate(InputMap->getMap()->GetFloat(InputMappings::PadRY) * 1.0f, InputMap->getMap()->GetFloat(InputMappings::PadRX) * 1.0f, 0.0f);
+		gCamera.getTransform()->rotate(dt * InputMap->getMap()->GetFloat(InputMappings::PadRY) * gCameraViewSpeed, dt * InputMap->getMap()->GetFloat(InputMappings::PadRX) * gCameraViewSpeed, 0.0f);
 
-		gCamera.getTransform()->translate(gCamera.getTransform()->GetForward() * InputMap->getMap()->GetFloat(InputMappings::PadLY));
-		gCamera.getTransform()->translate(gCamera.getTransform()->GetRight() * InputMap->getMap()->GetFloat(InputMappings::PadLX));
-		gCamera.getTransform()->translate(gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadRT));
-		gCamera.getTransform()->translate(-gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadLT));
-	}
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetForward() * InputMap->getMap()->GetFloat(InputMappings::PadLY));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetRight() * InputMap->getMap()->GetFloat(InputMappings::PadLX));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadRT));
+		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadLT));
+	}	
 
 	void RGameWindow::updateEditor()
 	{
@@ -555,14 +562,21 @@ namespace Raven
 			ImGui::EndDock();
 
 			if (ImGui::BeginDock("Properties", &d_propertyWindowOpen)) {
-				ImGui::Text("Camera");
-				ImGui::Separator();
-				ImGui::SliderFloat("Camera Rotation X", &gCamera.getTransform()->mRotation.x, -180.0f, 180.0f);
-				ImGui::SliderFloat("Camera Rotation Y", &gCamera.getTransform()->mRotation.y, -180.0f, 180.0f);
+				
+				if (ImGui::CollapsingHeader("Camera"))
+				{
+					ImGui::SliderFloat("Camera Move Speed", &gCameraMoveSpeed, 0.5f, 50.0f);
+					ImGui::SliderFloat("Camera View Speed", &gCameraViewSpeed, 0.5f, 50.0f);
+					ImGui::Separator();
+					//ImGui::SliderFloat("Camera Rotation X", &gCamera.getTransform()->mRotation.x, -180.0f, 180.0f);
+					//ImGui::SliderFloat("Camera Rotation Y", &gCamera.getTransform()->mRotation.y, -180.0f, 180.0f);
+					//
+					//ImGui::InputFloat("Camera Position X", &gCamera.getTransform()->mPosition.x, -180.0f, 180.0f);
+					//ImGui::InputFloat("Camera Position Y", &gCamera.getTransform()->mPosition.y, -180.0f, 180.0f);
+					//ImGui::InputFloat("Camera Position Z", &gCamera.getTransform()->mPosition.z, -180.0f, 180.0f);
 
-				ImGui::InputFloat("Camera Position X", &gCamera.getTransform()->mPosition.x, -180.0f, 180.0f);
-				ImGui::InputFloat("Camera Position Y", &gCamera.getTransform()->mPosition.y, -180.0f, 180.0f);
-				ImGui::InputFloat("Camera Position Z", &gCamera.getTransform()->mPosition.z, -180.0f, 180.0f);
+					//ImGui::Coll();
+				}
 				
 				ImGui::Text("SSAO");
 				ImGui::Separator();
@@ -687,7 +701,8 @@ namespace Raven
 
     void RGameWindow::Render()
     {
-		
+		gTimer.Tick();
+
 		static auto startTime = std::chrono::high_resolution_clock::now();
 		
 		auto currentTime = std::chrono::high_resolution_clock::now();
@@ -711,7 +726,7 @@ namespace Raven
 		}
 		else
 		{
-			handleGameInput(1.0f / 60.0f);
+			handleGameInput(gTimer.GetDelta());
 		}
 
 	
@@ -767,7 +782,7 @@ namespace Raven
 			shadowMapDesc.mTextureDesc.sampleCount = 1;
 			shadowMapDesc.mTextureDesc.sampleQuality = 1;
 
-			gShadowCamera.setOrthoProjection(200.0f, 200.0f, 0.1f, 700.0f);
+			gShadowCamera.setOrthoProjection(300.0f, 300.0f, 0.1f, 700.0f);
 			gShadowCamera.getTransform()->setRotation(glm::vec3(gLightRotX, gLightRotY, 0.0f));
 			gShadowCamera.getTransform()->setPosition(-gShadowCamera.getTransform()->GetForward() * 400.0f);
 			gShadowCamera.getTransform()->lookAt(FVector3(0.0f, 0.0f, 0.0f));

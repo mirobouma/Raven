@@ -14,17 +14,17 @@ macro(enable_glsl_to_spirv_compiling trgt)
 	endif()
 
 	file(GLOB_RECURSE GLSL_SOURCE_FILES
-		"${RVN_ROOT_SOURCE}/shaders/*.frag"
-		"${RVN_ROOT_SOURCE}/shaders/*.vert"
-		"${RVN_ROOT_SOURCE}/shaders/*.comp"
+		"${RVN_ROOT_SOURCE}/assets/shaders/*.frag"
+		"${RVN_ROOT_SOURCE}/assets/shaders/*.vert"
+		"${RVN_ROOT_SOURCE}/assets/shaders/*.comp"
 		)
 
 	foreach(GLSL ${GLSL_SOURCE_FILES})
 	  get_filename_component(FILE_NAME ${GLSL} NAME)
-	  set(SPIRV "${PROJECT_BINARY_DIR}/shaders/${FILE_NAME}.spv")
+	  set(SPIRV "${PROJECT_BINARY_DIR}/assets/shaders/${FILE_NAME}.spv")
 	  add_custom_command(
 		OUTPUT ${SPIRV}
-		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shaders/"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/assets/shaders/"
 		COMMAND ${GLSL_VALIDATOR} -V ${GLSL} -o ${SPIRV}
 		DEPENDS ${GLSL})
 	  list(APPEND SPIRV_BINARY_FILES ${SPIRV})
@@ -36,17 +36,17 @@ macro(enable_glsl_to_spirv_compiling trgt)
 		)
 	if(NOT FIX_OUTPUT_PATH)
 		add_custom_command(TARGET Shaders POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/shaders/"
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/assets/shaders/"
 			COMMAND ${CMAKE_COMMAND} -E copy_directory
-				"${PROJECT_BINARY_DIR}/shaders"
-				"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/shaders"
+				"${PROJECT_BINARY_DIR}/assets/shaders"
+				"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/$<CONFIG>/assets/shaders"
 				)
 	else()
 		add_custom_command(TARGET Shaders POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders/"
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets/shaders/"
 			COMMAND ${CMAKE_COMMAND} -E copy_directory
-				"${PROJECT_BINARY_DIR}/shaders"
-				"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/shaders"
+				"${PROJECT_BINARY_DIR}/assets/shaders"
+				"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets/shaders"
 				)
 	endif()
 	add_dependencies(${trgt} Shaders)

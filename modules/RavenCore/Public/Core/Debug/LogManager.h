@@ -55,8 +55,13 @@ namespace Raven {
 RLOG_ERROR("Assertion failed: \"%s\"", #condition);  \
 }
 
+#define RASSERT_MSG(condition, ...) if(!(condition)) {  \
+RLOG_ERROR("Assertion failed: \"%s\"", ##__VA_ARGS__);  \
+}
+
 #else
 #define RASSERT(condition) ((void)0)
+#define RASSERT_MSG(condition, ...) ((void)0)
 #endif
 
 

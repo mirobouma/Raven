@@ -1,5 +1,7 @@
 docs/output
 /.vs
+/.vscode
+/build/
 solution/
 BuildConfig.json
 /bin/

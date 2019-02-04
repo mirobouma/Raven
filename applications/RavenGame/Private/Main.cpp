@@ -1,14 +1,13 @@
 #include "Engine/Engine.h"
 #include "Engine/Globals.h"
 
-#include "WindowSystem/WindowSystem.h"
+#include "Core/WindowSystem/WindowSystem.h"
 #include "Engine/Windows/RenderableWindow.h"
 #include "Core/Threading/TaskScheduler.h"
 #include "Core/Debug/Profiler.h"
 
 #include "HAL/Platform.h"
 
-#include "RenderingVulkan/TestVulkanRenderer.h"
 #include "Core/Debug/LogManager.h"
 #include "Core/Memory/BuddyAllocator.h"
 #include "GameWindow.h"
@@ -45,7 +44,7 @@ void ApplicationStart(int argc, char*argv[])
 	// Create window.
 	if (GWindowSystem != nullptr)
 	{
-		Window = GWindowSystem->CreateAWindow<Raven::RGameWindow>(
+		Window = GWindowSystem->CreateWindow<Raven::RGameWindow>(
 			"Raven Game Engine <Vulkan>",
 			FVector2(1024, 800),
 			FVector2(0, 0),

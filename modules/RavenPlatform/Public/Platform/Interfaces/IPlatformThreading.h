@@ -8,7 +8,7 @@ namespace Raven
 	struct IPlatformThreadHandle {};
 
 	/*! Entry point typdef. */
-	typedef unsigned int (RPlatformThreadStart)(void *arg);
+	typedef unsigned int (_stdcall RPlatformThreadStart)(void *arg);
 
 	/*! Entry point for fibers typdef. */
 	typedef void (*RFiberStart)(void *arg);
@@ -22,7 +22,7 @@ namespace Raven
 		IPlatformThread() = default;
 
 		/*! Fill this object with parameters of the currently running thread. */
-		virtual void FromCurrentThread() = 0;
+		virtual IPlatformThread* FromCurrentThread() = 0;
 
 		/*! Create the platform thread. */
 		virtual bool Create(uint32_t stackSize, RPlatformThreadStart* start, void *arg, size_t coreAffinity = -1) = 0;
@@ -35,6 +35,9 @@ namespace Raven
 
 		/*! Get platform-specific handle for this thread. */
 		virtual IPlatformThreadHandle* GetHandle() = 0;
+
+		/*! Get unique ID for this thread. */
+		virtual uint64_t GetID() = 0;
 
 		/*! Checks if this thread equals the currently running thread. */
 		virtual bool IsCurrentThread() const = 0;

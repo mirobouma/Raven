@@ -55,6 +55,10 @@ macro(project_add_module name)
   add_subdirectory(modules/${name} ${ARGN})
 endmacro(project_add_module)
 
+macro(project_add_tool name)
+  add_subdirectory(tools/${name} ${ARGN})
+endmacro(project_add_tool)
+
 
 # Enable sanitizers builds
 macro(project_enable_sanitizer_build)

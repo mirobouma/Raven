@@ -108,10 +108,22 @@ namespace Raven
         RPlatformLinuxThread(const RPlatformLinuxThread&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a thread. */
         RPlatformLinuxThread& operator= (const RPlatformLinuxThread&) = delete; /*!< Delete assignment constuctor since it doesn't make sense to overwrite a thread. */
 
-        virtual void FromCurrentThread()
+		static uint64_t GetCurrentThreadID()
+		{
+			return RPlatformWindowsThread().FromCurrentThread()->GetID();
+		}
+
+        virtual IPlatformThread* FromCurrentThread()
         {
             mHandle.mThread = pthread_self();
+			return this;
         }
+
+		virtual uint64_t GetID()
+		{
+			return mId;
+		}
+
 
         /*! Create the thread. */
         virtual bool Create(uint32_t stackSize, RPlatformThreadStart* start, void *arg, size_t coreAffinity = -1)
@@ -134,6 +146,11 @@ namespace Raven
             {
                 SetAffinity(coreAffinity);
             }
+
+			pthread_id_np_t   tid;
+			pthread_getunique_np(&mHandle.mThread, &tid);
+
+			mId = (uint64_t)tid;
 
             // Cleanup
             pthread_attr_destroy(&threadAttr);
@@ -181,6 +198,7 @@ namespace Raven
 
     protected:
         FLinuxThreadStartArgs	   mArgs;
+		uint64_t				   mId;
         FPlatformLinuxThreadHandle mHandle;
     };
 

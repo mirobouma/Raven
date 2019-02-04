@@ -5,17 +5,16 @@ set (SourceGroup_PublicIncludes
 	"imgui/imgui.h"
 	"imgui/imconfig.h"
 	"imgui/imgui_internal.h"
-	"imgui/imgui_dock.h"
-	"imgui/stb_rect_pack.h"
-	"imgui/stb_textedit.h"
-	"imgui/stb_truetype.h"
+	"imgui/imstb_rectpack.h"
+	"imgui/imstb_textedit.h"
+	"imgui/imstb_truetype.h"
 )
 source_group("Include" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
 	"imgui/imgui.cpp"
 	"imgui/imgui_demo.cpp"
-	"imgui/imgui_dock.cpp"
+	"imgui/imgui_widgets.cpp"
 	"imgui/imgui_draw.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})

@@ -41,7 +41,7 @@ namespace Raven
 		inline bool IsCurrentThread() const { return _mThread.IsCurrentThread(); }
 
 	private:
-		static uint32_t StartThread(void* args)
+		static uint32_t _stdcall StartThread(void* args)
 		{
 			FThreadStartArgs* arg = (FThreadStartArgs*)args;
 			arg->mFunc(arg->mFuncArgs);

@@ -1,6 +1,6 @@
 #include "Platform/Generic/GenericPlatformWindow.h"
-#include "Math/Math.h"
-#include "Math/Rect.h"
+#include "Core/Math/Math.h"
+#include "Core/Math/Rect.h"
 
 namespace Raven {
 	RGenericPlatformWindow::RGenericPlatformWindow(IWindowMessageHandler* handler) : _handler(handler)

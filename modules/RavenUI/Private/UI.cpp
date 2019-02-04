@@ -1,6 +1,5 @@
 #include "UI/UI.h"
 #include "Core/Debug/LogManager.h"
-#include "imgui/imgui_dock.h"
 #include <chrono>
 
 #ifdef PLATFORM_LINUX
@@ -12,7 +11,7 @@
 
 namespace Raven
 {
-	void RUIRenderer::initialize(IRenderer* renderer, IPlatformWindow* window, ISwapChain* swapChain)
+	void RUIRenderer::initialize(IRenderInterface* renderer, IPlatformWindow* window, ISwapChain* swapChain)
 	{
 		RASSERT(renderer != nullptr);
 
@@ -28,10 +27,19 @@ namespace Raven
 
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGui::InitDock();
+		ImGuiIO& io = ImGui::GetIO(); 
 
-		ImGuiIO& io = ImGui::GetIO();
-		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values (optional)
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+		//io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   
+
+		ImGuiStyle& style = ImGui::GetStyle();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			style.WindowRounding = 0.0f;
+			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+		}
 
 #ifdef PLATFORM_WINDOWS
 		io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -56,7 +64,11 @@ namespace Raven
 		io.KeyMap[ImGuiKey_Y] = 'Y';
 		io.KeyMap[ImGuiKey_Z] = 'Z';
 		
-		io.ImeWindowHandle = mWindow->GetNativeHandle();
+		ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+		main_viewport->PlatformHandle = (void*)mWindow->GetNativeHandle();
+
+		//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			//ImGui_ImplWin32_InitPlatformInterface();
 #else
 		io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
 		io.KeyMap[ImGuiKey_LeftArrow] = SDL_SCANCODE_LEFT;
@@ -208,14 +220,14 @@ namespace Raven
 		// Load roboto font.
 		io.Fonts->AddFontFromFileTTF("fonts/Roboto-Regular.ttf", 18);
 
-		// Create font texture.
+		// Create font image.
 		unsigned char* pixels;
 		int width, height;
 		io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 		size_t upload_size = width * height * 4 * sizeof(char);
 
-		FTextureCreateDesc fontDesc = {};
-		fontDesc.type = TEXTURE_TYPE_2D;
+		FImageCreateDesc fontDesc = {};
+		fontDesc.type = IMAGE_TYPE_2D;
 		fontDesc.memoryType = MEMORY_TYPE_GPU;
 		fontDesc.arrayLayers = 1;
 		fontDesc.baseArrayLayer = 0;
@@ -229,9 +241,9 @@ namespace Raven
 		fontDesc.sampleCount = 1;
 		fontDesc.sampleQuality = 0;
 		fontDesc.tiling = IMAGE_TILING_OPTIMAL;
-		fontDesc.usage = TEXTURE_USAGE_SAMPLED | TEXTURE_USAGE_TRANSFER_DST;
+		fontDesc.usage = IMAGE_USAGE_SAMPLED | IMAGE_USAGE_TRANSFER_DST;
 
-		renderer->createTexture(&mFontTexture, &fontDesc);
+		renderer->createImage(&mFontTexture, &fontDesc);
 		io.Fonts->TexID = (void *)mFontTexture;
 
 		mInitialized = true;
@@ -275,7 +287,7 @@ namespace Raven
 		});
 
 		// Set execute function.
-		pass->setExecuteFunc([=](IRenderer* renderer, RRenderGraph& graph, RCompiledPass& pass, ICommandList* cmd)
+		pass->setExecuteFunc([=](IRenderInterface* renderer, RRenderGraph& graph, RCompiledPass& pass, ICommandList* cmd)
 		{
 			ImDrawData* draw_data = ImGui::GetDrawData();
 
@@ -374,7 +386,7 @@ namespace Raven
 			mRenderer->cmdPushConstant(cmd, SHADER_STAGE_FLAG_VERTEX, sizeof(float) * 2, sizeof(float) * 0, scale);
 			mRenderer->cmdPushConstant(cmd, SHADER_STAGE_FLAG_VERTEX, sizeof(float) * 2, sizeof(float) * 2, translate);
 
-			ITexture* imageToDraw = nullptr;
+			IImage* imageToDraw = nullptr;
 
 			//Render the command lists:
 			int vtx_offset = 0;
@@ -398,12 +410,12 @@ namespace Raven
 							binding.binding = 0;
 							binding.numDescriptors = 1;
 							binding.type = DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-							binding.ppTextures = (ITexture**)&pcmd->TextureId;
+							binding.ppImages = (IImage**)&pcmd->TextureId;
 
-							// Bind font texture.
+							// Bind font image.
 							mRenderer->cmdBindDescriptors(cmd, 1, &binding);
 
-							imageToDraw = (ITexture*)pcmd->TextureId;
+							imageToDraw = (IImage*)pcmd->TextureId;
 						}
 
 						FRect scissor;
@@ -427,6 +439,14 @@ namespace Raven
 
 		mCurrentFrameId = (mCurrentFrameId + 1) % MAX_UI_FRAMES;
 
+		ImGuiIO& io = ImGui::GetIO();
+
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
+		}
+
 		return output;
 	}
 
@@ -446,7 +466,7 @@ namespace Raven
 		mRenderer->destroyPipeline(mPipeline);
 		mRenderer->destroyRootSignature(mRootSignature);
 		mRenderer->destroyShader(mShader);
-		mRenderer->destroyTexture(mFontTexture);
+		mRenderer->destroyImage(mFontTexture);
 		mRenderer->destroySampler(mFontSampler);
 
 		for (uint32_t i = 0; i < MAX_UI_FRAMES; ++i)

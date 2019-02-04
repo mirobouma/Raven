@@ -2,9 +2,9 @@
 #include "Engine/Globals.h"
 
 #include "HAL/Platform.h"
-#include "WindowSystem/WindowSystem.h"
+#include "Core/WindowSystem/WindowSystem.h"
 #include "Core/Debug/LogManager.h"
-#include "RenderingVulkan/VulkanRenderer.h"
+#include "VulkanRenderer/VulkanRenderer.h"
 #include "Core/Input/InputManager.h"
 namespace Raven {
 
@@ -47,7 +47,7 @@ namespace Raven {
 	bool REngine::InitializeSystems()
 	{
 		// Create rendering system.
-		_Renderer = std::unique_ptr<IRenderer>(new RVulkanRenderer());
+		_Renderer = std::unique_ptr<IRenderInterface>(new RVulkanRenderer());
 
 		FRendererInitializationDesc initDesc;
 		initDesc.applicationName = "Application";

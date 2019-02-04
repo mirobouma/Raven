@@ -60,7 +60,7 @@ namespace Raven
 		}
 
 		/*! Initialize the fiber and start. */
-		static void InitFiber(void* arg)
+		static void _stdcall InitFiber(void* arg)
 		{
 			FWinFiberInitArgs* args = (FWinFiberInitArgs*)arg;
 			args->mStart(args->mArgs);
@@ -90,10 +90,22 @@ namespace Raven
 		RPlatformWindowsThread() = default;
 		RPlatformWindowsThread(const RPlatformWindowsThread&) = delete; /*!< Delete copy constuctor since it doesn't make sense to copy a thread. */
 
-		virtual void FromCurrentThread() override
+		virtual IPlatformThread* FromCurrentThread() override
 		{
 			mHandle.Handle = GetCurrentThread();
 			mHandle.Id = GetThreadId(mHandle.Handle);
+
+			return this;
+		}
+
+		static uint64_t GetCurrentThreadID()
+		{
+			return RPlatformWindowsThread().FromCurrentThread()->GetID();
+		}
+
+		virtual uint64_t GetID() override
+		{
+			return (uint64_t)mHandle.Id;
 		}
 
 		/*! Create the thread. */

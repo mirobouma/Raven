@@ -1,6 +1,6 @@
 #pragma once
 #include "HAL/PlatformWindow.h"
-#include "Rendering/Interfaces/ISwapChain.h"
+#include "RenderInterface/ISwapChain.h"
 
 namespace Raven {
 	/*!

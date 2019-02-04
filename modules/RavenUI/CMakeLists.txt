@@ -17,7 +17,7 @@ set (SOURCE
 )
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC imgui RavenRendering RavenHAL)
+target_link_libraries(${MODULE_NAME} PUBLIC imgui RavenRenderer RavenHAL)
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Private")
 
 

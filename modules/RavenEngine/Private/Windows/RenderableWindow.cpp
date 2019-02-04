@@ -1,7 +1,7 @@
 #include "Engine/Windows/RenderableWindow.h"
 #include "Engine/Globals.h"
 #include "Engine/Engine.h"
-#include "Rendering/Interfaces/IRenderer.h"
+#include "RenderInterface/IRenderInterface.h"
 
 namespace Raven 
 {

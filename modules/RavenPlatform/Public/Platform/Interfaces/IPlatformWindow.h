@@ -1,6 +1,6 @@
 #pragma once
-#include "Math/Math.h"
-#include "Math/Rect.h"
+#include "Core/Math/Math.h"
+#include "Core/Math/Rect.h"
 #include "Platform/Defines.h"
 #include "Platform/Interfaces/IWindowMessageHandler.h"
 #include <string>

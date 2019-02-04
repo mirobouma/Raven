@@ -1,8 +1,10 @@
 #pragma once
 #include "Engine/Windows/RenderableWindow.h"
-#include "Rendering/Interfaces/ISwapChain.h"
-#include "Rendering/Interfaces/IRenderer.h"
+#include "RenderInterface/ISwapChain.h"
+#include "RenderInterface/IRenderInterface.h"
 #include "ConsoleLogger.h"
+
+struct ImVec2;
 
 namespace Raven
 {
@@ -20,6 +22,11 @@ namespace Raven
         void Render();
 		void createGameWindow();
 		void updateEditor();
+		void DrawProfiler();
+		void DrawProperties();
+		void DrawConsole();
+		void DrawGameWindow();
+		void ResizeGameView(ImVec2 size);
 		void handleGameInput(float dt);
 
     protected:
@@ -41,7 +48,7 @@ namespace Raven
         /*! Callback function when the window posts a quit message. */
         virtual void OnClose() override;
 
-		IRenderer* renderer;
+		IRenderInterface* renderer;
 		FConsoleLogger mLogger;
     };
 }

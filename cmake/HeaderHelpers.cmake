@@ -1,0 +1,8 @@
+macro(extract_headers list)
+FOREACH(item ${SOURCE})
+  STRING(REGEX MATCH ".+\\.h?h$" item ${item})
+  IF(item)
+    LIST(APPEND list ${item})
+  ENDIF(item)
+ENDFOREACH(item ${SOURCE})
+endmacro()

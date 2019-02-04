@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Rendering/Interfaces/IRenderer.h"
+#include "RenderInterface/IRenderInterface.h"
 #include <memory>
 
 namespace Raven {
@@ -37,7 +37,7 @@ namespace Raven {
 		void Render();
 
 		/*! Get reference to the renderer. */
-		IRenderer* GetRenderer() { return _Renderer.get(); }
+		IRenderInterface* GetRenderer() { return _Renderer.get(); }
 
 	protected:
 		/*! Initializes the minimal engine functionality.
@@ -46,6 +46,6 @@ namespace Raven {
 		bool InitializeMinimal();
 
 		/*! TEMP Renderer */
-		std::unique_ptr<IRenderer> _Renderer;
+		std::unique_ptr<IRenderInterface> _Renderer;
 	};
 }

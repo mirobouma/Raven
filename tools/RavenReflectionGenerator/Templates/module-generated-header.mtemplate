@@ -1,0 +1,21 @@
+/* ----------------------------------------------------------------------------
+** GENERATED HEADER FILE
+** Do not modify the contents of this file.
+**
+** Raven Reflection Generator (RRG) version {{version}}
+** --------------------------------------------------------------------------*/
+
+#pragma once
+
+namespace Raven
+{
+	namespace Meta
+	{
+		class RReflectionDatabase;
+		
+		namespace Generated
+		{
+			
+		}
+	}	
+}

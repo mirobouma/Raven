@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.8.0)
+cmake_policy(SET CMP0074 NEW)
 
 set(RVN_PROJECT_NAME "Raven")
 set(RVN_PROJECT_VERSION 0.1.1)
-set(RVN_OUTPUT_DIR "bin")
+set(RVN_OUTPUT_BIN_DIR "${CMAKE_SOURCE_DIR}/build/bin")
+set(RVN_OUTPUT_LIB_DIR "${CMAKE_SOURCE_DIR}/build/lib")
 set(RVN_ICON_RESOURCE_PATH "${CMAKE_SOURCE_DIR}/resources/icon.rc")
 set(RVN_ROOT_SOURCE "${CMAKE_SOURCE_DIR}")
 
@@ -53,19 +55,18 @@ if(UNIX AND NOT APPLE)
 endif()
 
 find_package(Vulkan)
-
 include_directories(${MANUAL_INCLUDE_DIRS})
 
 # Set output directories
 if(FIX_OUTPUT_PATH)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${RVN_OUTPUT_BIN_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
 	
 else()
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/${RVN_OUTPUT_DIR}")
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}")
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}")
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${RVN_OUTPUT_BIN_DIR}")
 endif()
 
 set(GLM_INSTALL_ENABLE OFF CACHE BOOL "GLM install" FORCE)
@@ -77,30 +78,28 @@ project_add_3rdparty(glm)
 project_add_3rdparty(stb)
 project_add_3rdparty(imgui)
 project_add_3rdparty(sdl2)
-project_add_3rdparty(gainput)
-project_add_3rdparty(VulkanMemoryAllocator)
-project_add_3rdparty(assimp-3.3.1)
+project_add_3rdparty(vma)
+project_add_3rdparty(assimp)
 
 #add tools
-project_add_tool(RavenReflectionGenerator)
+project_add_tool(rrg)
 
-#add modules
-project_add_module(RavenModule)
-project_add_module(RavenCore)
-project_add_module(RavenHAL)
-project_add_module(RavenPlatform)
-project_add_module(RavenRenderInterface)
-project_add_module(RavenRenderer)
-project_add_module(RavenVulkanRenderer)
-project_add_module(RavenUI)
-project_add_module(RavenEngine)
+##add modules
+project_add_module(core)
+project_add_module(hal)
+project_add_module(platform)
+project_add_module(renderer_interface)
+project_add_module(renderer_vulkan)
+project_add_module(rendering)
+project_add_module(ui)
+project_add_module(engine)
 
 if (WIN32)
-	project_add_module(RavenPlatformWindows)
+	project_add_module(platform_windows)
 endif()
 if(UNIX AND NOT APPLE)
-	project_add_module(RavenPlatformLinux)
+	project_add_module(platform_linux)
 endif()
 
 #applications
-project_add_application(RavenGame)
+project_add_application(game)

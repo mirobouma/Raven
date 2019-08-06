@@ -49,7 +49,7 @@ if (NOT LLVM_INCLUDE_DIRS OR
     (NOT LLVM_LIBRARY_DIR AND LIBCLANG_USE_STATIC_LIBRARY))
     message(SEND_ERROR 
         "Unable to find LLVM installation. "
-        "Make sure that \"LLVM_ROOT\" is set with the installation directory in either an environment variable or through the CMake GUI."
+        "Make sure that \"LLVM_ROOT_DIR\" is set with the installation directory in either an environment variable or through the CMake GUI."
     )
 endif ()
 

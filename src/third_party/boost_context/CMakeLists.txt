@@ -1,8 +1,3 @@
-##          Copyright Adrian Astley 2016 - 2018
-## Distributed under the Boost Software License, Version 1.0.
-##    (See accompanying file LICENSE_1_0.txt or copy at
-##          http://www.boost.org/LICENSE_1_0.txt)
-
 cmake_minimum_required(VERSION 3.2)
 project(boost_context)
 
@@ -123,5 +118,5 @@ if (CONTEXT_ASM MATCHES "masm.asm" AND CONTEXT_PLATFORM MATCHES "i386")
 endif()
 
 
-add_library(boost_context STATIC ${BOOST_CONTEXT_ROOT} src/stack.cpp)
+add_library(boost_context STATIC ${BOOST_CONTEXT_ROOT} src/boost_context.cpp)
 target_include_directories(boost_context INTERFACE include)

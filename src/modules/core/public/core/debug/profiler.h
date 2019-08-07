@@ -74,8 +74,6 @@ namespace Raven
 	};
 }
 
-
-#define ENABLE_PROFILING
 #ifdef ENABLE_PROFILING
 #ifdef _MSC_VER
 #define __PRETTY_FUNCTION__ __FUNCSIG__

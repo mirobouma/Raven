@@ -111,7 +111,7 @@ void ApplicationStart(int argc, char*argv[])
 		}
 			PROFILER_END
 
-			GTaskScheduler->ResetTaskAllocations();
+			//GTaskScheduler->ResetTaskAllocations();
 	}
 
 	delete Window;
@@ -128,35 +128,14 @@ void ApplicationStart(int argc, char*argv[])
 #ifdef PLATFORM_WINDOWS
 	int WINAPI WinMain(HINSTANCE hThisInstance, HINSTANCE hPrevInstance, LPSTR lpszArgument, int nCmdShow)
 	{
-		RTaskAllocator taskAllocator;
-		auto task = FTask<uint32_t>([=](uint32_t i)
-		{
-			ApplicationStart(0, nullptr);
-		}, 0);
-
-		GTaskScheduler = new RTaskScheduler();
-		GTaskScheduler->Run(1, 60, &task);
-
-		taskAllocator.Reset(true);
-		delete GTaskScheduler;
+		ApplicationStart(0, nullptr);
 		return 0;
 	}
 #endif
 
 int main(int argc, char *argv[])
 {
-	RTaskAllocator taskAllocator;
-	auto task = FTask<uint32_t>([=](uint32_t i)
-	{
-		ApplicationStart(0, nullptr);
-	}, 0);
-	
-	GTaskScheduler = new RTaskScheduler();
-	GTaskScheduler->Run(1, 60, &task);
-	
-	taskAllocator.Reset(true);
-	delete GTaskScheduler;
-	//ApplicationStart(0, nullptr);
+	ApplicationStart(0, nullptr);
 	return 0;
 }
 

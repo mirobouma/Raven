@@ -1,6 +1,5 @@
 /*
-       Copyright Edward Nevill + Oliver Kowalke 2015
-            Copyright Adrian Astley 2017 - 2018.
+            Copyright Edward Nevill 2015
    Distributed under the Boost Software License, Version 1.0.
       (See accompanying file LICENSE_1_0.txt or copy at
           http://www.boost.org/LICENSE_1_0.txt)
@@ -43,15 +42,16 @@
  *  |    x27    |    x28    |    FP     |     LR    |  *
  *  -------------------------------------------------  *
  *  -------------------------------------------------  *
- *  |  40 |  41 |  42 | 43  |  444|  45 |  46 | 47  |  *
+ *  |  40 |  41 |  42 | 43  |           |           |  *
  *  -------------------------------------------------  *
- *  | 0xa0| 0xa4| 0xa8| 0xac| 0xb0| 0xb4| 0xb8| 0xbc|  *
+ *  | 0xa0| 0xa4| 0xa8| 0xac|           |           |  *
  *  -------------------------------------------------  *
  *  |     PC    |   align   |           |           |  *
  *  -------------------------------------------------  *
  *                                                     *
  *******************************************************/
 
+.cpu    generic+fp+simd
 .text
 .align  2
 .global jump_fcontext
@@ -60,12 +60,23 @@ jump_fcontext:
     # prepare stack for GP + FPU
     sub  sp, sp, #0xb0
 
+# Because gcc may save integer registers in fp registers across a
+# function call we cannot skip saving the fp registers.
+#
+# Do not reinstate this test unless you fully understand what you
+# are doing.
+#
+#    # test if fpu env should be preserved
+#    cmp  w3, #0
+#    b.eq  1f
+
     # save d8 - d15
     stp  d8,  d9,  [sp, #0x00]
     stp  d10, d11, [sp, #0x10]
     stp  d12, d13, [sp, #0x20]
     stp  d14, d15, [sp, #0x30]
 
+1:
     # save x19-x30
     stp  x19, x20, [sp, #0x40]
     stp  x21, x22, [sp, #0x50]
@@ -77,13 +88,17 @@ jump_fcontext:
     # save LR as PC
     str  x30, [sp, #0xa0]
 
-    # store RSP (pointing to context-data) at address pointed at by X0
-	# STR doesn't allow us to use sp as the base register, so we have to mov it to x4 first
-	mov x4, sp    
-	str x4, [x0, 0]
+    # store RSP (pointing to context-data) in first argument (x0).
+    # STR cannot have sp as a target register
+    mov  x4, sp
+    str  x4, [x0]
 
-    # restore RSP (pointing to context-data) from X1
+    # restore RSP (pointing to context-data) from A2 (x1)
     mov  sp, x1
+
+#    # test if fpu env should be preserved
+#    cmp  w3, #0
+#    b.eq  2f
 
     # load d8 - d15
     ldp  d8,  d9,  [sp, #0x00]
@@ -91,6 +106,7 @@ jump_fcontext:
     ldp  d12, d13, [sp, #0x20]
     ldp  d14, d15, [sp, #0x30]
 
+2:
     # load x19-x30
     ldp  x19, x20, [sp, #0x40]
     ldp  x21, x22, [sp, #0x50]
@@ -99,13 +115,14 @@ jump_fcontext:
     ldp  x27, x28, [sp, #0x80]
     ldp  x29, x30, [sp, #0x90]
 
-    # pass data (third arg passed to jump_fcontext) as first arg passed to context function
-    mov x0, x2
+    # use third arg as return value after jump
+    # and as first arg in context function
+    mov  x0, x2
 
     # load pc
     ldr  x4, [sp, #0xa0]
 
-    # restore stack from GP + FP
+    # restore stack from GP + FPU
     add  sp, sp, #0xb0
 
     ret x4

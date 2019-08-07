@@ -1,9 +1,10 @@
 #pragma once
+#include "gainput/gainput.h"
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace Raven 
+namespace Raven
 {
 	class RInputMapping;
 
@@ -11,7 +12,7 @@ namespace Raven
 	\class RInputManager
 	\brief Input manager, only one is allowed to exist per application.
 	*/
-	class RInputManager 
+	class RInputManager
 	{
 		friend class RInputMapping;
 	private:
@@ -32,24 +33,39 @@ namespace Raven
 		/*! Destroy the global log manager. */
 		static void Destroy();
 
-		/*! Create an input mapping. */
+		/*! Set display size for input. */
+		void SetDisplaySize(uint32_t width, uint32_t height);
+
+		/*! Set display size for input. */
 		RInputMapping* CreateMapping();
+
+
+		gainput::DeviceId GetMouseId() const { return _mMouseId; }
+		gainput::DeviceId GetKeyboardId() const { return _mKeyboardId; }
+		gainput::DeviceId GetPadId() const { return _mPadId; }
+		gainput::InputManager* GetInputManager() { return &_mInputManager; }
+
 	protected:
+		gainput::InputManager _mInputManager;
+		gainput::DeviceId _mMouseId;
+		gainput::DeviceId _mKeyboardId;
+		gainput::DeviceId _mPadId;
+
 		std::vector <std::unique_ptr<RInputMapping>> _mMappings;
 	};
 
 	class RInputMapping
 	{
 	public:
-		RInputMapping(RInputManager* manager) {}
+		RInputMapping(RInputManager* manager) : _mMapping(manager->_mInputManager) {}
+
+		gainput::InputMap* getMap() { return &_mMapping; }
+
+	protected:
+		gainput::InputMap _mMapping;
 	};
 
 	extern RInputManager* GInputManager; /*!< Global reference to input manager. */
 
 
 }
-
-
-
-
-

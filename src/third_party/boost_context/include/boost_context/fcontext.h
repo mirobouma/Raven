@@ -1,53 +1,62 @@
-//          Copyright Oliver Kowalke 2009.
-// Distributed under the Boost Software License, Version 1.0.
-//    (See accompanying file LICENSE_1_0.txt or copy at
-//          http://www.boost.org/LICENSE_1_0.txt)
+/*
+Copyright (c) 2016 Richard Maxwell
 
-// Modified for use in FiberTaskingLib
-//
-// FiberTaskingLib is the legal property of Adrian Astley
-// Copyright Adrian Astley 2015 - 2018
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
-#pragma once
+#ifndef FCONTEXT_H
+#define FCONTEXT_H
 
-#include <cstdint>
+#include <stdint.h>
 // intptr_t
 
-#include <cstddef>
+#include <stddef.h>
 // size_t
 
-#if defined(VALGRIND)
-#include <valgrind/valgrind.h>
-
-#define RVN_VALGRIND_ID uint32_t m_stackId
-
-#define RVN_VALGRIND_REGISTER(st, e) \
-		s.m_stackId = VALGRIND_STACK_REGISTER(st, e)
-
-#define RVN_VALGRIND_DEREGISTER() VALGRIND_STACK_DEREGISTER(s->m_stackId)
-#else
-#define RVN_VALGRIND_ID
-#define RVN_VALGRIND_REGISTER(st, e)
-#define RVN_VALGRIND_DEREGISTER()
+// -----------------------------------------------------------------------------
+#ifdef __cplusplus
+extern "C" {
 #endif
+// -----------------------------------------------------------------------------
 
-namespace boost_context
-{
-    struct fcontext_stack_t
-    {
-        void* sptr;
-        size_t ssize;
-        RVN_VALGRIND_ID;
-    };
+typedef void* fcontext_t;
 
-    typedef void *fcontext_t;
+intptr_t jump_fcontext
+(
+      fcontext_t* ofc
+    , fcontext_t  nfc
+    , intptr_t    vp
+    , int         preserve_fpu
+);
 
-    extern "C" void jump_fcontext(fcontext_t *from, fcontext_t to, void *arg);
-    extern "C" fcontext_t make_fcontext(void * sp, std::size_t size, void(*func)(void *));
-    // sp is the pointer to the _top_ of the stack (ie &stack_buffer[size]).
+fcontext_t make_fcontext
+(
+      void*  sp
+    , size_t size
+    , void  (*fn)(intptr_t)
+);
+// sp is the pointer to the _top_ of the stack (ie &stack_buffer[size]).
 
-    fcontext_stack_t create_fcontext_stack(size_t size = 0);
-    void destroy_fcontext_stack(fcontext_stack_t* s);
+// -----------------------------------------------------------------------------
+#ifdef __cplusplus
 }
+#endif
+// -----------------------------------------------------------------------------
+
+#endif

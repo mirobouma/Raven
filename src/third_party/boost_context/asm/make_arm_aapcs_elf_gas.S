@@ -1,6 +1,5 @@
 /*
             Copyright Oliver Kowalke 2009.
-            Copyright Adrian Astley 2017 - 2018.
    Distributed under the Boost Software License, Version 1.0.
       (See accompanying file LICENSE_1_0.txt or copy at
           http://www.boost.org/LICENSE_1_0.txt)
@@ -30,9 +29,9 @@
  *  |  v1 |  v2 |  v3 |  v4 |  v5 |  v6 |  v7 |  v8 |  *
  *  -------------------------------------------------  *
  *  -------------------------------------------------  *
- *  |  24 |  25 |  26 |  27 |  28 |  29 |  30 |  31 |  *
+ *  |  24 |  25 |                                   |  *
  *  -------------------------------------------------  *
- *  | 0x60| 0x64| 0x68| 0x6c| 0x70| 0x74| 0x78| 0x7c|  *
+ *  | 0x60| 0x64|                                   |  *
  *  -------------------------------------------------  *
  *  |  lr |  pc |                                   |  *
  *  -------------------------------------------------  *
@@ -48,21 +47,18 @@ make_fcontext:
     bic  a1, a1, #15
 
     @ reserve space for context-data on context-stack
-    sub  a1, a1, #128
+    sub  a1, a1, #104
 
     @ third arg of make_fcontext() == address of context-function
-    str  a3, [a1, #104]
+    str  a3, [a1,#100]
 
     @ compute abs address of label finish
     adr  a2, finish
     @ save address of finish as return-address for context-function
     @ will be entered after context-function returns
-    str  a2, [a1, #100]
+    str  a2, [a1,#96]
 
-#if (defined(__VFP_FP__) && !defined(__SOFTFP__))
-#endif
-
-    bx  lr @ return to caller
+    bx  lr @ return pointer to context-data
 
 finish:
     @ exit code is zero

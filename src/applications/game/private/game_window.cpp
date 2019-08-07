@@ -3,14 +3,14 @@
 #include "engine/engine.h"
 #include "core/debug/log_manager.h"
 #include "core/debug/profiler.h"
-#include "renderer/render_graph/render_graph.h"
-#include "renderer/render_graph/modules/rgm_common.h"
-#include "renderer/render_graph/modules/rgm_mesh.h"
-#include "renderer/render_graph/modules/rgm_ssao.h"
-#include "renderer/render_graph/modules/rgm_volumetric.h"
+#include "rendering/render_graph/render_graph.h"
+#include "rendering/render_graph/modules/rgm_common.h"
+#include "rendering/render_graph/modules/rgm_mesh.h"
+#include "rendering/render_graph/modules/rgm_ssao.h"
+#include "rendering/render_graph/modules/rgm_volumetric.h"
 #include "core/input/input_manager.h"
 #include "core/utility/timer.h"
-#include "renderer/game/mesh.h"
+#include "rendering/game/mesh.h"
 #include "ui/ui.h"
 
 #include <algorithm>
@@ -164,24 +164,24 @@ namespace Raven
 		gVolumetricVars.FogDensity = 0.8f;
 		gVolumetricVars.EnableNoise = false;
 
-		InputMap = GInputManager->CreateMapping();
-		InputMap->getMap()->MapFloat(InputMappings::MouseX, GInputManager->GetMouseId(), gainput::MouseAxisX);
-		InputMap->getMap()->MapFloat(InputMappings::MouseY, GInputManager->GetMouseId(), gainput::MouseAxisY);
-		InputMap->getMap()->MapBool(InputMappings::MouseR, GInputManager->GetMouseId(), gainput::MouseButtonRight);
-		InputMap->getMap()->MapBool(InputMappings::F1, GInputManager->GetKeyboardId(), gainput::KeyF1);
-		InputMap->getMap()->MapBool(InputMappings::W, GInputManager->GetKeyboardId(), gainput::KeyW);
-		InputMap->getMap()->MapBool(InputMappings::A, GInputManager->GetKeyboardId(), gainput::KeyA);
-		InputMap->getMap()->MapBool(InputMappings::S, GInputManager->GetKeyboardId(), gainput::KeyS);
-		InputMap->getMap()->MapBool(InputMappings::D, GInputManager->GetKeyboardId(), gainput::KeyD);
-		InputMap->getMap()->MapBool(InputMappings::E, GInputManager->GetKeyboardId(), gainput::KeyE);
-		InputMap->getMap()->MapBool(InputMappings::Q, GInputManager->GetKeyboardId(), gainput::KeyQ);
-
-		InputMap->getMap()->MapFloat(InputMappings::PadLX, GInputManager->GetPadId(), gainput::PadButtonLeftStickX);
-		InputMap->getMap()->MapFloat(InputMappings::PadLY, GInputManager->GetPadId(), gainput::PadButtonLeftStickY);
-		InputMap->getMap()->MapFloat(InputMappings::PadRX, GInputManager->GetPadId(), gainput::PadButtonRightStickX);
-		InputMap->getMap()->MapFloat(InputMappings::PadRY, GInputManager->GetPadId(), gainput::PadButtonRightStickY);
-		InputMap->getMap()->MapFloat(InputMappings::PadRT, GInputManager->GetPadId(), gainput::PadButtonR2);
-		InputMap->getMap()->MapFloat(InputMappings::PadLT, GInputManager->GetPadId(), gainput::PadButtonL2);
+		//InputMap = GInputManager->CreateMapping();
+		//InputMap->getMap()->MapFloat(InputMappings::MouseX, GInputManager->GetMouseId(), gainput::MouseAxisX);
+		//InputMap->getMap()->MapFloat(InputMappings::MouseY, GInputManager->GetMouseId(), gainput::MouseAxisY);
+		//InputMap->getMap()->MapBool(InputMappings::MouseR, GInputManager->GetMouseId(), gainput::MouseButtonRight);
+		//InputMap->getMap()->MapBool(InputMappings::F1, GInputManager->GetKeyboardId(), gainput::KeyF1);
+		//InputMap->getMap()->MapBool(InputMappings::W, GInputManager->GetKeyboardId(), gainput::KeyW);
+		//InputMap->getMap()->MapBool(InputMappings::A, GInputManager->GetKeyboardId(), gainput::KeyA);
+		//InputMap->getMap()->MapBool(InputMappings::S, GInputManager->GetKeyboardId(), gainput::KeyS);
+		//InputMap->getMap()->MapBool(InputMappings::D, GInputManager->GetKeyboardId(), gainput::KeyD);
+		//InputMap->getMap()->MapBool(InputMappings::E, GInputManager->GetKeyboardId(), gainput::KeyE);
+		//InputMap->getMap()->MapBool(InputMappings::Q, GInputManager->GetKeyboardId(), gainput::KeyQ);
+		//
+		//InputMap->getMap()->MapFloat(InputMappings::PadLX, GInputManager->GetPadId(), gainput::PadButtonLeftStickX);
+		//InputMap->getMap()->MapFloat(InputMappings::PadLY, GInputManager->GetPadId(), gainput::PadButtonLeftStickY);
+		//InputMap->getMap()->MapFloat(InputMappings::PadRX, GInputManager->GetPadId(), gainput::PadButtonRightStickX);
+		//InputMap->getMap()->MapFloat(InputMappings::PadRY, GInputManager->GetPadId(), gainput::PadButtonRightStickY);
+		//InputMap->getMap()->MapFloat(InputMappings::PadRT, GInputManager->GetPadId(), gainput::PadButtonR2);
+		//InputMap->getMap()->MapFloat(InputMappings::PadLT, GInputManager->GetPadId(), gainput::PadButtonL2);
 
 		gTimer = RTimer();
 
@@ -320,28 +320,28 @@ namespace Raven
 
 	void RGameWindow::handleGameInput(float dt)
 	{
-		if (InputMap->getMap()->GetBool(InputMappings::MouseR))
-		{
-			gCamera.getTransform()->rotate(-InputMap->getMap()->GetFloatDelta(InputMappings::MouseY) * 100.0f, InputMap->getMap()->GetFloatDelta(InputMappings::MouseX) * 100.0f, 0.0f);
-		}
+		//if (InputMap->getMap()->GetBool(InputMappings::MouseR))
+		//{
+		//	gCamera.getTransform()->rotate(-InputMap->getMap()->GetFloatDelta(InputMappings::MouseY) * 100.0f, InputMap->getMap()->GetFloatDelta(InputMappings::MouseX) * 100.0f, 0.0f);
+		//}
 
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::W));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::D));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::A));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::S));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::E));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::Q));
-
-		//gainput::InputDevicePad* pad = static_cast<gainput::InputDevicePad*>(GInputManager->GetInputManager()->GetDevice(GInputManager->GetPadId()));
-		//pad->Vibrate(1.0f, 0.0f);
-
-		gCamera.getTransform()->rotate(dt * InputMap->getMap()->GetFloat(InputMappings::PadRY) * gCameraViewSpeed, dt * InputMap->getMap()->GetFloat(InputMappings::PadRX) * gCameraViewSpeed, 0.0f);
-
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetForward() * InputMap->getMap()->GetFloat(InputMappings::PadLY));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetRight() * InputMap->getMap()->GetFloat(InputMappings::PadLX));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadRT));
-		gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadLT));
-	}
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::W));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::D));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetRight() * (float)InputMap->getMap()->GetBool(InputMappings::A));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetForward() * (float)InputMap->getMap()->GetBool(InputMappings::S));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::E));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetBool(InputMappings::Q));
+		//
+		////gainput::InputDevicePad* pad = static_cast<gainput::InputDevicePad*>(GInputManager->GetInputManager()->GetDevice(GInputManager->GetPadId()));
+		////pad->Vibrate(1.0f, 0.0f);
+		//
+		//gCamera.getTransform()->rotate(dt * InputMap->getMap()->GetFloat(InputMappings::PadRY) * gCameraViewSpeed, dt * InputMap->getMap()->GetFloat(InputMappings::PadRX) * gCameraViewSpeed, 0.0f);
+		//
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetForward() * InputMap->getMap()->GetFloat(InputMappings::PadLY));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetRight() * InputMap->getMap()->GetFloat(InputMappings::PadLX));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadRT));
+		//gCamera.getTransform()->translate(gCameraMoveSpeed * dt * -gCamera.getTransform()->GetUp() * (float)InputMap->getMap()->GetFloat(InputMappings::PadLT));
+	}	
 
 	void RGameWindow::updateEditor()
 	{
@@ -700,11 +700,11 @@ namespace Raven
 			return;
 		}
 
-		if (InputMap->getMap()->GetBoolIsNew(InputMappings::F1))
-		{
-			gShowEditor = !gShowEditor;
-			createGameWindow();
-		}
+		//if (InputMap->getMap()->GetBoolIsNew(InputMappings::F1))
+		//{
+		//	gShowEditor = !gShowEditor;
+		//	createGameWindow();
+		//}
 
 		if (gShowEditor)
 		{

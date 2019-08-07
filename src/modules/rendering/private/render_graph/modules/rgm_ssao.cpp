@@ -1,7 +1,7 @@
 #include "rendering/render_graph/modules/rgm_ssao.h"
 #include <chrono>
 #include "stb_image.h"
-#include "core/debug/logmanager.h"
+#include "core/debug/log_manager.h"
 #include <random>
 
 namespace Raven

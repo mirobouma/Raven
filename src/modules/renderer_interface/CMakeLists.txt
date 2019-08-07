@@ -1,7 +1,7 @@
 #module definition
 set(MODULE_NAME "renderer_interface")
 
-set (sourcegroup_publicincludes
+set (SourceGroup_PublicIncludes
 	"public/renderer_interface/renderer_interface.h"
 	"public/renderer_interface/buffer.h"
 	"public/renderer_interface/swapchain.h"
@@ -10,8 +10,8 @@ set (sourcegroup_publicincludes
 	"public/renderer_interface/command_pool.h"
 	"public/renderer_interface/pipeline.h"
 	"public/renderer_interface/queue.h"
-	"public/renderer_interface/rendertarget.h"
-	"public/renderer_interface/rootsignature.h"
+	"public/renderer_interface/render_target.h"
+	"public/renderer_interface/root_signature.h"
 	"public/renderer_interface/sampler.h"
 	"public/renderer_interface/image.h"
 	"public/renderer_interface/fence.h"

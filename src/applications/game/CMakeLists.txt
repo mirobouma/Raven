@@ -20,7 +20,7 @@ elseif(UNIX AND NOT APPLE)
 	add_executable(${PROJECT_NAME} ${SOURCE} ${RAVEN_ICON_RESOURCE_PATH})
 endif()
 
-target_link_libraries(${PROJECT_NAME} PRIVATE engine renderer ui assimp stb_image)
+target_link_libraries(${PROJECT_NAME} PRIVATE engine rendering ui assimp stb_image)
 #target_compile_definitions(${PROJECT_NAME} PUBLIC -DMALLOC_CHECK_)
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private")
 

@@ -31,7 +31,7 @@ namespace Raven
 				bool isDynamic
 			);
 
-			RConstructor &operator=(const RConstructor &&rhs);
+			RConstructor &operator=(const RConstructor &&rhs) noexcept;
 
 			static const RConstructor &Invalid(void);
 

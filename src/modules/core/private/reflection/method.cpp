@@ -40,15 +40,15 @@ namespace Raven
 		{
 #if defined(_DEBUG)
 
-			RASSERT(IsValid(),
+			RASSERT_MSG(IsValid(),
 				"Invalid RMethod invoked."
 			);
 
-			RASSERT(!(instance.IsConst() && !_isConst),
+			RASSERT_MSG(!(instance.IsConst() && !_isConst),
 				"Non-const RMethod invoked on const object."
 			);
 
-			RASSERT(instance.GetType() == _classType,
+			RASSERT_MSG(instance.GetType() == _classType,
 				"Incompatible RMethod invoked with instance."
 			);
 #endif

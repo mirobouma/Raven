@@ -28,7 +28,7 @@ namespace Raven
 		std::atomic<bool> InUse;
 
 		/*! The index of the fiber that is waiting on this counter */
-		std::size_t FiberIndex;
+		uint32_t FiberIndex;
 
 		/*! The value the fiber is waiting for */
 		uint32_t TargetValue;

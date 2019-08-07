@@ -1,7 +1,7 @@
 #pragma once
 #include "renderer_interface/buffer.h"
-#include "vulkan_renderer/vulkan_buffer.h"
-#include "vulkan_renderer/vulkan.h"
+#include "renderer_vulkan/vulkan_buffer.h"
+#include "renderer_vulkan/vulkan.h"
 #include <cinttypes>
 #include <vector>
 #include "hal/info.h"

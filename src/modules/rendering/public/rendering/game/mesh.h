@@ -1,7 +1,7 @@
 #pragma once
-#include "RenderInterface/IRenderInterface.h"
-#include "Renderer/Game/Material.h"
-#include "Core/Math/Transform.h"
+#include "renderer_interface/renderer_interface.h"
+#include "rendering/game/material.h"
+#include "core/math/transform.h"
 
 namespace Raven
 {

@@ -4,7 +4,7 @@
 #include <assimp/postprocess.h>
 #include <assimp/Logger.hpp>
 #include <assimp/DefaultLogger.hpp>
-#include "core/debug/logmanager.h"
+#include "core/debug/log_manager.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>

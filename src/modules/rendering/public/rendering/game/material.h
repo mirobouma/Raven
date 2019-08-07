@@ -1,6 +1,6 @@
 #pragma once
 #include "core/math/math.h"
-#include "rendering_interface/irenderinterface.h"
+#include "renderer_interface/renderer_interface.h"
 
 namespace Raven
 {

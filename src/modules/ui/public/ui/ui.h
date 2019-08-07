@@ -1,7 +1,7 @@
 #pragma once
 #include "imgui/imgui.h"
-#include "render_interface/renderinterface.h"
-#include "render_interface/swapchain.h"
+#include "renderer_interface/renderer_interface.h"
+#include "renderer_interface/swapchain.h"
 #include "platform/interfaces/window.h"
 #include "rendering/render_graph/render_graph.h"
 
@@ -12,7 +12,7 @@ namespace Raven
 	class RUIRenderer 
 	{
 	public:
-		RUIRenderer() : mInitialized(0), mCurrentFrameId(0) {}
+		RUIRenderer() : mInitialized(0), mCurrentFrameId(0), mBlendState(), mDepthStencilState(), mRasterizerState() {}
 
 		/*! Initialize this ui renderer. */
 		void initialize(IRenderInterface* pRenderer, IPlatformWindow* pWindow, ISwapChain* pSwapChain);
@@ -30,8 +30,8 @@ namespace Raven
 		void destroy();
 
 	private:
-		IPlatformWindow* mWindow;
-		IRenderInterface* mRenderer;
+		IPlatformWindow* mWindow = nullptr;
+		IRenderInterface* mRenderer = nullptr;
 
 		IShader* mShader = nullptr;
 		IRootSignature* mRootSignature = nullptr;

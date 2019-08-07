@@ -51,7 +51,7 @@ namespace Raven
 			_signature = signature;
 		}
 
-		RConstructor &RConstructor::operator=(const RConstructor &&rhs)
+		RConstructor &RConstructor::operator=(const RConstructor &&rhs) noexcept
 		{
 			_isDynamic = rhs._isDynamic;
 			_classType = rhs._classType;
@@ -85,7 +85,7 @@ namespace Raven
 
 		RVariant RConstructor::InvokeVariadic(const ArgumentList &arguments) const
 		{
-			RASSERT(IsValid(), "Invalid constructor invoked.");
+			RASSERT_MSG(IsValid(), "Invalid constructor invoked.");
 
 			return _invoker->Invoke(arguments);
 		}

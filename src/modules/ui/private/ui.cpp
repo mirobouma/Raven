@@ -1,5 +1,5 @@
 #include "ui/ui.h"
-#include "core/debug/logmanager.h"
+#include "core/debug/log_manager.h"
 #include <chrono>
 
 #ifdef PLATFORM_LINUX
@@ -7,7 +7,7 @@
 #endif
 
 #include "hal/platform.h"
-#include "hal/platform_window.h"
+#include "hal/window.h"
 
 namespace Raven
 {
@@ -92,9 +92,9 @@ namespace Raven
 #endif
 		// Create shaders.
 		FShaderCreateDesc shaderDesc;
-		shaderDesc.shaders[0].path = "shaders/imgui.vert.spv";
+		shaderDesc.shaders[0].path = "assets/shaders/imgui.vert.spv";
 		shaderDesc.shaders[0].stage = SHADER_STAGE_VERTEX;
-		shaderDesc.shaders[1].path = "shaders/imgui.frag.spv";
+		shaderDesc.shaders[1].path = "assets/shaders/imgui.frag.spv";
 		shaderDesc.shaders[1].stage = SHADER_STAGE_FRAGMENT;
 
 		renderer->createShader(&mShader, &shaderDesc);
@@ -218,7 +218,7 @@ namespace Raven
 		renderer->createPipeline(&mPipeline, &pipelineDesc);
 
 		// Load roboto font.
-		io.Fonts->AddFontFromFileTTF("fonts/Roboto-Regular.ttf", 18);
+		io.Fonts->AddFontFromFileTTF("assets/fonts/Roboto-Regular.ttf", 18);
 
 		// Create font image.
 		unsigned char* pixels;

@@ -4,7 +4,7 @@
 #include "hal/platform.h"
 #include "core/window_system/window_system.h"
 #include "core/debug/log_manager.h"
-#include "vulkan_renderer/vulkan_renderer.h"
+#include "renderer_vulkan/vulkan_renderer.h"
 #include "core/input/input_manager.h"
 
 namespace Raven {

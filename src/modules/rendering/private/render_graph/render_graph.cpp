@@ -1,5 +1,5 @@
 #include "rendering/render_graph/render_graph.h"
-#include "core/debug/logmanager.h"
+#include "core/debug/log_manager.h"
 #include "core/utility/hash.h"
 #include <algorithm>
 

@@ -28,7 +28,7 @@ namespace Raven {
 	{
 		// Set default properties.
 		InternalInitialize(
-			"New Window <Linux>",
+			"New Window <Windows>",
 			FRect(FVector2(800, 600), FVector2(0, 0)),
 			EPlatformWindowFlags::EPlatformWindowFlags_AutoPosition
 		);
@@ -127,7 +127,7 @@ namespace Raven {
 		// this struct holds Windows event messages
 		MSG msg;
 
-		GInputManager->GetInputManager()->Update();
+		//GInputManager->GetInputManager()->Update();
 
 		// Check to see if any messages are waiting in the queue
 		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -138,7 +138,7 @@ namespace Raven {
 			// send the message to the WindowProc function
 			DispatchMessage(&msg);
 
-			GInputManager->GetInputManager()->HandleMessage(msg);
+			//GInputManager->GetInputManager()->HandleMessage(msg);
 		}
 	}
 

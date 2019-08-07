@@ -34,7 +34,7 @@ namespace Raven {
 			gCurrWidth = LOWORD(lParam);
 			gCurrHeight = HIWORD(lParam);
 
-			GInputManager->SetDisplaySize(gCurrWidth, gCurrHeight);
+			//GInputManager->SetDisplaySize(gCurrWidth, gCurrHeight);
 		}
 		case WM_EXITSIZEMOVE:
 		{

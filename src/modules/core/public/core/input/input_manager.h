@@ -32,9 +32,6 @@ namespace Raven
 		/*! Destroy the global log manager. */
 		static void Destroy();
 
-		/*! Set display size for input. */
-		void SetDisplaySize(uint32_t width, uint32_t height);
-
 		/*! Create an input mapping. */
 		RInputMapping* CreateMapping();
 	protected:

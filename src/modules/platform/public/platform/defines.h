@@ -15,7 +15,7 @@ namespace Raven
 		EPlatformType_Undefined = 0, /*!< Undefined platform. */
 		EPlatformType_Windows, /*!< Windows based platform. */
 		EPlatformType_Linux, /*!< Linux based platform. */
-	};
+	} EPlatformType;
 
 	/*!
 	Enumerator to define flags for window creation.

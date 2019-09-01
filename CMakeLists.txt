@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.8.0)
-cmake_policy(SET CMP0074 NEW)
-
 set(RVN_PROJECT_NAME "Raven")
 set(RVN_PROJECT_VERSION 0.1.1)
 set(RVN_OUTPUT_BIN_DIR "${CMAKE_SOURCE_DIR}/build/bin")
@@ -17,6 +15,7 @@ include(ProjectGlobalMacros)
 include(GlslToSpirV)
 include(ProjectTestFunctions)
 include(CopyFiles)
+include(ReflectionParser)
 
 project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES C CXX)
 enable_testing()
@@ -80,6 +79,7 @@ project_add_3rdparty(imgui)
 project_add_3rdparty(sdl2)
 project_add_3rdparty(vma)
 project_add_3rdparty(assimp)
+project_add_3rdparty(gainput)
 
 #add tools
 project_add_tool(rrg)

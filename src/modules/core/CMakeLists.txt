@@ -2,6 +2,7 @@
 set(MODULE_NAME "core")
 
 set (SourceGroup_PublicIncludes
+	"public/core/core.module.h"
 	"public/core/application/application.h"
 
 	"public/core/utility/enum.h"
@@ -177,6 +178,9 @@ set (SOURCE
 )
 
 add_library(${MODULE_NAME} STATIC ${SOURCE})
-target_link_libraries(${MODULE_NAME} PUBLIC hal sdl2 glm gainput)
 target_include_directories(${MODULE_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private")
+target_link_libraries(${MODULE_NAME} PUBLIC hal sdl2 glm gainput)
+
+parse_reflection(core "${CMAKE_CURRENT_SOURCE_DIR}/public/${MODULE_NAME}/${MODULE_NAME}.module.h")
+
 

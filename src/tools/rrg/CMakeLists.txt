@@ -44,6 +44,7 @@ set (SOURCE
 	${SourceGroup_Source}
 )
 
+cmake_policy(SET CMP0074 NEW)
 find_package(LLVM REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCE} ${RAVEN_ICON_RESOURCE_PATH})

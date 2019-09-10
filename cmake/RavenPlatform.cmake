@@ -1,0 +1,15 @@
+macro(check_platform)
+    if(NOT DEFINED BUILD_PLATFORM)
+        if (WIN32)
+            set(BUILD_PLATFORM "windows")
+            set(PLATFORM_MODULE raven-os-windows)
+            add_definitions(-DPLATFORM_WINDOWS) # We are compiling for windows.
+		endif()
+    endif()
+endmacro()
+
+function(add_platform_module)
+    if(BUILD_PLATFORM MATCHES "windows")
+        project_add_os(windows)
+    endif()
+endfunction()

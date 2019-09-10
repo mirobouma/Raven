@@ -11,5 +11,5 @@ BuildConfig.json
 /Linux
 /SanitizerBlacklist.txt
 *.pc
-/third_party/VulkanMemoryAllocator/bin
-/third_party/VulkanMemoryAllocator/docs/html
+/src/third_party/vma/bin
+/src/third_party/vma/docs/html

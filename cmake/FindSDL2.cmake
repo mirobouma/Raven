@@ -21,7 +21,7 @@ endforeach()
 
 if(WIN32)
     # Search for SDL2 Debug CMake build in third_party/sdl2/build
-    find_path(SDL2_ROOT "include/SDL.h" PATHS "${CMAKE_CURRENT_LIST_DIR}/../third_party/sdl2" NO_DEFAULT_PATH)
+    find_path(SDL2_ROOT "include/SDL.h" PATHS "${CMAKE_CURRENT_LIST_DIR}/../src/third_party/sdl2" NO_DEFAULT_PATH)
     if(SDL2_ROOT)
         if (EXISTS "${SDL2_ROOT}/build/Debug/SDL2.lib")
             set(SDL2_INCLUDE_DIRS "${SDL2_ROOT}/include")
@@ -34,7 +34,7 @@ if(WIN32)
     endif()
     if(NOT SDL2_FOUND)
         # Search for SDL2 in third_party/sdl2
-        find_path(SDL2_ROOT "include/SDL.h" PATHS "${CMAKE_CURRENT_LIST_DIR}/../third_party/sdl2" NO_DEFAULT_PATH)
+        find_path(SDL2_ROOT "include/SDL.h" PATHS "${CMAKE_CURRENT_LIST_DIR}/../src/third_party/sdl2" NO_DEFAULT_PATH)
         if(SDL2_ROOT)
             set(SDL2_INCLUDE_DIRS "${SDL2_ROOT}/include")
             if(CMAKE_SIZEOF_VOID_P EQUAL 8)

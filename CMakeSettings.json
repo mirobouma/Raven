@@ -1,40 +1,33 @@
 ﻿{
-  "configurations": [
-    {
-      "name": "x64-Debug",
-      "generator": "Ninja",
-      "configurationType": "Debug",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\build\\cmake\\${name}",
-      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DFIX_OUTPUT_PATH=1",
-      "buildCommandArgs": "-v",
-      "ctestCommandArgs": "",
-      "variables": []
-    },
-    {
-      "name": "x64-RelWithDebInfo",
-      "generator": "Ninja",
-      "configurationType": "RelWithDebInfo",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "buildRoot": "${projectDir}\\build\\cmake\\${name}",
-      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DFIX_OUTPUT_PATH=1",
-      "buildCommandArgs": "-v",
-      "ctestCommandArgs": "",
-      "variables": []
-    },
-    {
-      "name": "x64-Release",
-      "generator": "Ninja",
-      "configurationType": "Release",
-      "buildRoot": "${projectDir}\\build\\cmake\\${name}",
-      "installRoot": "${env.USERPROFILE}\\CMakeBuilds\\${workspaceHash}\\install\\${name}",
-      "cmakeCommandArgs": "-DFIX_OUTPUT_PATH=1",
-      "buildCommandArgs": "-v",
-      "ctestCommandArgs": "",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "variables": []
-    }
-  ]
+    "configurations": [
+        {
+            "name": "x64-Debug",
+            "generator": "Ninja",
+            "configurationType": "Debug",
+            "inheritEnvironments": [ "msvc_x64_x64" ],
+            "buildRoot": "${projectDir}\\build\\cmake\\${name}",
+            "installRoot": "${projectDir}\\out\\install\\${name}",
+            "cmakeCommandArgs": "",
+            "buildCommandArgs": "-v",
+            "ctestCommandArgs": "",
+            "variables": [
+                {
+                    "name": "FIX_OUTPUT_PATH",
+                    "value": "True",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "BUILD_MONOLITHIC",
+                    "value": "False",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "CMAKE_EXPORT_COMPILE_COMMANDS",
+                    "value": "True",
+                    "type": "BOOL"
+                }
+            ],
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ]
 }

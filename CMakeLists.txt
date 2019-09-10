@@ -1,105 +1,66 @@
 cmake_minimum_required(VERSION 3.8.0)
-set(RVN_PROJECT_NAME "Raven")
+
+# Helper variables.
+set(RVN_ENGINE_NAME "Raven")
 set(RVN_PROJECT_VERSION 0.1.1)
 set(RVN_OUTPUT_BIN_DIR "${CMAKE_SOURCE_DIR}/build/bin")
 set(RVN_OUTPUT_LIB_DIR "${CMAKE_SOURCE_DIR}/build/lib")
 set(RVN_ICON_RESOURCE_PATH "${CMAKE_SOURCE_DIR}/resources/icon.rc")
 set(RVN_ROOT_SOURCE "${CMAKE_SOURCE_DIR}")
 
-# Cmake modules
+# CMake scripts.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 include(CheckCXXSourceCompiles)
 include(CheckCXXCompilerFlag)
-include(ProjectGlobalMacros)
-include(GlslToSpirV)
-include(ProjectTestFunctions)
+include(CheckCppVersion)
 include(CopyFiles)
-include(ReflectionParser)
-
-project(${RVN_PROJECT_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES C CXX)
-enable_testing()
-set(CMAKE_VERBOSE_MAKEFILE OFF)
-
-# Check for C++11/14/17 support
-project_check_cpp_version()
-
-if (NOT CPP11_SUPPORT)
-  message(FATAL_ERROR "C++11 support is required.")
-endif()
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+include(RavenProject)
+include(RavenPlatform)
 
 # Options
-option(BUILD_DOCUMENTATION "Build documentation" OFF)
 option(FIX_OUTPUT_PATH "Fix output directories for non-vs-project builds." OFF)
+option(BUILD_EDITOR "Build the editor." ON)
+option(BUILD_MONOLITHIC "Builds the project in monolithic mode" OFF)
 
-# Check if we are building for a 64 or 32 bit architecture.
+project(${RVN_ENGINE_NAME} VERSION ${RVN_PROJECT_VERSION} LANGUAGES C CXX)
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
    set(RVN_ARCHITECTURE "x64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
    set(RVN_ARCHITECTURE "x86")
 endif()
 
-if (WIN32)
-	add_definitions(-DPLATFORM_WINDOWS) # We are compiling for windows.
-elseif(UNIX AND NOT APPLE)
-	add_definitions(-DPLATFORM_LINUX) # We are compiling for linux.
+set(CMAKE_VERBOSE_MAKEFILE OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Check for C++11/14/17 support
+project_check_cpp_version()
+
+if(NOT CPP11_SUPPORT)
+  message(FATAL_ERROR "C++11 support is required.")
 endif()
 
-#find packages
-#On Linux, search for SDL2
-if(UNIX AND NOT APPLE)
-	find_package(SDL2 REQUIRED COMPONENTS main)
-endif()
+# Checks for which platform we are compiling.
+check_platform()
 
-find_package(Vulkan)
-include_directories(${MANUAL_INCLUDE_DIRS})
+# Set output paths for binaries.
+set_output_paths()
 
-# Set output directories
-if(FIX_OUTPUT_PATH)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${RVN_OUTPUT_BIN_DIR}/${CMAKE_BUILD_TYPE}_${RVN_ARCHITECTURE}")
-	
-else()
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}")
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${RVN_OUTPUT_LIB_DIR}")
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${RVN_OUTPUT_BIN_DIR}")
-endif()
+# Add correct module for this platform.
+add_platform_module()
 
-set(GLM_INSTALL_ENABLE OFF CACHE BOOL "GLM install" FORCE)
+# Add third-party modules.
+#project_add_third_party(blaze)
+project_add_third_party(sdl2)
+project_add_third_party(vma)
+project_add_third_party(tinystl)
 
-#add third-party modules.
-project_add_3rdparty(json)
-project_add_3rdparty(boost_context)
-project_add_3rdparty(glm)
-project_add_3rdparty(stb)
-project_add_3rdparty(imgui)
-project_add_3rdparty(sdl2)
-project_add_3rdparty(vma)
-project_add_3rdparty(assimp)
-project_add_3rdparty(gainput)
+# Add modules
+project_add_engine_module(core)
+project_add_engine_module(math)
+project_add_engine_module(plugin)
+project_add_engine_module(rendering)
+project_add_engine_module(util)
 
-#add tools
-project_add_tool(rrg)
-
-##add modules
-project_add_module(core)
-project_add_module(hal)
-project_add_module(platform)
-project_add_module(renderer_interface)
-project_add_module(renderer_vulkan)
-project_add_module(rendering)
-project_add_module(ui)
-project_add_module(engine)
-
-if (WIN32)
-	project_add_module(platform_windows)
-endif()
-if(UNIX AND NOT APPLE)
-	project_add_module(platform_linux)
-endif()
-
-#applications
+# Add applications
 project_add_application(game)

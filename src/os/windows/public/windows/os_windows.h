@@ -1,19 +1,27 @@
 #pragma once
 #include "core/os/os.h"
 
-class OSWindows : OS
+class OSWindows : public OS
 {
-    virtual bool initialize_core_systems();
-    virtual bool initialize();
+public:
+    OSWindows() : OS() {}
 
-    virtual inline bool supports_multiple_windows() final { return true; }
-    virtual inline bool supports_multithreading() const final { return true; }
+    virtual String get_name() const { return "Windows"; }
+    virtual Error initialize_core() override;
+    virtual Error initialize() override;
 
-    virtual int32_t get_mounitor_count();
-    virtual int32_t get_monitor(uint32_t index);
-    virtual int get_current_monitor();
-    virtual MonitorDescription get_monitor_description(uint32_t index);
+    virtual inline bool supports_multiple_windows() const override { return true; }
+    virtual inline bool supports_multithreading() const override { return true; }
 
-    virtual String get_working_directory() const;
-    virtual String get_environment_variable(const String& name) const;
+    virtual int32_t get_monitor_count() override;
+    virtual MonitorDescription get_main_monitor() override;
+    virtual MonitorDescription get_monitor_description(int32_t index) override;
+
+    virtual Path get_working_directory() const override;
+
+    virtual bool has_environment_variable(const String& key) const;
+    virtual String get_environment_variable(const String& key) const;
+    virtual bool set_environment_variable(const String& key, const String& value) const;
+
+    virtual int get_exit_code() const override;
 };

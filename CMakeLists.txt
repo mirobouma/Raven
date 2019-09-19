@@ -50,7 +50,7 @@ set_output_paths()
 add_platform_module()
 
 # Add third-party modules.
-#project_add_third_party(blaze)
+project_add_third_party(blaze)
 project_add_third_party(sdl2)
 project_add_third_party(vma)
 project_add_third_party(tinystl)
@@ -64,3 +64,4 @@ project_add_engine_module(util)
 
 # Add applications
 project_add_application(game)
+project_add_application(editor)

@@ -1,6 +1,5 @@
 #pragma once
-#include "TINYSTL/string.h"
-#include "TINYSTL/string_view.h"
+#include <string>
 
-typedef tinystl::string String;
-typedef tinystl::string_view StringView;
+typedef std::string String;
+typedef std::wstring WString;

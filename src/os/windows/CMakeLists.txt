@@ -2,8 +2,7 @@ set(PROJECT_NAME raven-os-windows)
 
 set (SourceGroup_PublicIncludes
     "public/windows/os_windows.h"
-    "public/windows/windows_filesystem.h"
-    "public/windows/windows_semaphore.h"
+    "public/windows/windows_file_system.h"
     "public/windows/windows_thread.h"
     "public/windows/windows_memory.h"
 )

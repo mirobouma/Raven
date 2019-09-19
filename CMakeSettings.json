@@ -25,6 +25,11 @@
                     "name": "CMAKE_EXPORT_COMPILE_COMMANDS",
                     "value": "True",
                     "type": "BOOL"
+                },
+                {
+                    "name": "USE_LAPACK",
+                    "value": "False",
+                    "type": "BOOL"
                 }
             ],
             "intelliSenseMode": "windows-msvc-x64"

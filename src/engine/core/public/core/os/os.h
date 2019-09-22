@@ -5,6 +5,7 @@
 #include "core/string.h"
 #include "core/path.h"
 #include "core/errors.h"
+#include "core/os/window_system.h"
 
 class OS {
 protected:
@@ -25,6 +26,8 @@ public:
     virtual Error initialize_core() = 0;
     virtual Error initialize() = 0;
 
+    virtual void update() = 0;
+
     virtual bool supports_multiple_windows() const = 0;
     virtual bool supports_multithreading() const = 0;
 
@@ -38,5 +41,5 @@ public:
     virtual String get_environment_variable(const String& key) const = 0;
     virtual bool set_environment_variable(const String& key, const String& value) const = 0;
 
-    virtual int get_exit_code() const = 0; 
+    virtual int get_exit_code(Error error) const = 0; 
 };

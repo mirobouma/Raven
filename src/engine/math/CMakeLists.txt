@@ -19,9 +19,5 @@ else()
 endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private")
+target_link_libraries(${PROJECT_NAME} INTERFACE blaze)
 
-find_package(blaze)
-if(blaze_FOUND)
-   add_library(blaze_target INTERFACE)
-   target_link_libraries(${PROJECT_NAME} INTERFACE blaze::blaze)
-endif()

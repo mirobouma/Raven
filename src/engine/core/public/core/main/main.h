@@ -2,6 +2,8 @@
 #include "core/os/os.h"
 #include "core/errors.h"
 
+class MainLoop;
+class Engine;
 class Main {
 public:
     Main();
@@ -10,12 +12,18 @@ public:
     static inline Main& get() { return *_singleton; }
 
     Error setup(int argc, char** argv);
-    Error start();
+    Error run();
+    Error update();
     Error cleanup();
+
+    Error parse_args(int argc, char** argv);
 
     Main(const Main&) = delete;
     Main& operator= (const Main&) = delete;
 
 private:
     static Main* _singleton;
+
+    Engine* _engine;
+    MainLoop* _main_loop;
 };

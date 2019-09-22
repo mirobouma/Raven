@@ -1,4 +1,5 @@
 #pragma once
-#include "TINYSTL/vector.h"
+#include <vector>
 
-typedef tinystl::vector Vector;
+template<typename T>
+using Vector = std::vector<T>;

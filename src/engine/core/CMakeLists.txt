@@ -6,6 +6,7 @@ set (SourceGroup_PublicIncludes
     "public/core/path.h"
     "public/core/string.h"
     "public/core/vector.h"
+    "public/core/window_event_listener.h"
     "public/core/modules/module.h"
     "public/core/modules/module_manager.h"
     "public/core/os/os.h"
@@ -14,16 +15,21 @@ set (SourceGroup_PublicIncludes
     "public/core/os/memory.h"
     "public/core/os/monitor.h"
     "public/core/os/thread.h"
+    "public/core/os/window.h"
+    "public/core/os/window_system.h"
     "public/core/main/main.h"
-    "public/core/main/main_looper.h"
+    "public/core/main/main_loop.h"
+    "public/core/main/game_loop.h"
 )
 source_group("Public" FILES ${SourceGroup_PublicIncludes})
 
 set (SourceGroup_Source
 	"private/core.cpp"
+    "private/engine.cpp"
     "private/path.cpp"
     "private/main/main.cpp"
     "private/os/os.cpp" 
+    "private/os/window_system.cpp" 
 )
 
 source_group("Source" FILES ${SourceGroup_Source})
@@ -36,4 +42,4 @@ else()
 endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private")
-target_link_libraries(${PROJECT_NAME} PUBLIC tinystl)
+target_link_libraries(${PROJECT_NAME} PUBLIC raven-math)

@@ -10,6 +10,8 @@ public:
     virtual Error initialize_core() override;
     virtual Error initialize() override;
 
+    virtual void update() override;
+
     virtual inline bool supports_multiple_windows() const override { return true; }
     virtual inline bool supports_multithreading() const override { return true; }
 
@@ -23,5 +25,5 @@ public:
     virtual String get_environment_variable(const String& key) const;
     virtual bool set_environment_variable(const String& key, const String& value) const;
 
-    virtual int get_exit_code() const override;
+    virtual int get_exit_code(Error error) const override;
 };

@@ -1,5 +1,6 @@
 #include "windows/os_windows.h"
 #include "core/main/main.h"
+#include "math/math.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -16,13 +17,16 @@ int main(int argc, char** argv)
     OSWindows os;
     Main* main = new Main();
 
-    if (main->setup(argc, argv))
-    {
-        main->start();
-    }
+    Error result = main->setup(argc, argv);
+    if (result != Error::SUCCESS)
+        return os.get_exit_code(result);
+
+    result = main->run();
+    if (result != Error::SUCCESS)
+        return os.get_exit_code(result);
 
     main->cleanup();
 
     delete main;
-    return os.get_exit_code();
+    return os.get_exit_code(result);
 }

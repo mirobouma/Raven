@@ -1,7 +1,9 @@
 docs/output
-/.vs
+.idea/
+.vs/
 /.vscode
 /build/
+/cmake-build-*/
 solution/
 BuildConfig.json
 /bin/

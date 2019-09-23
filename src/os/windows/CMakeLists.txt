@@ -12,6 +12,7 @@ source_group("Public" FILES ${SourceGroup_PublicIncludes})
 set (SourceGroup_Source
 	"private/os_windows.cpp"
     "private/windows_main.cpp"
+    "private/util/wstring.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 set (SOURCES ${SourceGroup_Source} ${SourceGroup_PublicIncludes})

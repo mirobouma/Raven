@@ -3,6 +3,7 @@
 #include "core/engine.h"
 
 Main* Main::_singleton = nullptr;
+MainLoop* raven_create_main_loop();
 
 Main::Main()
 {
@@ -31,6 +32,7 @@ Error Main::setup(int argc, char** argv)
     if (result != Error::SUCCESS)
         return result;
 
+    _main_loop = raven_create_main_loop();
     return Error::SUCCESS;
 }
 
@@ -43,9 +45,10 @@ Error Main::parse_args(int argc, char** argv)
 Error Main::run()
 {
     OS& os = OS::get();
+    Engine& engine = Engine::get();
 
     if (!_main_loop)
-        return;
+        return Error::ERR_DOES_NOT_EXIST;
     
     // The root main loop is always a standalone.
     // If the game is an editor, the dynamic game library will not
@@ -58,14 +61,13 @@ Error Main::run()
         return result;
     }
     
-    while (!_engine->should_shutdown()) 
+    while (!engine.should_shutdown())
     {
         // Update OS messages.
         os.update();
 
         // Update the main loop.
         result = update();
-
         if (result != Error::SUCCESS)
             break;          
     }
@@ -80,10 +82,16 @@ Error Main::run()
     return result;
 }
 
+Error Main::update()
+{
+    float deltaTime = 0.016f;
+    _main_loop->update(deltaTime);
+
+    return Error::SUCCESS;
+}
+
 Error Main::cleanup()
 {
-    _engine->cleanup();
-    delete _engine;
-
+    Engine::get().cleanup();
     return Error::SUCCESS;
 }

@@ -2,7 +2,7 @@
 
 Engine* Engine::_singleton = nullptr;
 
-Engine::Engine()
+Engine::Engine() : _shouldShutdown(false)
 {
     _singleton = this;
 }
@@ -19,5 +19,8 @@ Error Engine::update()
 
 Error Engine::cleanup()
 {
+    delete _singleton;
+    _singleton = nullptr;
+
     return Error::SUCCESS;
 }

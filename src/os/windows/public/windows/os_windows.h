@@ -25,5 +25,9 @@ public:
     virtual String get_environment_variable(const String& key) const;
     virtual bool set_environment_variable(const String& key, const String& value) const;
 
+    virtual uint64_t get_unix_time() const;
+    virtual uint64_t get_system_time() const;
+
+
     virtual int get_exit_code(Error error) const override;
 };

@@ -22,12 +22,12 @@ uint32_t WindowSystem::get_window_count()
     return _windows.size();
 }
 
-bool WindowSystem::register_event_listener(IWindowEventListener* listener)
+void WindowSystem::register_event_listener(IWindowEventListener* listener)
 {
     _eventListeners.push_back(listener);
 }
 
-bool WindowSystem::unregister_event_listener(IWindowEventListener* listener)
+void WindowSystem::unregister_event_listener(IWindowEventListener* listener)
 {
-    _eventListeners.erase(listener);
+    _eventListeners.erase(std::remove(_eventListeners.begin(), _eventListeners.end(), listener), _eventListeners.end());
 }

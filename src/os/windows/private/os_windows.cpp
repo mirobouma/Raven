@@ -181,6 +181,55 @@ bool OSWindows::set_environment_variable(const String& key, const String& value)
     return isSet;
 }
 
+uint64_t OSWindows::get_unix_time() const
+{
+    FILETIME ft;
+    SYSTEMTIME st;
+    GetSystemTime(&st);
+    SystemTimeToFileTime(&st, &ft);
+
+    SYSTEMTIME ep;
+    ep.wYear = 1970;
+    ep.wMonth = 1;
+    ep.wDayOfWeek = 4;
+    ep.wDay = 1;
+    ep.wHour = 0;
+    ep.wMinute = 0;
+    ep.wSecond = 0;
+    ep.wMilliseconds = 0;
+    FILETIME fep;
+    SystemTimeToFileTime(&ep, &fep);
+
+    ULARGE_INTEGER ft_punning;
+    ft_punning.LowPart = ft.dwLowDateTime;
+    ft_punning.HighPart = ft.dwHighDateTime;
+
+    ULARGE_INTEGER fep_punning;
+    fep_punning.LowPart = fep.dwLowDateTime;
+    fep_punning.HighPart = fep.dwHighDateTime;
+
+    return (ft_punning.QuadPart - fep_punning.QuadPart) / 10000000;
+
+}
+
+uint64_t OSWindows::get_system_time() const
+{
+    const uint64_t WINDOWS_TICK = 10000;
+    const uint64_t MSEC_TO_UNIX_EPOCH = 11644473600000LL;
+
+    SYSTEMTIME st;
+    GetSystemTime(&st);
+    FILETIME ft;
+    SystemTimeToFileTime(&st, &ft);
+    uint64_t ret;
+    ret = ft.dwHighDateTime;
+    ret <<= 32;
+    ret |= ft.dwLowDateTime;
+
+    return (uint64_t)((ret / WINDOWS_TICK - MSEC_TO_UNIX_EPOCH) / 1000);
+}
+
+
 int OSWindows::get_exit_code(Error error) const
 {
     return 0;

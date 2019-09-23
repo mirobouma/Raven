@@ -20,6 +20,7 @@ set (SourceGroup_PublicIncludes
     "public/core/main/main.h"
     "public/core/main/main_loop.h"
     "public/core/main/game_loop.h"
+    "public/core/main/application.h"
 )
 source_group("Public" FILES ${SourceGroup_PublicIncludes})
 
@@ -28,6 +29,7 @@ set (SourceGroup_Source
     "private/engine.cpp"
     "private/path.cpp"
     "private/main/main.cpp"
+    "private/main/game_loop.cpp"
     "private/os/os.cpp" 
     "private/os/window_system.cpp" 
 )

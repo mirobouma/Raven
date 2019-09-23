@@ -2,12 +2,14 @@ set(PROJECT_NAME raven-editor)
 
 set(SourceGroup_PublicIncludes
     "public/editor/editor.h"
+    "public/editor/editor_loop.h"
 )
 
 source_group("Public" FILES ${SourceGroup_PublicIncludes})
 
 set(SourceGroup_Source
 	"private/editor.cpp"
+    "private/editor_loop.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})
 set(SOURCES ${SourceGroup_Source} ${SourceGroup_PublicIncludes})

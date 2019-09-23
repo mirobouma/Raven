@@ -1,9 +1,10 @@
 #pragma once
+#include "core/errors.h"
 
 class MainLoop {
 public:
-    MainLoop();
-    virtual ~MainLoop();
+    MainLoop() = default;
+    virtual ~MainLoop() = default;
 
     virtual Error initialize(bool isStandalone) = 0;
     virtual void update(float deltaTime) = 0;

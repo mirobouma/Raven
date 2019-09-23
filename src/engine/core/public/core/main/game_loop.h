@@ -3,7 +3,7 @@
 
 class GameLoop : public MainLoop
 {
-    virtual Error initialize(bool isStandalone) {}
-    virtual void update(float deltaTime) = 0;
-    virtual Error cleanup() {}
+    virtual Error initialize(bool isStandalone);
+    virtual void update(float deltaTime);
+    virtual Error cleanup();
 };

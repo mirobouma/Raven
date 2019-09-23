@@ -23,7 +23,5 @@ public:
 
 private:
     static Main* _singleton;
-
-    Engine* _engine;
     MainLoop* _main_loop;
 };

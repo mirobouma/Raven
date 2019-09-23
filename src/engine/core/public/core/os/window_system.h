@@ -12,13 +12,13 @@ public:
     Window* get_main_window();
     uint32_t get_window_count();
 
-    bool register_event_listener();
-    bool unregister_event_listener();
+    void register_event_listener(IWindowEventListener* listener);
+    void unregister_event_listener(IWindowEventListener* listener);
 
     virtual Window* create_window() = 0;
 
 protected:
-    WindowSystem() = default;
+    WindowSystem();
     WindowSystem(const WindowSystem&) = delete;
     WindowSystem& operator= (const WindowSystem&) = delete;
     virtual ~WindowSystem() = default;

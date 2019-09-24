@@ -1,5 +1,5 @@
 #pragma once
-#include "blaze/math/Math.h"
+#include "blaze/Math.h"
 
 template <typename T>
 class VectorBase {
@@ -101,7 +101,7 @@ public:
 
     // Simple move assignment operator
     Vector2Base& operator=(Vector2Base&& other) {
-        member = std::move(other.member);
+        _vector = std::move(other._vector);
         return *this;
     }
 protected:
@@ -150,7 +150,7 @@ public:
     // Simple move assignment operator
     Vector3Base& operator=(Vector3Base&& other)
     {
-        member = std::move(other.member);
+        _vector = std::move(other._vector);
         return *this;
     }
 
@@ -201,7 +201,7 @@ public:
     // Simple move assignment operator
     Vector4Base& operator=(Vector4Base&& other)
     {
-        member = std::move(other.member);
+        _vector = std::move(other._vector);
         return *this;
     }
 

@@ -44,4 +44,4 @@ else()
 endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/public" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private")
-target_link_libraries(${PROJECT_NAME} PUBLIC raven-math)
+target_link_libraries(${PROJECT_NAME} PUBLIC raven-math raven-util)

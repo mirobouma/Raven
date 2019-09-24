@@ -33,6 +33,40 @@
                 }
             ],
             "intelliSenseMode": "windows-msvc-x64"
+        },
+        {
+            "name": "x64-DebugMonolithic",
+            "generator": "Ninja",
+            "configurationType": "Debug",
+            "buildRoot": "${projectDir}\\build\\cmake\\${name}",
+            "installRoot": "${projectDir}\\out\\install\\${name}",
+            "cmakeCommandArgs": "",
+            "buildCommandArgs": "-v",
+            "ctestCommandArgs": "",
+            "inheritEnvironments": [ "msvc_x64_x64" ],
+            "variables": [
+                {
+                    "name": "FIX_OUTPUT_PATH",
+                    "value": "True",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "BUILD_MONOLITHIC",
+                    "value": "True",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "CMAKE_EXPORT_COMPILE_COMMANDS",
+                    "value": "True",
+                    "type": "BOOL"
+                },
+                {
+                    "name": "USE_LAPACK",
+                    "value": "False",
+                    "type": "BOOL"
+                }
+            ],
+            "intelliSenseMode": "windows-msvc-x64"
         }
     ]
 }

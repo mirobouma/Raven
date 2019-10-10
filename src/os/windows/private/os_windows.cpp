@@ -1,5 +1,8 @@
 #include "windows/os_windows.h"
 #include "windows/util/wstring.h"
+#include "windows/windows_window.h"
+#include "windows/windows_thread.h"
+#include "core/logging_macros.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -7,20 +10,74 @@
 #include <ShellScalingApi.h>
 #endif
 
+HINSTANCE gHInstance = nullptr;
 
 Error OSWindows::initialize_core()
 {
+    gHInstance = GetModuleHandle(nullptr);
+    LogManager::get().register_logger(new ConsoleLogger());
+
+    WindowsThread::make_current();
+    WindowsWindow::make_current();
+
     return Error::SUCCESS;
+}
+
+// this is the main message handler for the program
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    WindowsWindow* wnd = reinterpret_cast<WindowsWindow*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
+
+    // Process window messages.
+    switch (message)
+    {
+    case WM_CREATE: {
+        LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
+        SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+    } break;
+    }
+
+    // Handle any messages the switch statement didn't
+    return DefWindowProcW(hWnd, message, wParam, lParam);
 }
 
 Error OSWindows::initialize()
 {
+    // Register window type.
+    WNDCLASSEXW winClass;
+
+    // clear out the window class for use
+    ZeroMemory(&winClass, sizeof(WNDCLASSEXW));
+
+    // fill in the struct with the needed information
+    winClass.cbSize = sizeof(WNDCLASSEXW);
+    winClass.style = CS_HREDRAW | CS_VREDRAW;
+    winClass.lpfnWndProc = WindowProc;
+    winClass.hInstance = gHInstance == nullptr ? GetModuleHandle(nullptr) : gHInstance;
+    winClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+    winClass.hbrBackground = (HBRUSH)COLOR_WINDOW;
+    winClass.lpszClassName = L"RavenWindow";
+
+    // register the window class
+    RegisterClassExW(&winClass);
+
     return Error::SUCCESS;
 }
 
 void OSWindows::update()
 {
+    // this struct holds Windows event messages
+    MSG msg;
 
+    // Check to see if any messages are waiting in the queue
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    {
+        // translate keystroke messages into the right format
+        TranslateMessage(&msg);
+
+        // send the message to the WindowProc function
+        DispatchMessage(&msg);
+    }
 }
 
 static BOOL CALLBACK _EnumMonitorsCount(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData) {
@@ -163,7 +220,7 @@ String OSWindows::get_environment_variable(const String& key) const
     wchar_t* wValue = new wchar_t[0x7Fff];
     int length = GetEnvironmentVariableW(utf8_decode(key).c_str(), wValue, 0x7Fff);
 
-    if (length > 0) 
+    if (length > 0)
     {
         String utf8 = utf8_encode(wValue);
         delete[] wValue;
@@ -175,7 +232,7 @@ String OSWindows::get_environment_variable(const String& key) const
 
 bool OSWindows::set_environment_variable(const String& key, const String& value) const
 {
-    bool isSet = SetEnvironmentVariableW(utf8_decode(key).c_str(), 
+    bool isSet = SetEnvironmentVariableW(utf8_decode(key).c_str(),
         utf8_decode(value).c_str());
 
     return isSet;
@@ -227,6 +284,15 @@ uint64_t OSWindows::get_system_time() const
     ret |= ft.dwLowDateTime;
 
     return (uint64_t)((ret / WINDOWS_TICK - MSEC_TO_UNIX_EPOCH) / 1000);
+}
+
+uint64_t OSWindows::get_page_size() const
+{
+    // Get system information and fetch the page size.
+    SYSTEM_INFO info;
+    GetSystemInfo(&info);
+
+    return info.dwPageSize;
 }
 
 

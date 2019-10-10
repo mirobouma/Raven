@@ -27,7 +27,7 @@ public:
 
     virtual uint64_t get_unix_time() const;
     virtual uint64_t get_system_time() const;
-
+    virtual uint64_t get_page_size() const;
 
     virtual int get_exit_code(Error error) const override;
 };

@@ -5,6 +5,7 @@ set (SourceGroup_PublicIncludes
     "public/windows/windows_file_system.h"
     "public/windows/windows_thread.h"
     "public/windows/windows_memory.h"
+    "public/windows/windows_window.h"
 )
 
 source_group("Public" FILES ${SourceGroup_PublicIncludes})
@@ -12,6 +13,8 @@ source_group("Public" FILES ${SourceGroup_PublicIncludes})
 set (SourceGroup_Source
 	"private/os_windows.cpp"
     "private/windows_main.cpp"
+    "private/windows_thread.cpp"
+    "private/windows_window.cpp"
     "private/util/wstring.cpp"
 )
 source_group("Source" FILES ${SourceGroup_Source})

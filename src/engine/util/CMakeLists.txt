@@ -1,7 +1,8 @@
 set(PROJECT_NAME raven-util)
 
 set (SourceGroup_PublicIncludes
-    "public/util/enum_as_flag.h"
+    "public/util/enum_as_flags.h"
+    "public/util/hash.h"
 )
 source_group("Public" FILES ${SourceGroup_PublicIncludes})
 

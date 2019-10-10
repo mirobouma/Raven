@@ -3,7 +3,7 @@
 #include "core/os/monitor.h"
 #include "core/os/thread.h"
 #include "core/string.h"
-#include "core/path.h"
+#include "core/io/path.h"
 #include "core/errors.h"
 #include "core/os/window_system.h"
 
@@ -43,6 +43,7 @@ public:
 
     virtual uint64_t get_unix_time() const = 0;
     virtual uint64_t get_system_time() const = 0;
+    virtual uint64_t get_page_size() const = 0;
 
     virtual int get_exit_code(Error error) const = 0; 
 };

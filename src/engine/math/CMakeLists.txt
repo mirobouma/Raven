@@ -4,6 +4,7 @@ set (SourceGroup_PublicIncludes
     "public/math/math.h"
     "public/math/vector.h"
     "public/math/matrix.h"
+    "public/math/rect.h"
 )
 source_group("Public" FILES ${SourceGroup_PublicIncludes})
 

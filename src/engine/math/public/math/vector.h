@@ -1,5 +1,5 @@
 #pragma once
-#include "blaze/Math.h"
+#include "blaze/math.h"
 
 template <typename T>
 class VectorBase {
@@ -93,8 +93,8 @@ public:
     inline Vector2Base<T> normalized() const { return blaze::normalize(_vector); }
     inline Vector2Base<T> dot(const Vector2Base<T>& other) const { return blaze::dot(this, other); }
 
-    inline T x() { return _vector[0]; }
-    inline T y() { return _vector[1]; }
+    inline T x() const { return _vector[0]; }
+    inline T y() const { return _vector[1]; }
 
     inline void set_x(T value) { _vector[0] = value; }
     inline void set_y(T value) { _vector[1] = value; }
@@ -139,9 +139,9 @@ public:
     inline Vector3Base<T> dot(const Vector3Base<T>& other) const { return blaze::dot(this, other); }
     inline Vector3Base<T> cross(const Vector3Base<T>& other) const { return blaze::cross(this, other); }
 
-    inline T x() { return _vector[0]; }
-    inline T y() { return _vector[1]; }
-    inline T z() { return _vector[2]; }
+    inline T x() const { return _vector[0]; }
+    inline T y() const { return _vector[1]; }
+    inline T z() const { return _vector[2]; }
 
     inline void set_x(T value) { _vector[0] = value; }
     inline void set_y(T value) { _vector[1] = value; }
@@ -188,10 +188,10 @@ public:
     inline Vector4Base<T> normalized() const { return blaze::normalize(_vector); }
     inline Vector4Base<T> dot(const Vector4Base<T>& other) const { return blaze::dot(this, other); }
 
-    inline T x() { return _vector[0]; }
-    inline T y() { return _vector[1]; }
-    inline T z() { return _vector[2]; }
-    inline T w() { return _vector[3]; }
+    inline T x() const { return _vector[0]; }
+    inline T y() const { return _vector[1]; }
+    inline T z() const { return _vector[2]; }
+    inline T w() const { return _vector[3]; }
 
     inline void set_x(T value) { _vector[0] = value; }
     inline void set_y(T value) { _vector[1] = value; }

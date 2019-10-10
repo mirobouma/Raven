@@ -1,0 +1,24 @@
+#pragma once
+#include "core/api/rendering/render_target.h"
+#include "renderer-vulkan/vulkan.h"
+
+struct VulkanImage;
+
+/*! \struct FVulkanRenderTarget
+\brief Wrapper object around a vulkan render target.
+*/
+struct VulkanRenderTarget : IRenderTarget
+{
+    VulkanImage* image;
+    RenderTargetCreateDesc	desc;
+
+    virtual IImage* get_image() const override
+    {
+        return (IImage*)image;
+    }
+
+    virtual const RenderTargetCreateDesc* get_desc() const override
+    {
+        return &desc;
+    }
+};

@@ -41,27 +41,39 @@ if(NOT CPP11_SUPPORT)
 endif()
 
 # Checks for which platform we are compiling.
-check_platform()
+if(NOT DEFINED BUILD_PLATFORM)
+    if (WIN32)
+        set(BUILD_PLATFORM "windows")
+        set(PLATFORM_MODULE raven-os-windows)
+        add_definitions(-DPLATFORM_WINDOWS) # We are compiling for windows.
+    endif()
+endif()
 
 # Set output paths for binaries.
 set_output_paths()
 
 # Add correct module for this platform.
-add_platform_module()
+if(BUILD_PLATFORM MATCHES "windows")
+    add_subdirectory(src/os/windows)
+endif()
+
+find_package(Vulkan REQUIRED)
 
 # Add third-party modules.
-project_add_third_party(blaze)
-project_add_third_party(sdl2)
-project_add_third_party(vma)
-project_add_third_party(tinystl)
+ add_subdirectory(src/third_party/blaze)
+ add_subdirectory(src/third_party/sdl2)
+ add_subdirectory(src/third_party/vma)
+ add_subdirectory(src/third_party/tinystl)
 
 # Add modules
-project_add_engine_module(core)
-project_add_engine_module(math)
-project_add_engine_module(plugin)
-project_add_engine_module(rendering)
-project_add_engine_module(util)
+ add_subdirectory(src/engine/core)
+ add_subdirectory(src/engine/math)
+ add_subdirectory(src/engine/plugin)
+ add_subdirectory(src/engine/util)
+
+# Add renderers
+add_subdirectory(src/renderers/renderer-vulkan)
 
 # Add applications
-project_add_application(game)
-project_add_application(editor)
+add_subdirectory(src/applications/game)
+add_subdirectory(src/applications/editor)

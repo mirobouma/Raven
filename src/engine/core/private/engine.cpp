@@ -9,6 +9,7 @@ Engine::Engine() : _shouldShutdown(false)
 
 Error Engine::setup()
 {
+    _windowSystem = new WindowSystem();
     return Error::SUCCESS;
 }
 
@@ -19,6 +20,9 @@ Error Engine::update()
 
 Error Engine::cleanup()
 {
+    delete _windowSystem;
+    _windowSystem = nullptr;
+
     delete _singleton;
     _singleton = nullptr;
 

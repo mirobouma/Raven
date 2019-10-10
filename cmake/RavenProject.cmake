@@ -10,6 +10,10 @@ macro(project_add_engine_module name)
   add_subdirectory(src/engine/${name} ${ARGN})
 endmacro(project_add_engine_module)
 
+macro(project_add_renderer name)
+  add_subdirectory(src/renderers/${name} ${ARGN})
+endmacro(project_add_renderer)
+
 macro(project_add_plugin name)
   add_subdirectory(src/plugins/${name} ${ARGN})
 endmacro(project_add_plugin)

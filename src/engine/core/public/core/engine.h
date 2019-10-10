@@ -1,6 +1,7 @@
 #pragma once
 #include "core/os/os.h"
 #include "core/errors.h"
+#include "core/os/window_system.h"
 
 class Engine {
 public:
@@ -20,5 +21,6 @@ public:
 
 private:
     static Engine* _singleton;
+    WindowSystem* _windowSystem;
     bool _shouldShutdown;
 };

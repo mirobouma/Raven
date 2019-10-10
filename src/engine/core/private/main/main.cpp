@@ -1,6 +1,7 @@
 #include "core/main/main.h"
 #include "core/main/main_loop.h"
 #include "core/engine.h"
+#include "core/io/logger.h"
 
 Main* Main::_singleton = nullptr;
 MainLoop* raven_create_main_loop();
@@ -12,9 +13,12 @@ Main::Main()
 
 Error Main::setup(int argc, char** argv)
 {
+    LogManager* logManager = new LogManager();
+    logManager->setup();
+
     OS& os = OS::get();
     Engine* engine = new Engine();
-
+  
     parse_args(argc, argv);
 
     // Initialize core systems required to initialize before anything else.

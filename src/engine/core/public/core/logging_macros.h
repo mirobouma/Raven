@@ -22,19 +22,19 @@ RLOG_ERROR("Assertion failed: \"%s\"", ##__VA_ARGS__);  \
 
 #ifndef DISABLE_LOGGING
 #define RLOG(severity, message, ...) \
-	LogManager::get().log(severity, message, ##__VA_ARGS__);
+	Raven::LogManager::get().log(severity, message, ##__VA_ARGS__);
 
 #define RLOG_DEBUG(message, ...) \
-	LogManager::get().log(LS_Debug, message, ##__VA_ARGS__);
+	Raven::LogManager::get().log(LS_Debug, message, ##__VA_ARGS__);
 
 #define RLOG_INFO(message, ...) \
-	LogManager::get().log(LS_Info, message, ##__VA_ARGS__);
+	Raven::LogManager::get().log(LS_Info, message, ##__VA_ARGS__);
 
 #define RLOG_WARNING(message, ...) \
-	LogManager::get().log(LS_Warning, message, ##__VA_ARGS__);
+	Raven::LogManager::get().log(LS_Warning, message, ##__VA_ARGS__);
 
 #define RLOG_ERROR(message, ...) \
-	LogManager::get().log(LS_Error, String(message).append(" at line ").append(STRINGIZE(__LINE__)).append(" of file ").append(STRINGIZE(__FILE__)).append(" in function ").append(__FUNCTION__ ), ##__VA_ARGS__);
+	Raven::LogManager::get().log(LS_Error, String(message).append(" at line ").append(STRINGIZE(__LINE__)).append(" of file ").append(STRINGIZE(__FILE__)).append(" in function ").append(__FUNCTION__ ), ##__VA_ARGS__);
 #else
 #define RLOG(severity, message, ...) ((void)0)
 #define RLOG_DEBUG(message, ...) ((void)0)

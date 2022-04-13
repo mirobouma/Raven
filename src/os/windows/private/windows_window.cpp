@@ -6,102 +6,105 @@
 #include <Windows.h>
 #endif
 
-Window* WindowsWindow::create_window_windows(const String title, const Vector2Int size, WindowCreationFlags creationFlags)
+namespace Raven
 {
-    WindowsWindow* window = new WindowsWindow(title, size, creationFlags);
-    return window;
-}
-
-WindowsWindow::WindowsWindow(const String title, const Vector2Int size, WindowCreationFlags creationFlags)
-{
-    _title = title;
-    
-    Vector2Int position = Vector2Int(0, 0);
-    long flags;
-
-    // Set up proper variables based on flags.
-    if (creationFlags & WindowCreationFlags_AutoPosition)
+    Window* WindowsWindow::create_window_windows(const String title, const Vector2Int size, WindowCreationFlags creationFlags)
     {
-        position.set_x(static_cast<int>(CW_USEDEFAULT));
-        position.set_y(static_cast<int>(CW_USEDEFAULT));
+        WindowsWindow* window = new WindowsWindow(title, size, creationFlags);
+        return window;
     }
 
-    if (creationFlags & WindowCreationFlags_Borderless)
+    WindowsWindow::WindowsWindow(const String title, const Vector2Int size, WindowCreationFlags creationFlags)
     {
-        flags = WS_POPUP;
+        _title = title;
+
+        Vector2Int position = Vector2Int(0, 0);
+        long flags;
+
+        // Set up proper variables based on flags.
+        if (creationFlags & WindowCreationFlags_AutoPosition)
+        {
+            position.set_x(static_cast<int>(CW_USEDEFAULT));
+            position.set_y(static_cast<int>(CW_USEDEFAULT));
+        }
+
+        if (creationFlags & WindowCreationFlags_Borderless)
+        {
+            flags = WS_POPUP;
+        }
+        else
+        {
+            flags = WS_OVERLAPPEDWINDOW;
+        }
+
+        if (creationFlags & WindowCreationFlags_AlwaysOnTop)
+        {
+            flags |= WS_EX_TOPMOST;
+        }
+
+        if (creationFlags & WindowCreationFlags_NoResize)
+        {
+            flags &= ~WS_THICKFRAME;
+            flags &= ~WS_MAXIMIZEBOX;
+        }
+
+        RECT wr = { 0, 0, static_cast<long>(size.x()), static_cast<long>(size.y()) }; // set the size, but not the position
+        AdjustWindowRect(&wr, flags, FALSE); // adjust the size to account for the window title bar.
+
+        // create the window and use the result as the handle
+        _handle = CreateWindowExW(NULL,
+            L"RavenWindow",    // name of the window class
+            utf8_decode(_title).c_str(), // title of the window
+            flags,    // window style
+            static_cast<int>(position.x()),    // x-position of the window
+            static_cast<int>(position.y()),    // y-position of the window
+            wr.right - wr.left,    // width of the window
+            wr.bottom - wr.top,    // height of the window
+            NULL,    // we have no parent window, NULL
+            NULL,    // we aren't using menus, NULL
+            GetModuleHandle(nullptr),    // application handle
+            this);
+
+        // Show the window if it should be shown by default.
+        if (creationFlags & WindowCreationFlags_Shown)
+        {
+            show();
+        }
+
+        if (creationFlags & WindowCreationFlags_AlwaysOnTop)
+        {
+            SetWindowPos((HWND)_handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        }
     }
-    else
+
+    void WindowsWindow::make_current()
     {
-        flags = WS_OVERLAPPEDWINDOW;
+        create_window_func = create_window_windows;
     }
 
-    if (creationFlags & WindowCreationFlags_AlwaysOnTop)
+    WindowHandle WindowsWindow::get_handle() const
     {
-        flags |= WS_EX_TOPMOST;
+        return _handle;
     }
 
-    if (creationFlags & WindowCreationFlags_NoResize)
+    void WindowsWindow::show()
     {
-        flags &= ~WS_THICKFRAME;
-        flags &= ~WS_MAXIMIZEBOX;
+        ShowWindow((HWND)_handle, SW_SHOW);
     }
 
-    RECT wr = { 0, 0, static_cast<long>(size.x()), static_cast<long>(size.y()) }; // set the size, but not the position
-    AdjustWindowRect(&wr, flags, FALSE); // adjust the size to account for the window title bar.
-
-    // create the window and use the result as the handle
-    _handle = CreateWindowExW(NULL,
-        L"RavenWindow",    // name of the window class
-        utf8_decode(_title).c_str(), // title of the window
-        flags,    // window style
-        static_cast<int>(position.x()),    // x-position of the window
-        static_cast<int>(position.y()),    // y-position of the window
-        wr.right - wr.left,    // width of the window
-        wr.bottom - wr.top,    // height of the window
-        NULL,    // we have no parent window, NULL
-        NULL,    // we aren't using menus, NULL
-        GetModuleHandle(nullptr),    // application handle
-        this);
-
-    // Show the window if it should be shown by default.
-    if (creationFlags & WindowCreationFlags_Shown)
+    void WindowsWindow::minimize()
     {
-        show();
+        ShowWindow((HWND)_handle, SW_HIDE);
     }
 
-    if (creationFlags & WindowCreationFlags_AlwaysOnTop)
+    void WindowsWindow::set_title(String title)
     {
-        SetWindowPos((HWND)_handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        SetWindowTextW((HWND)_handle, utf8_decode(title).c_str());
+        _title = title;
     }
-}
 
-void WindowsWindow::make_current()
-{
-    create_window_func = create_window_windows;
-}
-
-WindowHandle WindowsWindow::get_handle() const
-{
-    return _handle;
-}
-
-void WindowsWindow::show()
-{
-    ShowWindow((HWND)_handle, SW_SHOW);
-}
-
-void WindowsWindow::minimize()
-{
-    ShowWindow((HWND)_handle, SW_HIDE);
-}
-
-void WindowsWindow::set_title(String title)
-{
-    SetWindowTextW((HWND)_handle, utf8_decode(title).c_str());
-    _title = title;
-}
-
-const String& WindowsWindow::get_title() const
-{
-    return _title;
+    const String& WindowsWindow::get_title() const
+    {
+        return _title;
+    }
 }

@@ -2,18 +2,21 @@
 #include "core/api/rendering/buffer.h"
 #include "renderer-vulkan/vulkan.h"
 
-/*! \struct FVulkanBuffer
-\brief Wrapper object around a vulkan buffer object.
-*/
-struct VulkanBuffer : IBuffer
+namespace Raven
 {
-    VkBuffer			buffer;
-    VmaAllocation		allocation;
-    BufferCreateDesc	desc;
-    ResourceState		state;
-
-    size_t get_size() override
+    /*! \struct FVulkanBuffer
+    \brief Wrapper object around a vulkan buffer object.
+    */
+    struct VulkanBuffer : IBuffer
     {
-        return desc.size;
-    }
-};
+        VkBuffer			buffer;
+        VmaAllocation		allocation;
+        BufferCreateDesc	desc;
+        ResourceState		state;
+
+        size_t get_size() override
+        {
+            return desc.size;
+        }
+    };
+}

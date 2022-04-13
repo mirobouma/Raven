@@ -1,6 +1,9 @@
 #pragma once
 #include "core/os/memory.h"
 
-class WindowsMemory : Memory {
+namespace Raven
+{
+	class WindowsMemory : Memory {
 
-};
+	};
+}

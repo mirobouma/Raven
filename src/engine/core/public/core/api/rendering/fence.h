@@ -1,3 +1,6 @@
 #pragma once
 
-struct IFence {};
+namespace Raven
+{
+	struct IFence {};
+}

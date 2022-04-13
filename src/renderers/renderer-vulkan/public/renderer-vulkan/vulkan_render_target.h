@@ -2,23 +2,26 @@
 #include "core/api/rendering/render_target.h"
 #include "renderer-vulkan/vulkan.h"
 
-struct VulkanImage;
-
-/*! \struct FVulkanRenderTarget
-\brief Wrapper object around a vulkan render target.
-*/
-struct VulkanRenderTarget : IRenderTarget
+namespace Raven
 {
-    VulkanImage* image;
-    RenderTargetCreateDesc	desc;
+    struct VulkanImage;
 
-    virtual IImage* get_image() const override
+    /*! \struct FVulkanRenderTarget
+    \brief Wrapper object around a vulkan render target.
+    */
+    struct VulkanRenderTarget : IRenderTarget
     {
-        return (IImage*)image;
-    }
+        VulkanImage* image;
+        RenderTargetCreateDesc	desc;
 
-    virtual const RenderTargetCreateDesc* get_desc() const override
-    {
-        return &desc;
-    }
-};
+        virtual IImage* get_image() const override
+        {
+            return (IImage*)image;
+        }
+
+        virtual const RenderTargetCreateDesc* get_desc() const override
+        {
+            return &desc;
+        }
+    };
+}

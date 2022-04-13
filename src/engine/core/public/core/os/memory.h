@@ -1,5 +1,8 @@
 #pragma once
 
-class Memory {
+namespace Raven
+{
+	class Memory {
 
-};
+	};
+}

@@ -1,5 +1,8 @@
 #pragma once
 
-/*! \struct ISemaphore
-\brief Interface for a semaphore. */
-struct ISemaphore {};
+namespace Raven
+{
+	/*! \struct ISemaphore
+	\brief Interface for a semaphore. */
+	struct ISemaphore {};
+}

@@ -7,20 +7,23 @@
 #include <map>
 #include <tuple>
 
-struct VulkanPipeline;
-struct VulkanImage;
-struct VulkanBuffer;
-struct VulkanRenderPass;
-
-/*! \struct FVulkanCommandList
-\brief wrapper around vulkan command buffer. */
-struct VulkanCommandList : public ICommandList
+namespace Raven
 {
-    VkCommandBuffer	cmdBuffer;
-    VulkanPipeline* boundPipeline;
-    VulkanRenderPass* currentRenderPass;
-    VulkanDynamicDescriptorSetCache* descriptorSetCache;
-    VulkanDynamicUniformAllocator* dynamicUniformAllocator;
-    std::map<VulkanImage*, std::tuple<ResourceState, ResourceState>> pendingImageBarriers;
-    std::map<VulkanBuffer*, std::tuple<ResourceState, ResourceState>> pendingBufferBarriers;
-};
+    struct VulkanPipeline;
+    struct VulkanImage;
+    struct VulkanBuffer;
+    struct VulkanRenderPass;
+
+    /*! \struct FVulkanCommandList
+    \brief wrapper around vulkan command buffer. */
+    struct VulkanCommandList : public ICommandList
+    {
+        VkCommandBuffer	cmdBuffer;
+        VulkanPipeline* boundPipeline;
+        VulkanRenderPass* currentRenderPass;
+        VulkanDynamicDescriptorSetCache* descriptorSetCache;
+        VulkanDynamicUniformAllocator* dynamicUniformAllocator;
+        std::map<VulkanImage*, std::tuple<ResourceState, ResourceState>> pendingImageBarriers;
+        std::map<VulkanBuffer*, std::tuple<ResourceState, ResourceState>> pendingBufferBarriers;
+    };
+}

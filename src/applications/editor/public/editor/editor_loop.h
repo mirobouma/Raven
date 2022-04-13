@@ -1,9 +1,16 @@
 #pragma once
-#include "core/main/main_loop.h"
+#include "core/main/application_loop.h"
+#include "core/os/window.h"
 
-class EditorLoop : public MainLoop {
-public:
-    virtual Error initialize(bool isStandalone) override;
-    virtual void update(float deltaTime) override;
-    virtual Error cleanup() override;
-};
+namespace Raven
+{
+    class EditorLoop : public ApplicationLoop {
+    public:
+        virtual Error initialize(bool isStandalone) override;
+        virtual void update(float deltaTime) override;
+        virtual Error cleanup() override;
+
+    private:
+        Window* _mainWindow;
+    };
+}

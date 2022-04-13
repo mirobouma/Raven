@@ -2,4 +2,4 @@
 #include "core/main/game_loop.h"
 #include "core/main/application.h"
 
-RAVEN_APPLICATION(GameLoop)
+RAVEN_APPLICATION(Raven::GameLoop)

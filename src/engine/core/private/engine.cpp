@@ -1,30 +1,33 @@
 #include "core/engine.h"
 
-Engine* Engine::_singleton = nullptr;
-
-Engine::Engine() : _shouldShutdown(false)
+namespace Raven
 {
-    _singleton = this;
-}
+    Engine* Engine::_singleton = nullptr;
 
-Error Engine::setup()
-{
-    _windowSystem = new WindowSystem();
-    return Error::SUCCESS;
-}
+    Engine::Engine() : _shouldShutdown(false)
+    {
+        _singleton = this;
+    }
 
-Error Engine::update()
-{
-    return Error::SUCCESS;
-}
+    Error Engine::setup()
+    {
+        _windowSystem = new WindowSystem();
+        return Error::SUCCESS;
+    }
 
-Error Engine::cleanup()
-{
-    delete _windowSystem;
-    _windowSystem = nullptr;
+    Error Engine::update()
+    {
+        return Error::SUCCESS;
+    }
 
-    delete _singleton;
-    _singleton = nullptr;
+    Error Engine::cleanup()
+    {
+        delete _windowSystem;
+        _windowSystem = nullptr;
 
-    return Error::SUCCESS;
+        delete _singleton;
+        _singleton = nullptr;
+
+        return Error::SUCCESS;
+    }
 }

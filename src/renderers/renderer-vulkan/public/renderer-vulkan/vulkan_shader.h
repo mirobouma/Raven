@@ -2,10 +2,13 @@
 #include "core/api/rendering/shader.h"
 #include "renderer-vulkan/vulkan.h"
 
-/*! \struct FVulkanShader
-\brief Wrapper object around a vulkan shader program.
-*/
-struct VulkanShader : public IShader
+namespace Raven
 {
-    VkShaderModule	shaders[MAX_SHADER_STAGE]; /*!< Shader modules. */
-};
+    /*! \struct FVulkanShader
+    \brief Wrapper object around a vulkan shader program.
+    */
+    struct VulkanShader : public IShader
+    {
+        VkShaderModule	shaders[MAX_SHADER_STAGE]; /*!< Shader modules. */
+    };
+}

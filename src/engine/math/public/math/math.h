@@ -1,3 +1,3 @@
 #pragma once
-#include "blaze/Blaze.h"
+#include <glm/glm.hpp>
 #include "math/vector.h"

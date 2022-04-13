@@ -24,6 +24,9 @@
 #endif
 #endif // defined(__GNUC__)
 
-class DynamicLibrary {
+namespace Raven
+{
+	class DynamicLibrary {
 
-};
+	};
+}

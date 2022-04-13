@@ -1,3 +1,6 @@
 #pragma once
 
-static const uint32_t gMaxFramesAtOnce = 3;
+namespace Raven
+{
+	static const uint32_t gMaxFramesAtOnce = 3;
+}

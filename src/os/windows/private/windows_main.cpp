@@ -1,5 +1,5 @@
 #include "windows/os_windows.h"
-#include "core/main/main.h"
+#include "core/main/application.h"
 #include "math/math.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -8,25 +8,27 @@
 #endif
 
 extern "C" {
-    __declspec(dllexport) DWORD NvOptimusEnablement = 1;
-    __declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
+	__declspec(dllexport) DWORD NvOptimusEnablement = 1;
+	__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
+
+using namespace Raven;
 
 int main(int argc, char** argv)
 {
-    OSWindows os;
-    Main* main = new Main();
+	OSWindows os;
+	Application* application = new Application();
 
-    Error result = main->setup(argc, argv);
-    if (result != Error::SUCCESS)
-        return os.get_exit_code(result);
+	Error result = application->setup(argc, argv);
+	if (result != Error::SUCCESS)
+		return os.get_exit_code(result);
 
-    result = main->run();
-    if (result != Error::SUCCESS)
-        return os.get_exit_code(result);
+	result = application->run();
+	if (result != Error::SUCCESS)
+		return os.get_exit_code(result);
 
-    main->cleanup();
+	application->cleanup();
 
-    delete main;
-    return os.get_exit_code(result);
+	delete application;
+	return os.get_exit_code(result);
 }

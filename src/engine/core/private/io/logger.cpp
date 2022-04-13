@@ -1,53 +1,56 @@
 #include "core/io/logger.h"
 #include "core/os/os.h"
 
-LogManager* LogManager::_singleton = nullptr;
-
-Error LogManager::setup()
+namespace Raven
 {
-    _singleton = this;
-    return Error::SUCCESS;
-}
+    LogManager* LogManager::_singleton = nullptr;
 
-Error LogManager::cleanup()
-{
-    for (int i = 0; i < _loggers.size(); i++)
+    Error LogManager::setup()
     {
-        delete _loggers[i];
+        _singleton = this;
+        return Error::SUCCESS;
     }
 
-    return Error::SUCCESS;
-}
-
-void LogManager::log(LogSeverity severity, String message, ...)
-{
-    va_list args;
-    va_start(args, message);
-
-    for (int i = 0; i < _loggers.size(); ++i)
+    Error LogManager::cleanup()
     {
-        _loggers[i]->log(severity, message, args);
+        for (int i = 0; i < _loggers.size(); i++)
+        {
+            delete _loggers[i];
+        }
+
+        return Error::SUCCESS;
     }
 
-    va_end(args);
-}
+    void LogManager::log(LogSeverity severity, String message, ...)
+    {
+        va_list args;
+        va_start(args, message);
 
-void LogManager::register_logger(Logger* logger)
-{
-    _loggers.push_back(logger);
-}
+        for (int i = 0; i < _loggers.size(); ++i)
+        {
+            _loggers[i]->log(severity, message, args);
+        }
 
-void LogManager::deregister_logger(Logger* logger)
-{
-    _loggers.erase(std::remove(_loggers.begin(), _loggers.end(), logger));
-}
+        va_end(args);
+    }
 
-void ConsoleLogger::log(LogSeverity severity, String message, va_list args)
-{
-    // Unimplemented.
-}
+    void LogManager::register_logger(Logger* logger)
+    {
+        _loggers.push_back(logger);
+    }
 
-LogSeverity ConsoleLogger::get_min_log_severity() const
-{
-    return LogSeverity::LS_Debug;
+    void LogManager::deregister_logger(Logger* logger)
+    {
+        _loggers.erase(std::remove(_loggers.begin(), _loggers.end(), logger));
+    }
+
+    void ConsoleLogger::log(LogSeverity severity, String message, va_list args)
+    {
+        // Unimplemented.
+    }
+
+    LogSeverity ConsoleLogger::get_min_log_severity() const
+    {
+        return LogSeverity::LS_Debug;
+    }
 }

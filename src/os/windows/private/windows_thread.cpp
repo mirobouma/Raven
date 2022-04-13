@@ -5,18 +5,21 @@
 #include <Windows.h>
 #endif
 
-ThreadID WindowsThread::get_current_thread_id_windows()
+namespace Raven
 {
-    return ::GetCurrentThreadId();
-}
+    ThreadID WindowsThread::get_current_thread_id_windows()
+    {
+        return ::GetCurrentThreadId();
+    }
 
-Thread* WindowsThread::create_thread_windows()
-{
-    return new WindowsThread();
-}
+    Thread* WindowsThread::create_thread_windows()
+    {
+        return new WindowsThread();
+    }
 
-void WindowsThread::make_current()
-{
-    create_thread_func = create_thread_windows;
-    get_current_thread_id_func = get_current_thread_id_windows;
+    void WindowsThread::make_current()
+    {
+        create_thread_func = create_thread_windows;
+        get_current_thread_id_func = get_current_thread_id_windows;
+    }
 }

@@ -59,9 +59,9 @@ if(BUILD_PLATFORM MATCHES "windows")
 endif()
 
 find_package(Vulkan REQUIRED)
+find_package(glm CONFIG REQUIRED)
 
 # Add third-party modules.
- add_subdirectory(src/third_party/sdl2)
  add_subdirectory(src/third_party/vma)
  add_subdirectory(src/third_party/tinystl)
 

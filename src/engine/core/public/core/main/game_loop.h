@@ -1,14 +1,17 @@
 #pragma once
-#include "core/main/main_loop.h"
+#include "core/main/application_loop.h"
 
-class Window;
-class GameLoop : public MainLoop
+namespace Raven
 {
-public:
-    virtual Error initialize(bool isStandalone);
-    virtual void update(float deltaTime);
-    virtual Error cleanup();
+    class Window;
+    class GameLoop : public ApplicationLoop
+    {
+    public:
+        virtual Error initialize(bool isStandalone);
+        virtual void update(float deltaTime);
+        virtual Error cleanup();
 
-private:
-    Window* _mainWindow;
-};
+    private:
+        Window* _mainWindow;
+    };
+}

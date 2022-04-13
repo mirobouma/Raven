@@ -1,5 +1,8 @@
 #pragma once
 
-class FileSystem {
+namespace Raven
+{
+	class FileSystem {
 
-};
+	};
+}

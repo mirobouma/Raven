@@ -3,22 +3,25 @@
 #include "core/logging_macros.h"
 #include "renderer-vulkan/vulkan.h"
 
-/*! \struct FVulkanImage
-\brief Wrapper object around a vulkan image object.
-*/
-struct VulkanImage : IImage
+namespace Raven
 {
-    virtual const ImageCreateDesc* get_desc() const
+    /*! \struct FVulkanImage
+    \brief Wrapper object around a vulkan image object.
+    */
+    struct VulkanImage : IImage
     {
-        return &desc;
-    }
+        virtual const ImageCreateDesc* get_desc() const
+        {
+            return &desc;
+        }
 
-    VkImage					image;
-    VkImageView				imageView;
-    VmaAllocation			allocation;
-    ImageCreateDesc		    desc;
-    VkImageCreateInfo		vkImageDesc;
-    VkImageViewCreateInfo	vkImageViewDesc;
-    ResourceState 			state;
-    size_t					textureId;
-};
+        VkImage					image;
+        VkImageView				imageView;
+        VmaAllocation			allocation;
+        ImageCreateDesc		    desc;
+        VkImageCreateInfo		vkImageDesc;
+        VkImageViewCreateInfo	vkImageViewDesc;
+        ResourceState 			state;
+        size_t					textureId;
+    };
+}

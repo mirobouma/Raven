@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.8.0)
+set(CMAKE_TOOLCHAIN_FILE ./vcpkg/scripts/buildsystems/vcpkg.cmake)
 
 # Helper variables.
 set(RVN_ENGINE_NAME "Raven")

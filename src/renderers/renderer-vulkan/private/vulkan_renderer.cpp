@@ -2510,7 +2510,7 @@ RenderResult VulkanRenderer::create_image(IImage** ppTexture, ImageCreateDesc* p
 
     // Set the image description of the image to the one of the created image.
     image->desc = *pDesc;
-    image->desc.mipLevels = image->desc.mipLevels == 0 ? (std::floor(std::log2(std::max(pDesc->width, pDesc->height))) + 1) : pDesc->mipLevels;
+    image->desc.mipLevels = image->desc.mipLevels == 0 ? ((uint32_t)std::floor(std::log2(std::max(pDesc->width, pDesc->height))) + 1) : pDesc->mipLevels;
 
     image->vkImageDesc = imageInfo;
     image->state = ResourceState::RESOURCE_STATE_UNDEFINED;
@@ -4674,7 +4674,9 @@ RenderResult VulkanRenderer::cmd_bind_descriptors(ICommandList* pCommandList, ui
     for (uint32_t i = 0; i < copySetIds.size(); ++i)
     {
         // Bind descriptor sets.
-        vkCmdBindDescriptorSets(list->cmdBuffer, gPipelineTypeTranslator[pipeline->type], pipeline->layout, copySetIds[i], 1, &dynamicDescriptorSets[i], mDynamicOffsets[copySetIds[i]].size(), mDynamicOffsets[copySetIds[i]].empty() ? nullptr : mDynamicOffsets[copySetIds[i]].data());
+        vkCmdBindDescriptorSets(list->cmdBuffer, gPipelineTypeTranslator[pipeline->type], pipeline->layout, copySetIds[i], 1, 
+            &dynamicDescriptorSets[i], mDynamicOffsets[copySetIds[i]].size(), 
+            mDynamicOffsets[copySetIds[i]].empty() ? nullptr : mDynamicOffsets[copySetIds[i]].data());
     }
 
     return RR_SUCCESS;

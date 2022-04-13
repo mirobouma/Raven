@@ -84,7 +84,7 @@ struct VulkanDynamicUniformAllocator
     \param size Size of the memory allocation.
     \param alignment Alignment of the memory allocation, 256 by default.
     */
-    VulkanLinearAllocation allocate(IRenderingAPI* renderer, uint32_t size, uint32_t alignment = 256)
+    VulkanLinearAllocation allocate(IRenderingAPI* renderer, uint32_t size, VkDeviceSize alignment = 256)
     {
         const size_t alignmentMask = alignment - 1;
 

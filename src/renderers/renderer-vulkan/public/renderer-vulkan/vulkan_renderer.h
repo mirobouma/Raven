@@ -281,6 +281,8 @@ protected:
     */
     VulkanDescriptorSetCache* get_thread_local_descriptor_set_cache();
 
+    static const uint32_t VK_DESCRIPTOR_TYPE_RANGE_SIZE = (VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT - VK_DESCRIPTOR_TYPE_SAMPLER + 1);
+
     // Global variables
     static const uint32_t gDescriptorPoolSize = 4096;
     static const uint32_t gDescriptorSets = gDescriptorPoolSize * VK_DESCRIPTOR_TYPE_RANGE_SIZE;
@@ -333,7 +335,7 @@ protected:
     bool									            _initialized; /*!< Boolean to store if the renderer is initialized. */
 
     template <typename T>
-    using ThreadLocalMap = std::map<uint32_t, T>;
+    using ThreadLocalMap = std::map<uint64_t, T>;
 
     ThreadLocalMap<VulkanDescriptorPool*>				_descriptor_pools; /*!< Global descriptor pool. */
     ThreadLocalMap<VulkanDescriptorSetCache*>			_descriptor_set_caches; /*!< Descriptor set cache */

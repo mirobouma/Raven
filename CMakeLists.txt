@@ -61,7 +61,6 @@ endif()
 find_package(Vulkan REQUIRED)
 
 # Add third-party modules.
- add_subdirectory(src/third_party/blaze)
  add_subdirectory(src/third_party/sdl2)
  add_subdirectory(src/third_party/vma)
  add_subdirectory(src/third_party/tinystl)

@@ -3,15 +3,15 @@
 
 namespace Raven
 {
-    class Window;
+    class INativeWindow;
     class GameLoop : public ApplicationLoop
     {
     public:
-        virtual Error initialize(bool isStandalone);
+        virtual Result initialize(bool isStandalone);
         virtual void update(float deltaTime);
-        virtual Error cleanup();
+        virtual Result cleanup();
 
     private:
-        Window* _mainWindow;
+        INativeWindow* _mainWindow;
     };
 }

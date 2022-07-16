@@ -1,10 +1,10 @@
 #include "core/main/game_loop.h"
-#include "core/os/window_system.h"
-#include "core/logging_macros.h"
+#include "os/window_system.h"
+#include "util/logging_macros.h"
 
 namespace Raven
 {
-    Error GameLoop::initialize(bool isStandalone)
+    Result GameLoop::initialize(bool isStandalone)
     {
         _isStandalone = isStandalone;
 
@@ -19,7 +19,7 @@ namespace Raven
             RASSERT(_mainWindow != nullptr);
         }
 
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 
     void GameLoop::update(float deltaTime)
@@ -27,13 +27,13 @@ namespace Raven
 
     }
 
-    Error GameLoop::cleanup()
+    Result GameLoop::cleanup()
     {
         if (_isStandalone)
         {
             WindowSystem::get().destroy_window(_mainWindow);
         }
 
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 }

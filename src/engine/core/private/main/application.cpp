@@ -1,7 +1,8 @@
 #include "core/main/application.h"
 #include "core/main/application_loop.h"
 #include "core/engine.h"
-#include "core/io/logger.h"
+#include "util/logger.h"
+#include "os/os.h"
 
 Raven::ApplicationLoop* raven_create_application();
 
@@ -12,9 +13,10 @@ namespace Raven
     Application::Application()
     {
         _singleton = this;
+        _application_loop = nullptr;
     }
 
-    Error Application::setup(int argc, char** argv)
+    Result Application::setup(int argc, char** argv)
     {
         LogManager* logManager = new LogManager();
         logManager->setup();
@@ -25,44 +27,44 @@ namespace Raven
         parse_args(argc, argv);
 
         // Initialize core systems required to initialize before anything else.
-        Error result = os.initialize_core();
-        if (result != Error::SUCCESS)
+        Result result = os.initialize_core();
+        if (result != Result::SUCCESS)
             return result;
 
         // Initialize engine.
         result = engine->setup();
-        if (result != Error::SUCCESS)
+        if (result != Result::SUCCESS)
             return result;
 
         // Initialize OS specific systems.
         result = os.initialize();
-        if (result != Error::SUCCESS)
+        if (result != Result::SUCCESS)
             return result;
 
-        _application_loop = raven_create_main_loop();
-        return Error::SUCCESS;
+        _application_loop = raven_create_application();
+        return Result::SUCCESS;
     }
 
-    Error Application::parse_args(int argc, char** argv)
+    Result Application::parse_args(int argc, char** argv)
     {
         // Parse command-line args.
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 
-    Error Application::run()
+    Result Application::run()
     {
         OS& os = OS::get();
         Engine& engine = Engine::get();
 
         if (!_application_loop)
-            return Error::ERR_DOES_NOT_EXIST;
+            return Result::ERR_DOES_NOT_EXIST;
 
         // The root main loop is always a standalone.
         // If the game is an editor, the dynamic game library will not
         // be a standalone, and it's viewport creation is handled by
         // the editor loop.
-        Error result = _application_loop->initialize(true);
-        if (result != Error::SUCCESS)
+        Result result = _application_loop->initialize(true);
+        if (result != Result::SUCCESS)
         {
             _application_loop->cleanup();
             return result;
@@ -75,11 +77,11 @@ namespace Raven
 
             // Update the main loop.
             result = update();
-            if (result != Error::SUCCESS)
+            if (result != Result::SUCCESS)
                 break;
         }
 
-        if (result != Error::SUCCESS)
+        if (result != Result::SUCCESS)
         {
             _application_loop->cleanup();
             return result;
@@ -89,17 +91,17 @@ namespace Raven
         return result;
     }
 
-    Error Application::update()
+    Result Application::update()
     {
         float deltaTime = 0.016f;
         _application_loop->update(deltaTime);
 
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 
-    Error Application::cleanup()
+    Result Application::cleanup()
     {
         Engine::get().cleanup();
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 }

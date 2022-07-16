@@ -1,9 +1,7 @@
 #pragma once
-#include "core/os/dynamic_library.h"
-#include "core/os/os.h"
-
+#include "os/os.h"
 #include "core/main/application_loop.h"
-#include "core/errors.h"
+#include "util/result.h"
 
 #include <cinttypes>
 
@@ -21,12 +19,12 @@ namespace Raven
 
         static inline Application& get() { return *_singleton; }
 
-        Error setup(int argc, char** argv);
-        Error run();
-        Error update();
-        Error cleanup();
+        Result setup(int argc, char** argv);
+        Result run();
+        Result update();
+        Result cleanup();
 
-        Error parse_args(int argc, char** argv);
+        Result parse_args(int argc, char** argv);
 
         Application(const Application&) = delete;
         Application& operator= (const Application&) = delete;

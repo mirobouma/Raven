@@ -22,4 +22,4 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/public" 
     PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/private")
 
-target_link_libraries(${PROJECT_NAME} PUBLIC ${PLATFORM_MODULE} raven-core)
+target_link_libraries(${PROJECT_NAME} PUBLIC raven-core)

@@ -1,7 +1,8 @@
 #pragma once
-#include "core/os/os.h"
-#include "core/errors.h"
-#include "core/os/window_system.h"
+#include "os/os.h"
+#include "util/result.h"
+#include "os/window_system.h"
+
 namespace Raven
 {
     class Engine {
@@ -11,9 +12,9 @@ namespace Raven
 
         static inline Engine& get() { return *_singleton; }
 
-        Error setup();
-        Error update();
-        Error cleanup();
+        Result setup();
+        Result update();
+        Result cleanup();
 
         Engine(const Engine&) = delete;
         Engine& operator= (const Engine&) = delete;

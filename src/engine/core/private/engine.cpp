@@ -9,18 +9,18 @@ namespace Raven
         _singleton = this;
     }
 
-    Error Engine::setup()
+    Result Engine::setup()
     {
         _windowSystem = new WindowSystem();
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 
-    Error Engine::update()
+    Result Engine::update()
     {
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 
-    Error Engine::cleanup()
+    Result Engine::cleanup()
     {
         delete _windowSystem;
         _windowSystem = nullptr;
@@ -28,6 +28,6 @@ namespace Raven
         delete _singleton;
         _singleton = nullptr;
 
-        return Error::SUCCESS;
+        return Result::SUCCESS;
     }
 }

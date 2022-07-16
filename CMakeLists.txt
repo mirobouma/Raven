@@ -53,26 +53,31 @@ endif()
 # Set output paths for binaries.
 set_output_paths()
 
-# Add correct module for this platform.
-if(BUILD_PLATFORM MATCHES "windows")
-    add_subdirectory(src/os/windows)
-endif()
-
 find_package(Vulkan REQUIRED)
 find_package(glm CONFIG REQUIRED)
+
+# Add correct module for this platform.
+if(BUILD_PLATFORM MATCHES "windows")
+    add_subdirectory(src/os/os_windows)
+endif()
 
 # Add third-party modules.
  add_subdirectory(src/third_party/vma)
  add_subdirectory(src/third_party/tinystl)
 
+# Add apis
+add_subdirectory(src/os/os_api)
+
 # Add modules
- add_subdirectory(src/engine/core)
+ add_subdirectory(src/os/os)
  add_subdirectory(src/engine/math)
- add_subdirectory(src/engine/plugin)
+ add_subdirectory(src/engine/plugin_api)
  add_subdirectory(src/engine/util)
+ add_subdirectory(src/engine/core)
 
 # Add renderers
-add_subdirectory(src/renderers/renderer-vulkan)
+add_subdirectory(src/rendering/renderer_api)
+add_subdirectory(src/rendering/renderer-vulkan)
 
 # Add applications
 add_subdirectory(src/applications/game)

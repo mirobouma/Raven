@@ -1,5 +1,5 @@
 #pragma once
-#include "core/errors.h"
+#include "util/result.h"
 
 namespace Raven
 {
@@ -8,9 +8,9 @@ namespace Raven
         ApplicationLoop() = default;
         virtual ~ApplicationLoop() = default;
 
-        virtual Error initialize(bool isStandalone) = 0;
+        virtual Result initialize(bool isStandalone) = 0;
         virtual void update(float deltaTime) = 0;
-        virtual Error cleanup() = 0;
+        virtual Result cleanup() = 0;
 
     protected:
         bool _isStandalone;
